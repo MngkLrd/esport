@@ -219,7 +219,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 3,
+  version: 4,
   seed: 271828,
   week: 1,
   seasonLength: 12,
@@ -604,7 +604,10 @@ const makeProspect = (
   return {
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
     alias: identity.alias,
-    firstName: identity.firstName,
+    firstName: identity.realName,
+    realName: identity.realName,
+    country: identity.country,
+    team: identity.team,
     age: identity.age,
     role: identity.role,
     aim: clamp(base + Math.round((rng() - 0.5) * 14)),

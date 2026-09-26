@@ -1,4 +1,6 @@
-import { REAL_PLAYERS } from './players'\n\nexport type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
+import { REAL_PLAYERS } from './players'
+
+export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
 export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
 
@@ -6,6 +8,9 @@ export interface Player {
   id: string
   alias: string
   firstName: string
+  realName: string
+  country: string
+  team: string
   age: number
   role: Role
   aim: number
@@ -65,7 +70,7 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 3
+  version: 4
   seed: number
   week: number
   seasonLength: number
@@ -592,7 +597,9 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
   }
 }
 
-const proPlayerIdentities = REAL_PLAYERS\n\nconst traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
+const proPlayerIdentities = REAL_PLAYERS
+
+const traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
 
 const makeProspect = (
   state: GameState,

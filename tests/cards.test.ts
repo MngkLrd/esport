@@ -41,6 +41,17 @@ describe('HLTV collectible card pipeline', () => {
       expect(snapshot.cardScores).not.toBeNull()
       for (const value of Object.values(snapshot.cardScores!)) {
         expect(Number.isFinite(value)).toBe(true)
+        expect(value).toBeGreaterThanOrEqual(0)
+        expect(value).toBeLessThanOrEqual(100)
+      }
+
+      const player = REAL_PLAYERS.find(
+        (candidate) => candidate.alias.toLocaleLowerCase('en-US') === snapshot.alias.toLocaleLowerCase('en-US'),
+      )
+      expect(player).toBeDefined()
+      const card = cardStatsForAlias(snapshot.alias, player!.role)
+      expect(card).not.toBeNull()
+      for (const value of [card!.aim, card!.utility, card!.positioning, card!.clutch, card!.ovr]) {
         expect(value).toBeGreaterThanOrEqual(1)
         expect(value).toBeLessThanOrEqual(99)
       }

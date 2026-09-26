@@ -122,9 +122,8 @@ const mulberry32 = (seed: number) => () => {
 
 const aliasNoise = (alias: string) => (hashSeed(alias.toLocaleLowerCase('en-US')) % 7) - 3
 
-// Pack power is a 1–100 presentation scale. The current pro pool intentionally
-// occupies roughly 54–99: curated profiles use the public rating seed, while
-// long-tail VRS players use the ranking of their snapshot team.
+// Pack power prefers the current HLTV card OVR. Players without usable HLTV
+// statistics keep the old VRS/rating fallback so every roster entry remains packable.
 export const playerPower = (player: RealPlayerSeed) => {
   const hltv = cardStatsForAlias(player.alias, player.role)
   if (hltv) return hltv.ovr
@@ -194,7 +193,9 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
   const edition = cardStats
     ? (cardStats.window === 'calendar-year'
         ? cardStats.periodEnd.slice(0, 4)
-        : "’" + cardStats.periodStart.slice(2, 4) + "–’" + cardStats.periodEnd.slice(2, 4))
+        : cardStats.window === 'past3m'
+          ? cardStats.periodStart.slice(5, 7) + '–' + cardStats.periodEnd.slice(5, 7) + " ’" + cardStats.periodEnd.slice(2, 4)
+          : "’" + cardStats.periodStart.slice(2, 4) + "–’" + cardStats.periodEnd.slice(2, 4))
     : 'VRS'
   return {
     id: ['card', serial, slot, player.alias].join('-'),
@@ -237,7 +238,9 @@ const migrateCard = (raw: unknown): PackCard | null => {
           if (!stats) return 'VRS'
           return stats.window === 'calendar-year'
             ? stats.periodEnd.slice(0, 4)
-            : "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
+            : stats.window === 'past3m'
+              ? stats.periodStart.slice(5, 7) + '–' + stats.periodEnd.slice(5, 7) + " ’" + stats.periodEnd.slice(2, 4)
+              : "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
         })(),
   }
 }

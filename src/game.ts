@@ -271,13 +271,15 @@ export const migrateState = (raw: unknown): GameState => {
       return {
         ...player,
         alias: identity.alias,
-        firstName: identity.realName,
-        realName: identity.realName,
-        country: identity.country,
+        firstName: identity.realName ?? identity.alias,
+        realName: identity.realName ?? identity.alias,
+        country: identity.country ?? 'Unknown',
         team: identity.team,
-        age: identity.age,
-        role: identity.role,
-        bio: identity.realName + ' · ' + identity.country + ' · current team: ' + identity.team + '. Gameplay ratings are fictionalized for this manager save.',
+        age: identity.age ?? player.age,
+        role: identity.role ?? player.role,
+        bio: identity.realName
+          ? identity.realName + ' · ' + (identity.country ?? 'country unknown') + ' · profile team: ' + identity.team + '. Gameplay ratings are fictionalized for this manager save.'
+          : identity.alias + ' · Valve VRS roster snapshot team: ' + identity.team + ' (2026-09-07). Full profile metadata is not enriched yet; gameplay ratings and role are simulation data.',
         salary: parsed.version === 1 ? Math.max(70, Math.round((player.salary ?? 200) * 0.45)) : player.salary,
       }
     }
@@ -598,6 +600,7 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
 }
 
 const proPlayerIdentities = REAL_PLAYERS
+const simulationRoles: readonly Role[] = ['IGL', 'Entry', 'Rifler', 'AWP', 'Support']
 
 const traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
 
@@ -611,12 +614,12 @@ const makeProspect = (
   return {
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
     alias: identity.alias,
-    firstName: identity.realName,
-    realName: identity.realName,
-    country: identity.country,
+    firstName: identity.realName ?? identity.alias,
+    realName: identity.realName ?? identity.alias,
+    country: identity.country ?? 'Unknown',
     team: identity.team,
-    age: identity.age,
-    role: identity.role,
+    age: identity.age ?? 0,
+    role: identity.role ?? pick(simulationRoles, rng),
     aim: clamp(base + Math.round((rng() - 0.5) * 14)),
     gameSense: clamp(base + Math.round((rng() - 0.5) * 14)),
     utility: clamp(base + Math.round((rng() - 0.5) * 14)),
@@ -629,7 +632,9 @@ const makeProspect = (
     salary: Math.round(70 + base * 0.72),
     contractWeeks: 8,
     traits: [pick(traits, rng), pick(traits, rng)],
-    bio: identity.realName + ' · ' + identity.country + ' · current team: ' + identity.team + '. Ratings, wage and potential are fictionalized for gameplay.',
+    bio: identity.realName
+      ? identity.realName + ' · ' + (identity.country ?? 'country unknown') + ' · profile team: ' + identity.team + '. Ratings, wage and potential are fictionalized for gameplay.'
+      : identity.alias + ' · Valve VRS roster snapshot team: ' + identity.team + ' (2026-09-07). Full name, nationality and age are not enriched yet; role, ratings, wage and potential are simulation data.',
   }
 }
 
@@ -654,7 +659,7 @@ export const scout = (state: GameState): GameState => {
       week: state.week,
       kind: 'scout' as const,
       title: 'Scouting report delivered',
-      body: 'Three real CS2 players are available. Name, nickname, nationality and current team come from the verified 2026-09-26 dataset; ratings, salaries and potential are fictionalized for the manager simulation.',
+      body: 'Three real CS2 aliases are drawn from the expanded player universe. Curated profiles include verified identity metadata; the long tail comes from Valve VRS roster snapshots dated 2026-09-07. Ratings, roles, salaries and potential are manager-simulation data.',
     }, ...state.news].slice(0, 50),
   }
 }

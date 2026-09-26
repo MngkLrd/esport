@@ -22,13 +22,14 @@ export interface PackCard {
   role: RealPlayerRole | null
   power: number
   rarity: PackRarity
+  sourceRating: number | null
   sourceRank: number | null
   packId: PackId
   serial: number
 }
 
 export interface PackState {
-  version: 1
+  version: 2
   serial: number
   inventory: PackCard[]
   history: PackCard[]
@@ -40,6 +41,8 @@ export interface PackRoll {
   reel: PackCard[]
   winnerIndex: number
 }
+
+export const LEGACY_PACK_SAVE_KEY = 'esport-ai-manager-packs-v1'
 
 export const PACKS: readonly PackDefinition[] = [
   {
@@ -114,9 +117,16 @@ const mulberry32 = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296
 }
 
-const playerPower = (player: RealPlayerSeed) => {
-  const noise = (hashSeed(player.alias.toLocaleLowerCase('en-US')) % 7) - 3
-  if (player.rating != null) return clamp(Math.round(60 + (player.rating - 0.8) * 62 + noise), 58, 99)
+const aliasNoise = (alias: string) => (hashSeed(alias.toLocaleLowerCase('en-US')) % 7) - 3
+
+// Pack power is a 1–100 presentation scale. The current pro pool intentionally
+// occupies roughly 54–99: curated profiles use the public rating seed, while
+// long-tail VRS players use the ranking of their snapshot team.
+export const playerPower = (player: RealPlayerSeed) => {
+  const noise = aliasNoise(player.alias)
+  if (player.rating != null) {
+    return clamp(Math.round(60 + (player.rating - 0.8) * 62 + noise), 58, 99)
+  }
   const rank = player.vrsRank ?? 401
   if (rank <= 10) return clamp(91 + noise, 88, 96)
   if (rank <= 30) return clamp(85 + noise, 82, 91)
@@ -170,6 +180,7 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     role: player.role,
     power,
     rarity: rarityForPower(power),
+    sourceRating: player.rating,
     sourceRank: player.vrsRank ?? null,
     packId,
     serial,
@@ -177,27 +188,40 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
 }
 
 export const createPackState = (): PackState => ({
-  version: 1,
+  version: 2,
   serial: 0,
   inventory: [],
   history: [],
 })
 
-export const migratePackState = (raw: unknown): PackState => {
-  if (!raw || typeof raw !== 'object') return createPackState()
-  const parsed = raw as Partial<PackState>
-  if (parsed.version !== 1 || !Array.isArray(parsed.inventory)) return createPackState()
+const migrateCard = (raw: unknown): PackCard | null => {
+  if (!raw || typeof raw !== 'object') return null
+  const card = raw as Partial<PackCard>
+  if (typeof card.alias !== 'string' || typeof card.power !== 'number' || typeof card.packId !== 'string') return null
   return {
-    version: 1,
-    serial: typeof parsed.serial === 'number' ? parsed.serial : 0,
-    inventory: parsed.inventory,
-    history: Array.isArray(parsed.history) ? parsed.history : [],
+    ...(card as PackCard),
+    sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
+    sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
   }
 }
 
-export const rollPack = (packId: PackId, serial: number): PackRoll => {
+export const migratePackState = (raw: unknown): PackState => {
+  if (!raw || typeof raw !== 'object') return createPackState()
+  const parsed = raw as { version?: number; serial?: number; inventory?: unknown[]; history?: unknown[] }
+  if ((parsed.version !== 1 && parsed.version !== 2) || !Array.isArray(parsed.inventory)) return createPackState()
+  return {
+    version: 2,
+    serial: typeof parsed.serial === 'number' ? Math.max(0, Math.floor(parsed.serial)) : 0,
+    inventory: parsed.inventory.map(migrateCard).filter((card): card is PackCard => Boolean(card)),
+    history: Array.isArray(parsed.history)
+      ? parsed.history.map(migrateCard).filter((card): card is PackCard => Boolean(card)).slice(0, 60)
+      : [],
+  }
+}
+
+export const rollPack = (packId: PackId, serial: number, saveId: string): PackRoll => {
   const pack = PACKS.find((candidate) => candidate.id === packId) ?? PACKS[0]
-  const rng = mulberry32(hashSeed(['pack', packId, serial].join(':')))
+  const rng = mulberry32(hashSeed(['pack-v2', saveId, packId, serial].join(':')))
   const winnerRarity = pickRarity(pack.weights, rng)
   const winnerPlayer = pickPlayer(winnerRarity, rng)
   const winnerIndex = 37
@@ -211,18 +235,37 @@ export const rollPack = (packId: PackId, serial: number): PackRoll => {
 }
 
 export const collectPackWinner = (state: PackState, winner: PackCard): PackState => ({
-  version: 1,
+  version: 2,
   serial: Math.max(state.serial + 1, winner.serial + 1),
   inventory: [winner, ...state.inventory],
-  history: [winner, ...state.history].slice(0, 40),
+  history: [winner, ...state.history].slice(0, 60),
+})
+
+export const clearPackCollection = (state: PackState): PackState => ({
+  version: 2,
+  serial: state.serial,
+  inventory: [],
+  history: [],
 })
 
 export const packCollectionStats = (state: PackState) => {
-  const unique = new Set(state.inventory.map((card) => card.alias.toLocaleLowerCase('en-US'))).size
+  const aliases = state.inventory.map((card) => card.alias.toLocaleLowerCase('en-US'))
+  const unique = new Set(aliases).size
   const legendary = state.inventory.filter((card) => card.rarity === 'legendary').length
   const epic = state.inventory.filter((card) => card.rarity === 'epic').length
-  return { total: state.inventory.length, unique, legendary, epic }
+  const bestPower = state.inventory.reduce((best, card) => Math.max(best, card.power), 0)
+  return {
+    total: state.inventory.length,
+    unique,
+    duplicates: state.inventory.length - unique,
+    legendary,
+    epic,
+    bestPower,
+  }
 }
+
+export const packAliasCount = (state: PackState, alias: string) =>
+  state.inventory.filter((card) => card.alias.toLocaleLowerCase('en-US') === alias.toLocaleLowerCase('en-US')).length
 
 export const PACK_POOL_STATS = {
   totalPlayers: REAL_PLAYERS.length,

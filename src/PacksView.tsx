@@ -19,6 +19,14 @@ import { countryFlag, playerPhoto } from './playerVisuals'
 const PACK_SAVE_KEY = 'esport-ai-manager-packs-v1'
 const SPIN_MS = 5200
 
+const ROLE_LABELS: Record<NonNullable<PackCard['role']>, string> = {
+  IGL: 'IGL',
+  Entry: 'Энтри',
+  Rifler: 'Рифлер',
+  AWP: 'AWP',
+  Support: 'Саппорт',
+}
+
 const loadPackState = (): PackState => {
   try {
     const raw = localStorage.getItem(PACK_SAVE_KEY)
@@ -61,7 +69,7 @@ function CollectionCard({ card }: { card: PackCard }) {
     <article className={'collection-card rarity-' + card.rarity} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
       <div className="collection-card-top">
         <b>{card.power}</b>
-        <span>{card.role ?? 'ПРО'}</span>
+        <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
       </div>
       <div className="collection-photo">
         <span>{card.alias.slice(0, 3).toUpperCase()}</span>
@@ -199,7 +207,7 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
               </p>
             </div>
             <div className="pack-winner-actions">
-              <button className="secondary" onClick={() => openPack(roll.pack.id)} disabled={credits < roll.pack.price}>Открыть ещё · {roll.pack.price}</button>
+              <button className="secondary" onClick={() => openPack(roll.pack.id)} disabled={credits < roll.pack.price}>Открыть ещё · {roll.pack.price} кр.</button>
             </div>
           </div>
         )}

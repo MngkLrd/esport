@@ -1,5 +1,5 @@
 import { REAL_PLAYERS } from './players'
-import { createPackState, type PackState } from './packState'
+import { createPackState, type PackCard, type PackState } from './packState'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
@@ -71,7 +71,7 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 5
+  version: 6
   saveId: string
   seed: number
   week: number
@@ -84,6 +84,7 @@ export interface GameState {
   streak: number
   seasonPoints: number
   staffEnergy: number
+  welcomeComplete: boolean
   roster: Player[]
   startingFive: string[]
   lineupContinuity: number
@@ -187,6 +188,54 @@ export const teamRating = (roster: Player[], startingFive?: string[], continuity
   return Math.round(clamp(raw * 0.87 + chemistry(roster, active.map((p) => p.id), continuity) * 0.13))
 }
 
+export const playerFromPackCard = (card: PackCard, index: number): Player => {
+  const role = card.role ?? 'Rifler'
+  const aim = card.cardStats?.aim ?? card.power
+  const gameSense = card.cardStats?.positioning ?? clamp(card.power - 2)
+  const utility = card.cardStats?.utility ?? clamp(card.power - 5)
+  const clutch = card.cardStats?.clutch ?? clamp(card.power - 1)
+  const leadership = role === 'IGL'
+    ? clamp(gameSense + 12)
+    : role === 'Support'
+      ? clamp(gameSense + 3)
+      : clamp(gameSense - 8)
+  const age = card.age ?? 23
+  const potential = clamp(card.power + Math.max(2, 27 - age) + (role === 'Entry' ? 3 : 0), 45, 99)
+  const salary = Math.max(55, Math.round(35 + card.power * 1.05))
+
+  return {
+    id: 'welcome-' + index + '-' + card.alias.toLocaleLowerCase('en-US'),
+    alias: card.alias,
+    firstName: card.realName ?? card.alias,
+    realName: card.realName ?? card.alias,
+    country: card.country ?? 'Неизвестно',
+    team: card.team,
+    age,
+    role,
+    aim,
+    gameSense,
+    utility,
+    clutch,
+    leadership,
+    form: 60,
+    morale: 72,
+    fatigue: 0,
+    potential,
+    salary,
+    contractWeeks: 10 + (index % 3),
+    traits: role === 'IGL'
+      ? ['Коллер', 'Структура']
+      : role === 'AWP'
+        ? ['Снайпер', 'Контроль карты']
+        : role === 'Support'
+          ? ['Командный игрок', 'Гранаты']
+          : role === 'Entry'
+            ? ['Первый контакт', 'Темп']
+            : ['Рифлер', 'Гибкий'],
+    bio: (card.realName ?? card.alias) + ' · ' + (card.country ?? 'страна неизвестна') + ' · ' + card.team + '.',
+  }
+}
+
 const initialRoster: Player[] = [
   {
     id: 'p-donk', alias: 'donk', firstName: 'Danil Kryshkovets', realName: 'Danil Kryshkovets', country: 'Russia', team: 'Spirit', age: 19, role: 'Entry',
@@ -233,7 +282,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 5,
+  version: 6,
   saveId: createSaveId(),
   seed: 271828,
   week: 1,
@@ -246,9 +295,10 @@ export const createInitialState = (): GameState => ({
   streak: 0,
   seasonPoints: 0,
   staffEnergy: 3,
-  roster: initialRoster.map((p) => ({ ...p, traits: [...p.traits] })),
-  startingFive: initialRoster.slice(0, 5).map((p) => p.id),
-  lineupContinuity: 62,
+  welcomeComplete: false,
+  roster: [],
+  startingFive: [],
+  lineupContinuity: 50,
   prospects: [],
   scoutCycle: 0,
   history: [],
@@ -258,7 +308,7 @@ export const createInitialState = (): GameState => ({
       week: 1,
       kind: 'media' as const,
       title: 'Новый проект выходит на сцену',
-      body: 'Двенадцать недель. Шесть игроков. Одна стартовая пятёрка. Зарплаты, контракты и усталость имеют значение каждую неделю: даже сильный состав можно развалить плохим менеджментом.',
+      body: 'Двенадцать недель начинаются с welcome-пака. Пять выпавших игроков становятся первой стартовой пятёркой клуба.',
     },
   ],
   lastPayroll: 0,
@@ -269,12 +319,23 @@ export const createInitialState = (): GameState => ({
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if (parsed.version === 5 && Array.isArray(parsed.roster)) {
+  if (parsed.version === 6 && Array.isArray(parsed.roster)) {
     return {
       ...(parsed as unknown as GameState),
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      welcomeComplete: Boolean(parsed.welcomeComplete),
       packs: parsed.packs?.version === 2 ? parsed.packs : createPackState(),
     }
+  }
+
+  if (parsed.version === 5 && Array.isArray(parsed.roster)) {
+    return {
+      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete'>),
+      version: 6,
+      saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      welcomeComplete: true,
+      packs: parsed.packs?.version === 2 ? parsed.packs : createPackState(),
+    } as GameState
   }
 
   if ((parsed.version === 4 || parsed.version === 3 || parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
@@ -308,8 +369,9 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 5,
+      version: 6,
       saveId: createSaveId(),
+      welcomeComplete: true,
       seasonLength: 12,
       roster,
       startingFive: Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id),

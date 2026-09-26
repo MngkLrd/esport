@@ -44,36 +44,36 @@ export interface PackRoll {
 export const PACKS: readonly PackDefinition[] = [
   {
     id: 'academy',
-    name: 'Academy Drop',
-    eyebrow: 'LOW COST · DEEP POOL',
-    description: 'Cheap route into the long tail. Mostly prospects, with a small chance of a star.',
+    name: 'Академический набор',
+    eyebrow: 'НИЗКАЯ ЦЕНА · БОЛЬШОЙ ПУЛ',
+    description: 'Дешёвый вход в большой пул. В основном перспективные игроки, но есть небольшой шанс на звезду.',
     price: 180,
     accent: '#8ca3b8',
     weights: { common: 52, uncommon: 31, rare: 13, epic: 3.5, legendary: 0.5 },
   },
   {
     id: 'challenger',
-    name: 'Challenger Case',
-    eyebrow: 'BALANCED · COMPETITIVE',
-    description: 'A broader competitive pack with a meaningful blue-and-purple hit rate.',
+    name: 'Набор претендента',
+    eyebrow: 'СБАЛАНСИРОВАННЫЙ · СОРЕВНОВАТЕЛЬНЫЙ',
+    description: 'Более сильный соревновательный набор с заметным шансом на редкие и эпические карты.',
     price: 420,
     accent: '#54a9ff',
     weights: { common: 30, uncommon: 35, rare: 23, epic: 10, legendary: 2 },
   },
   {
     id: 'major',
-    name: 'Major Night',
-    eyebrow: 'PREMIUM · STAR HUNT',
-    description: 'Expensive, dramatic and biased toward recognizable high-ranked players.',
+    name: 'Ночь мейджора',
+    eyebrow: 'ПРЕМИУМ · ОХОТА ЗА ЗВЁЗДАМИ',
+    description: 'Дорогой набор с повышенным шансом на узнаваемых игроков высокого уровня.',
     price: 850,
     accent: '#9b7cff',
     weights: { common: 12, uncommon: 28, rare: 34, epic: 21, legendary: 5 },
   },
   {
     id: 'afterdark',
-    name: 'After Dark',
-    eyebrow: 'HIGH ROLLER · NO GREYS',
-    description: 'No common cards. Built for late-save collecting and painful credit decisions.',
+    name: 'После полуночи',
+    eyebrow: 'ВЫСОКИЕ СТАВКИ · БЕЗ ОБЫЧНЫХ',
+    description: 'Без обычных карт. Для поздней стадии сохранения, когда коллекция начинает дорого стоить.',
     price: 1450,
     accent: '#ffb84d',
     weights: { common: 0, uncommon: 20, rare: 37, epic: 33, legendary: 10 },
@@ -81,11 +81,11 @@ export const PACKS: readonly PackDefinition[] = [
 ] as const
 
 export const RARITY_LABEL: Record<PackRarity, string> = {
-  common: 'COMMON',
-  uncommon: 'UNCOMMON',
-  rare: 'RARE',
-  epic: 'EPIC',
-  legendary: 'LEGENDARY',
+  common: 'ОБЫЧНАЯ',
+  uncommon: 'НЕОБЫЧНАЯ',
+  rare: 'РЕДКАЯ',
+  epic: 'ЭПИЧЕСКАЯ',
+  legendary: 'ЛЕГЕНДАРНАЯ',
 }
 
 export const RARITY_COLOR: Record<PackRarity, string> = {

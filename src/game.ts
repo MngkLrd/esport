@@ -361,7 +361,7 @@ const performanceRating = (player: Player, won: boolean, tactic: TacticalPlan, r
 }
 
 export const weeklyPayroll = (state: GameState) =>
-  state.roster.reduce((sum, player) => sum + player.salary, 0)
+  state.roster.reduce((sum, player) => sum + (player.contractWeeks > 0 ? player.salary : 0), 0)
 
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   const active = getStartingFive(state.roster, state.startingFive)
@@ -665,7 +665,7 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
   if (state.roster.length <= 5) return state
   const player = state.roster.find((p) => p.id === playerId)
   if (!player) return state
-  const severance = player.salary
+  const severance = player.contractWeeks <= 0 ? 0 : player.salary
   if (state.credits < severance) return state
   return {
     ...state,

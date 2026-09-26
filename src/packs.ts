@@ -1,4 +1,5 @@
 import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
+import { cardStatsForAlias, type PlayerCardStats } from './cardStats'
 
 export type PackRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 export type PackId = 'academy' | 'challenger' | 'major' | 'afterdark'
@@ -24,6 +25,8 @@ export interface PackCard {
   rarity: PackRarity
   sourceRating: number | null
   sourceRank: number | null
+  cardStats: PlayerCardStats | null
+  edition: string
   packId: PackId
   serial: number
 }
@@ -119,10 +122,12 @@ const mulberry32 = (seed: number) => () => {
 
 const aliasNoise = (alias: string) => (hashSeed(alias.toLocaleLowerCase('en-US')) % 7) - 3
 
-// Pack power is a 1–100 presentation scale. The current pro pool intentionally
-// occupies roughly 54–99: curated profiles use the public rating seed, while
-// long-tail VRS players use the ranking of their snapshot team.
+// Pack power prefers the current HLTV card OVR. Players without usable HLTV
+// statistics keep the old VRS/rating fallback so every roster entry remains packable.
 export const playerPower = (player: RealPlayerSeed) => {
+  const hltv = cardStatsForAlias(player.alias, player.role)
+  if (hltv) return hltv.ovr
+
   const noise = aliasNoise(player.alias)
   if (player.rating != null) {
     return clamp(Math.round(60 + (player.rating - 0.8) * 62 + noise), 58, 99)
@@ -135,14 +140,20 @@ export const playerPower = (player: RealPlayerSeed) => {
   return clamp(63 + noise - Math.floor((rank - 160) / 90), 54, 70)
 }
 
-export const rarityForPower = (power: number): PackRarity => {
-  if (power >= 91) return 'legendary'
-  if (power >= 84) return 'epic'
-  if (power >= 76) return 'rare'
-  if (power >= 67) return 'uncommon'
+const rarityForPercentile = (index: number, total: number): PackRarity => {
+  const percentile = (index + 1) / Math.max(1, total)
+  if (percentile <= 0.025) return 'legendary'
+  if (percentile <= 0.10) return 'epic'
+  if (percentile <= 0.30) return 'rare'
+  if (percentile <= 0.60) return 'uncommon'
   return 'common'
 }
 
+const rankedPool = REAL_PLAYERS
+  .map((player) => ({ player, power: playerPower(player) }))
+  .sort((a, b) => b.power - a.power || a.player.alias.localeCompare(b.player.alias, 'en-US'))
+
+const rarityByAlias = new Map<string, PackRarity>()
 const pools: Record<PackRarity, RealPlayerSeed[]> = {
   common: [],
   uncommon: [],
@@ -151,7 +162,14 @@ const pools: Record<PackRarity, RealPlayerSeed[]> = {
   legendary: [],
 }
 
-for (const player of REAL_PLAYERS) pools[rarityForPower(playerPower(player))].push(player)
+rankedPool.forEach(({ player }, index) => {
+  const rarity = rarityForPercentile(index, rankedPool.length)
+  rarityByAlias.set(player.alias.toLocaleLowerCase('en-US'), rarity)
+  pools[rarity].push(player)
+})
+
+const rarityForPlayer = (player: RealPlayerSeed): PackRarity =>
+  rarityByAlias.get(player.alias.toLocaleLowerCase('en-US')) ?? 'common'
 
 const pickRarity = (weights: Record<PackRarity, number>, rng: () => number) => {
   const rarities = Object.keys(weights) as PackRarity[]
@@ -170,7 +188,15 @@ const pickPlayer = (rarity: PackRarity, rng: () => number) => {
 }
 
 const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: number): PackCard => {
-  const power = playerPower(player)
+  const cardStats = cardStatsForAlias(player.alias, player.role)
+  const power = cardStats?.ovr ?? playerPower(player)
+  const edition = cardStats
+    ? (cardStats.window === 'calendar-year'
+        ? cardStats.periodEnd.slice(0, 4)
+        : cardStats.window === 'past3m'
+          ? cardStats.periodStart.slice(5, 7) + '–' + cardStats.periodEnd.slice(5, 7) + " ’" + cardStats.periodEnd.slice(2, 4)
+          : "’" + cardStats.periodStart.slice(2, 4) + "–’" + cardStats.periodEnd.slice(2, 4))
+    : 'VRS'
   return {
     id: ['card', serial, slot, player.alias].join('-'),
     alias: player.alias,
@@ -179,9 +205,11 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     team: player.team,
     role: player.role,
     power,
-    rarity: rarityForPower(power),
+    rarity: rarityForPlayer(player),
     sourceRating: player.rating,
     sourceRank: player.vrsRank ?? null,
+    cardStats,
+    edition,
     packId,
     serial,
   }
@@ -202,6 +230,18 @@ const migrateCard = (raw: unknown): PackCard | null => {
     ...(card as PackCard),
     sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
     sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
+    cardStats: card.cardStats ?? cardStatsForAlias(card.alias, card.role ?? null),
+    edition: typeof card.edition === 'string'
+      ? card.edition
+      : (() => {
+          const stats = cardStatsForAlias(card.alias, card.role ?? null)
+          if (!stats) return 'VRS'
+          return stats.window === 'calendar-year'
+            ? stats.periodEnd.slice(0, 4)
+            : stats.window === 'past3m'
+              ? stats.periodStart.slice(5, 7) + '–' + stats.periodEnd.slice(5, 7) + " ’" + stats.periodEnd.slice(2, 4)
+              : "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
+        })(),
   }
 }
 

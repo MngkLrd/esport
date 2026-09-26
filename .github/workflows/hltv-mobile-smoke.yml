@@ -1,0 +1,37 @@
+name: HLTV source smoke
+
+on:
+  push:
+    branches:
+      - feat/hltv-card-snapshots
+    paths:
+      - .github/workflows/hltv-mobile-smoke.yml
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests curl_cffi
+      - name: Probe HLTV-derived API and app frontend
+        run: |
+          python - <<'PY'
+          import requests
+          from curl_cffi import requests as crequests
+
+          for url in [
+              "https://api.csapi.de/counts/",
+              "https://api.csapi.de/players/11893?start_date=2025-09-26&end_date=2026-09-26",
+              "https://api.csapi.de/players/?name=ZywOo&limit=5",
+          ]:
+              r=requests.get(url,timeout=20)
+              print("CSAPI",url,r.status_code,r.text[:1800])
+              r.raise_for_status()
+
+          s=crequests.Session(impersonate="chrome120")
+          r=s.get("https://app.hltv.org/player/11893/zywoo",timeout=20)
+          print("APP-HLTV",r.status_code,r.text[:1200])
+          PY

@@ -69,6 +69,7 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
         <b>{card.power}</b>
         <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
       </div>
+      <div className="collection-edition">{card.edition}</div>
       {count > 1 && <div className="collection-count">×{count}</div>}
       <div className="collection-photo">
         <span>{card.alias.slice(0, 3).toUpperCase()}</span>
@@ -86,6 +87,14 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
         <strong>{card.alias}</strong>
         <span>{countryFlag(card.country ?? 'Неизвестно')} {card.team}</span>
       </div>
+      {card.cardStats && (
+        <div className="collection-card-stats">
+          <span><b>{card.cardStats.aim}</b>АИМ</span>
+          <span><b>{card.cardStats.utility}</b>УТЛ</span>
+          <span><b>{card.cardStats.positioning}</b>ПОЗ</span>
+          <span><b>{card.cardStats.clutch}</b>КЛА</span>
+        </div>
+      )}
       <div className="collection-rarity">{RARITY_LABEL[card.rarity]}</div>
     </article>
   )
@@ -93,11 +102,16 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
 
 function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean }) {
   const photo = playerPhoto(card.alias)
-  const source = card.sourceRating != null
-    ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
-    : card.sourceRank
-      ? 'место команды VRS #' + card.sourceRank
-      : 'пул VRS'
+  const source = card.cardStats
+    ? (card.cardStats.scoreSource === 'hltv-player-screen' ? 'HLTV current' : 'HLTV matches') +
+      ' · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd +
+      (card.cardStats.maps != null ? ' · ' + card.cardStats.maps + ' карт' : '') +
+      (card.cardStats.rating != null ? ' · rating ' + card.cardStats.rating.toFixed(3) : '')
+    : card.sourceRating != null
+      ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
+      : card.sourceRank
+        ? 'место команды VRS #' + card.sourceRank
+        : 'пул VRS'
 
   return (
     <div
@@ -111,6 +125,7 @@ function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean 
         <div className="pack-reveal-rating">
           <b>{card.power}</b>
           <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
+          <i>{card.edition}</i>
         </div>
         <div className="pack-reveal-country">{countryFlag(card.country ?? 'Неизвестно')}</div>
         <div className="pack-reveal-photo">
@@ -128,6 +143,14 @@ function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean 
           <strong>{card.alias}</strong>
           <span>{card.team}</span>
         </div>
+        {card.cardStats && (
+          <div className="pack-reveal-card-stats">
+            <span><b>{card.cardStats.aim}</b>АИМ</span>
+            <span><b>{card.cardStats.utility}</b>УТЛ</span>
+            <span><b>{card.cardStats.positioning}</b>ПОЗ</span>
+            <span><b>{card.cardStats.clutch}</b>КЛА</span>
+          </div>
+        )}
       </div>
 
       <div className="pack-reveal-copy">
@@ -308,13 +331,13 @@ export function PacksView({
 
       <div className="pack-rating-note">
         <div>
-          <span>КАК СЧИТАЕТСЯ СИЛА 1–100</span>
-          <strong>Это игровая шкала, а не официальный рейтинг игрока.</strong>
+          <span>КАРТОЧКИ · HLTV CURRENT + HISTORY</span>
+          <strong>Прямые skill scores HLTV имеют приоритет; история используется как fallback.</strong>
         </div>
         <p>
-          Для профилей с индивидуальным рейтингом используется формула <code>60 + (rating − 0.80) × 62</code> и стабильный
-          модификатор ника от −3 до +3. Для остальных базовый диапазон задаёт место команды в VRS. В текущем пуле
-          профессионалов фактический диапазон примерно 54–99.
+          Для текущих профилей АИМ = Firepower, УТЛ = Utility, КЛА = Clutching, а ПОЗ собирается из Trading, Opening и Entrying.
+          Если прямых skill scores нет, карточка строится из HLTV-derived матчей за последние 12 месяцев или последний доступный
+          календарный год. Только когда подтверждённых матчевых данных нет вообще, игрок остаётся на <code>VRS</code>-fallback.
         </p>
       </div>
 

@@ -1,0 +1,59 @@
+name: HLTV card snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/hltv-card-snapshots
+    paths:
+      - scripts/update-hltv-card-stats.py
+      - src/players.ts
+      - src/vrs.ts
+      - src/playerMetadata.ts
+      - .github/workflows/hltv-card-snapshot.yml
+
+concurrency:
+  group: hltv-card-snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install stats client
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Fetch HLTV-derived last-12-month player stats
+        run: >-
+          python scripts/update-hltv-card-stats.py
+          --start-date 2025-09-26
+          --end-date 2026-09-26
+          --output src/hltvCardStats.generated.ts
+          --report data/hltv-card-report.json
+
+      - name: Commit generated snapshot
+        run: |
+          if git diff --quiet -- src/hltvCardStats.generated.ts data/hltv-card-report.json; then
+            echo "Snapshot unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/hltvCardStats.generated.ts data/hltv-card-report.json
+          git commit -m "data: refresh HLTV 12-month card snapshot"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"

@@ -23,6 +23,7 @@ The previous build exposed many management concepts but several of them were mos
 - AI Director is currently a **rule-based live advisor** over canonical state; it does not pretend an LLM is connected
 - versioned browser save with migration from the v0.1 save
 - collectible player packs bound to the club save, with deterministic per-save rolls, animated reel + cinematic reveal, duplicate tracking, filters and collection history
+- card snapshots for the full 1,634-player pool, preferring direct HLTV PlayerScreen skill scores and falling back to HLTV-derived match aggregates
 - in-app Credits page documenting GitHub references, source datasets and license boundaries
 
 The architecture rule remains:
@@ -49,13 +50,15 @@ This is still a browser-only prototype. It does **not** yet have accounts, serve
 
 Those are follow-up systems, not features claimed by the current build.
 
+The card-data pipeline is intentionally period-aware (`past3m`, `last12m`, `calendar-year`) so yearly editions can be added later without changing the pack/save model.
+
 ## Deployment
 
 The Vite base path is configured for this repository at `/esport/`. CI builds every branch and PR. The Pages workflow deploys `main`.
 
 ## Fan-project and source boundary
 
-This is a personal, non-commercial fan manager. It now uses public real-player aliases, team snapshot data and remotely loaded player photographs where a verified mapping exists. Gameplay ratings, pack power, wages, potential and match outcomes are our own simulation values. Pack power uses a 1–100 presentation scale: curated profiles use the public individual rating as a seed, while long-tail players use their Valve VRS team rank; a stable alias modifier keeps ties from collapsing to identical values.
+This is a personal, non-commercial fan manager. It now uses public real-player aliases, team snapshot data and remotely loaded player photographs where a verified mapping exists. Gameplay ratings, wages, potential and match outcomes are our own simulation values. Collectible-card attributes are a separate data layer: direct HLTV PlayerScreen skill scores are preferred, then HLTV-derived last-12-month / latest-year aggregates are used when current skill scores are unavailable. Players without usable verified statistics retain the older VRS/rating fallback rather than receiving fabricated HLTV numbers.
 
 Public GitHub repositories are not treated as automatically reusable. The pack animation is our own React/TypeScript implementation informed by public case-opening references; repositories without a compatible license are credited as references rather than copied. See the in-app **Credits** page for authors, source links and license notes.
 

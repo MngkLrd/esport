@@ -2,7 +2,7 @@ import { HLTV_CARD_SNAPSHOTS } from './hltvCardStats.generated'
 import type { RealPlayerRole } from './players'
 
 export interface HltvRawStats {
-  maps: number
+  maps: number | null
   rating: number | null
   adr: number | null
   kast: number | null
@@ -23,8 +23,9 @@ export interface HltvPlayerSnapshot {
   playerId: number | null
   profileUrl: string | null
   status: 'ok' | 'no-data' | 'unmatched' | 'error'
-  matchMethod: 'hltv-id' | 'exact-alias' | 'normalized-alias' | null
-  window: 'last12m' | 'calendar-year'
+  matchMethod: 'hltv-id' | 'exact-alias' | 'normalized-alias' | 'hltv-player-screen' | null
+  scoreSource: 'hltv-player-screen' | 'hltv-match-derived' | null
+  window: 'past3m' | 'last12m' | 'calendar-year'
   periodStart: string
   periodEnd: string
   raw: HltvRawStats
@@ -39,7 +40,7 @@ export interface PlayerCardStats extends DerivedCardScores {
   window: HltvPlayerSnapshot['window']
   periodStart: string
   periodEnd: string
-  maps: number
+  maps: number | null
   rating: number | null
 }
 
@@ -76,7 +77,9 @@ export const cardStatsFromHltv = (
     utility,
     positioning,
     clutch,
-    confidence: maps >= 60 ? 'high' : maps >= 20 ? 'medium' : 'low',
+    confidence: snapshot.scoreSource === 'hltv-player-screen'
+      ? 'medium'
+      : (maps != null && maps >= 60 ? 'high' : maps != null && maps >= 20 ? 'medium' : 'low'),
     source: 'hltv',
     window: snapshot.window,
     periodStart: snapshot.periodStart,

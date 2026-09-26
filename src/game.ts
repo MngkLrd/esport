@@ -1,4 +1,5 @@
 import { REAL_PLAYERS } from './players'
+import { createPackState, type PackState } from './packs'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
@@ -70,7 +71,8 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 4
+  version: 5
+  saveId: string
   seed: number
   week: number
   seasonLength: number
@@ -91,9 +93,16 @@ export interface GameState {
   news: NewsItem[]
   lastPayroll: number
   lastWeekNet: number
+  packs: PackState
 }
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
+
+const createSaveId = () => {
+  const randomUUID = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)
+  if (randomUUID) return randomUUID()
+  return 'save-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
+}
 
 const hashSeed = (input: string) => {
   let h = 2166136261
@@ -224,7 +233,8 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 4,
+  version: 5,
+  saveId: createSaveId(),
   seed: 271828,
   week: 1,
   seasonLength: 12,
@@ -253,14 +263,21 @@ export const createInitialState = (): GameState => ({
   ],
   lastPayroll: 0,
   lastWeekNet: 0,
+  packs: createPackState(),
 })
 
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
-  const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; [key: string]: unknown }
-  if (parsed.version === 4 && Array.isArray(parsed.roster)) return parsed as unknown as GameState
+  const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
+  if (parsed.version === 5 && Array.isArray(parsed.roster)) {
+    return {
+      ...(parsed as unknown as GameState),
+      saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      packs: parsed.packs?.version === 2 ? parsed.packs : createPackState(),
+    }
+  }
 
-  if ((parsed.version === 3 || parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 4 || parsed.version === 3 || parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
     const base = createInitialState()
     const identities = proPlayerIdentities
 
@@ -291,7 +308,8 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 4,
+      version: 5,
+      saveId: createSaveId(),
       seasonLength: 12,
       roster,
       startingFive: Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id),
@@ -301,6 +319,7 @@ export const migrateState = (raw: unknown): GameState => {
       news: Array.isArray(parsed.news) ? parsed.news as NewsItem[] : base.news,
       lastPayroll: typeof parsed.lastPayroll === 'number' ? parsed.lastPayroll : 0,
       lastWeekNet: typeof parsed.lastWeekNet === 'number' ? parsed.lastWeekNet : 0,
+      packs: createPackState(),
     } as GameState
   }
   return createInitialState()

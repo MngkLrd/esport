@@ -1,5 +1,5 @@
 import { REAL_PLAYERS } from './players'
-import { createPackState, type PackState } from './packs'
+import { createPackState, type PackState } from './packState'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'

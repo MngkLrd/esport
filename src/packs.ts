@@ -1,4 +1,5 @@
 import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
+import { cardStatsForAlias, type PlayerCardStats } from './cardStats'
 
 export type PackRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 export type PackId = 'academy' | 'challenger' | 'major' | 'afterdark'
@@ -24,6 +25,8 @@ export interface PackCard {
   rarity: PackRarity
   sourceRating: number | null
   sourceRank: number | null
+  cardStats: PlayerCardStats | null
+  edition: string
   packId: PackId
   serial: number
 }
@@ -123,6 +126,9 @@ const aliasNoise = (alias: string) => (hashSeed(alias.toLocaleLowerCase('en-US')
 // occupies roughly 54–99: curated profiles use the public rating seed, while
 // long-tail VRS players use the ranking of their snapshot team.
 export const playerPower = (player: RealPlayerSeed) => {
+  const hltv = cardStatsForAlias(player.alias, player.role)
+  if (hltv) return hltv.ovr
+
   const noise = aliasNoise(player.alias)
   if (player.rating != null) {
     return clamp(Math.round(60 + (player.rating - 0.8) * 62 + noise), 58, 99)
@@ -170,7 +176,11 @@ const pickPlayer = (rarity: PackRarity, rng: () => number) => {
 }
 
 const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: number): PackCard => {
-  const power = playerPower(player)
+  const cardStats = cardStatsForAlias(player.alias, player.role)
+  const power = cardStats?.ovr ?? playerPower(player)
+  const edition = cardStats
+    ? cardStats.periodStart.slice(2, 4) + '–' + cardStats.periodEnd.slice(2, 4)
+    : 'VRS'
   return {
     id: ['card', serial, slot, player.alias].join('-'),
     alias: player.alias,
@@ -182,6 +192,8 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     rarity: rarityForPower(power),
     sourceRating: player.rating,
     sourceRank: player.vrsRank ?? null,
+    cardStats,
+    edition,
     packId,
     serial,
   }
@@ -202,6 +214,12 @@ const migrateCard = (raw: unknown): PackCard | null => {
     ...(card as PackCard),
     sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
     sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
+    cardStats: card.cardStats ?? cardStatsForAlias(card.alias, card.role ?? null),
+    edition: typeof card.edition === 'string'
+      ? card.edition
+      : (cardStatsForAlias(card.alias, card.role ?? null)
+          ? cardStatsForAlias(card.alias, card.role ?? null)!.periodStart.slice(2, 4) + '–' + cardStatsForAlias(card.alias, card.role ?? null)!.periodEnd.slice(2, 4)
+          : 'VRS'),
   }
 }
 

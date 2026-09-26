@@ -1,5 +1,5 @@
 import { REAL_PLAYERS, type RealPlayerSeed } from './players'
-import { cardStatsForAlias, type PlayerCardStats } from './cardStats'
+import { cardStatsForAlias, hltvSnapshotForAlias, type PlayerCardStats } from './cardStats'
 import type {
   PackCard,
   PackDefinition,
@@ -166,6 +166,7 @@ const pickPlayer = (rarity: PackRarity, rng: () => number) => {
 
 const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: number): PackCard => {
   const cardStats = cardStatsForAlias(player.alias, player.role)
+  const snapshot = hltvSnapshotForAlias(player.alias)
   const power = cardStats?.ovr ?? playerPower(player)
 
   return {
@@ -174,6 +175,8 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     realName: player.realName,
     country: player.country,
     team: player.team,
+    age: player.age,
+    profileId: snapshot?.playerId ?? null,
     role: player.role,
     power,
     rarity: rarityForPlayer(player),
@@ -187,18 +190,22 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
 }
 
 const hydrateCard = (card: PackCard): PackCard => {
-  if (card.cardStats) return card
-
   const player = playerByAlias.get(card.alias.toLocaleLowerCase('en-US'))
-  const stats = cardStatsForAlias(card.alias, card.role)
-  if (!stats) return card
+  const stats = card.cardStats ?? cardStatsForAlias(card.alias, card.role)
+  const snapshot = hltvSnapshotForAlias(card.alias)
 
   return {
     ...card,
-    power: stats.ovr,
+    realName: card.realName ?? player?.realName ?? null,
+    country: card.country ?? player?.country ?? null,
+    team: card.team || player?.team || 'Free agent',
+    age: card.age ?? player?.age ?? null,
+    profileId: card.profileId ?? snapshot?.playerId ?? null,
+    role: card.role ?? player?.role ?? null,
+    power: stats?.ovr ?? card.power,
     rarity: player ? rarityForPlayer(player) : card.rarity,
     cardStats: stats,
-    edition: editionForStats(stats),
+    edition: stats ? editionForStats(stats) : card.edition,
   }
 }
 
@@ -208,7 +215,45 @@ export const hydratePackState = (state: PackState): PackState => ({
   history: state.history.map(hydrateCard),
 })
 
-export const rollPack = (packId: PackId, serial: number, saveId: string): PackRoll => {
+const WELCOME_WEIGHTS: Record<PackRarity, number> = {
+  common: 45,
+  uncommon: 35,
+  rare: 15,
+  epic: 4.5,
+  legendary: 0.5,
+}
+
+const WELCOME_ROLES = ['IGL', 'AWP', 'Entry', 'Support', 'Rifler'] as const
+
+const pickPlayerForRole = (
+  role: (typeof WELCOME_ROLES)[number],
+  rarity: PackRarity,
+  rng: () => number,
+  usedAliases: Set<string>,
+) => {
+  const rolePool = pools[rarity].filter(
+    (player) => player.role === role && !usedAliases.has(player.alias.toLocaleLowerCase('en-US')),
+  )
+  const fallback = REAL_PLAYERS.filter(
+    (player) => player.role === role && !usedAliases.has(player.alias.toLocaleLowerCase('en-US')),
+  )
+  const pool = rolePool.length ? rolePool : fallback.length ? fallback : REAL_PLAYERS
+  return pool[Math.floor(rng() * pool.length)]
+}
+
+export const rollWelcomePack = (saveId: string): PackCard[] => {
+  const rng = mulberry32(hashSeed(['welcome-v1', saveId].join(':')))
+  const usedAliases = new Set<string>()
+
+  return WELCOME_ROLES.map((role, index) => {
+    const rarity = pickRarity(WELCOME_WEIGHTS, rng)
+    const player = pickPlayerForRole(role, rarity, rng, usedAliases)
+    usedAliases.add(player.alias.toLocaleLowerCase('en-US'))
+    return toCard(player, 'welcome', -1, index)
+  })
+}
+
+export const rollPack = (packId: Exclude<PackId, 'welcome'>, serial: number, saveId: string): PackRoll => {
   const pack = PACKS.find((candidate) => candidate.id === packId) ?? PACKS[0]
   const rng = mulberry32(hashSeed(['pack-v2', saveId, packId, serial].join(':')))
   const winnerRarity = pickRarity(pack.weights, rng)

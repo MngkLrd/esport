@@ -1,4 +1,5 @@
 import { VRS_PLAYERS } from './vrs'
+import { metadataForAlias } from './playerMetadata'
 
 export type RealPlayerRole = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 
@@ -12,6 +13,7 @@ export interface RealPlayerSeed {
   rating: number | null
   vrsRank?: number | null
   source?: 'curated-profile' | 'valve-vrs'
+  profileUrl?: string | null
 }
 
 // Identity, nationality, current team and age were verified against current HLTV
@@ -66,17 +68,21 @@ const curatedAliases = new Set(CURATED_REAL_PLAYERS.map((player) => player.alias
 
 const VRS_ONLY_PLAYERS: readonly RealPlayerSeed[] = VRS_PLAYERS
   .filter((player) => !curatedAliases.has(player.alias.toLocaleLowerCase('en-US')))
-  .map((player) => ({
-    alias: player.alias,
-    realName: null,
-    country: null,
-    team: player.team,
-    age: null,
-    role: null,
-    rating: null,
-    vrsRank: player.teamRank,
-    source: 'valve-vrs' as const,
-  }))
+  .map((player) => {
+    const metadata = metadataForAlias(player.alias)
+    return {
+      alias: player.alias,
+      realName: metadata?.realName ?? null,
+      country: metadata?.country ?? null,
+      team: player.team,
+      age: metadata?.age ?? null,
+      role: metadata?.role ?? null,
+      rating: null,
+      vrsRank: player.teamRank,
+      source: 'valve-vrs' as const,
+      profileUrl: metadata?.profileUrl ?? null,
+    }
+  })
 
 export const REAL_PLAYERS: readonly RealPlayerSeed[] = [
   ...CURATED_REAL_PLAYERS,

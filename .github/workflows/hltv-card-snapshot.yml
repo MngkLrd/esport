@@ -1,0 +1,64 @@
+name: HLTV card snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/hltv-card-snapshots
+    paths:
+      - scripts/update-hltv-card-stats.py
+      - src/players.ts
+      - src/vrs.ts
+      - src/playerMetadata.ts
+      - .github/workflows/hltv-card-snapshot.yml
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/hltv-card-snapshots
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install scraper dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Fetch last 12 months from HLTV
+        run: >-
+          python scripts/update-hltv-card-stats.py
+          --start-date 2025-09-26
+          --end-date 2026-09-26
+          --workers 4
+          --output src/hltvCardStats.generated.ts
+          --report hltv-card-report.json
+
+      - name: Upload snapshot report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hltv-card-report
+          path: |
+            hltv-card-report.json
+            src/hltvCardStats.generated.ts
+
+      - name: Commit generated snapshot
+        run: |
+          if git diff --quiet -- src/hltvCardStats.generated.ts; then
+            echo "Snapshot unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/hltvCardStats.generated.ts
+          git commit -m "data: refresh HLTV 12-month card snapshot"
+          git push origin HEAD:feat/hltv-card-snapshots

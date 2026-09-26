@@ -77,9 +77,9 @@ function PlayerCard({
     <article className={'player-card ' + (isStarter ? 'player-card-starter' : '')}>
       <div className="player-head">
         <div>
-          <div className="eyebrow">{player.role} · {player.age} y.o. · {isStarter ? 'STARTER' : 'BENCH'}</div>
+          <div className="eyebrow">{player.country} · {player.team} · {player.role} · {isStarter ? 'STARTER' : 'BENCH'}</div>
           <h3>{player.alias}</h3>
-          <p>{player.firstName} · OVR {overall(player)} · POT {player.potential}</p>
+          <p>{player.realName} · {player.age} y.o. · OVR {overall(player)} · POT {player.potential}</p>
         </div>
         <div className="ovr">{overall(player)}</div>
       </div>
@@ -460,9 +460,9 @@ function App() {
                     <article className="prospect-card" key={player.id}>
                       <div className="player-head">
                         <div>
-                          <div className="eyebrow">{player.role} · {player.age} y.o.</div>
+                          <div className="eyebrow">{player.country} · {player.team} · {player.role}</div>
                           <h2>{player.alias}</h2>
-                          <p>{player.firstName}</p>
+                          <p>{player.realName} · {player.age} y.o.</p>
                         </div>
                         <div className="ovr">{overall(player)}</div>
                       </div>

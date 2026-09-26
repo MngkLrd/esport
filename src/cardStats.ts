@@ -23,7 +23,8 @@ export interface HltvPlayerSnapshot {
   playerId: number | null
   profileUrl: string | null
   status: 'ok' | 'no-data' | 'unmatched' | 'error'
-  window: 'past3m' | 'year'
+  matchMethod: 'hltv-id' | 'exact-alias' | 'normalized-alias' | null
+  window: 'last12m' | 'calendar-year'
   periodStart: string
   periodEnd: string
   raw: HltvRawStats

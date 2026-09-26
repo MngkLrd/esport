@@ -143,11 +143,11 @@ const roleCoverage = (active: Player[]) => {
 export const lineupWarnings = (roster: Player[], startingFive: string[]) => {
   const active = getStartingFive(roster, startingFive)
   const warnings: string[] = []
-  if (active.length !== 5) warnings.push('Select exactly five starters.')
-  if (active.some((p) => p.contractWeeks <= 0)) warnings.push('A starter has an expired contract.')
-  if (!active.some((p) => p.role === 'IGL')) warnings.push('No IGL: mid-round structure is weaker.')
-  if (!active.some((p) => p.role === 'AWP')) warnings.push('No dedicated AWP: map control suffers.')
-  if (active.filter((p) => p.fatigue >= 75).length >= 2) warnings.push('Two or more starters are exhausted.')
+  if (active.length !== 5) warnings.push('Выбери ровно пять игроков в основу.')
+  if (active.some((p) => p.contractWeeks <= 0)) warnings.push('У игрока основы истёк контракт.')
+  if (!active.some((p) => p.role === 'IGL')) warnings.push('Нет IGL: структура игры по ходу раунда слабее.')
+  if (!active.some((p) => p.role === 'AWP')) warnings.push('Нет выделенного AWP: контроль карты становится слабее.')
+  if (active.filter((p) => p.fatigue >= 75).length >= 2) warnings.push('Два или больше игроков основы сильно устали.')
   return warnings
 }
 
@@ -183,43 +183,43 @@ const initialRoster: Player[] = [
     id: 'p-donk', alias: 'donk', firstName: 'Danil Kryshkovets', realName: 'Danil Kryshkovets', country: 'Russia', team: 'Spirit', age: 19, role: 'Entry',
     aim: 78, gameSense: 65, utility: 55, clutch: 63, leadership: 48,
     form: 68, morale: 74, fatigue: 12, potential: 90, salary: 105, contractWeeks: 8,
-    traits: ['Fearless', 'Momentum'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Бесстрашный', 'Набирает темп'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
   {
     id: 'p-apex', alias: 'apEX', firstName: 'Dan Madesclaire', realName: 'Dan Madesclaire', country: 'France', team: 'Vitality', age: 33, role: 'IGL',
     aim: 62, gameSense: 82, utility: 79, clutch: 69, leadership: 88,
     form: 61, morale: 70, fatigue: 8, potential: 82, salary: 120, contractWeeks: 10,
-    traits: ['Caller', 'Calm'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Коллер', 'Хладнокровный'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
   {
     id: 'p-zywoo', alias: 'ZywOo', firstName: 'Mathieu Herbaut', realName: 'Mathieu Herbaut', country: 'France', team: 'Vitality', age: 25, role: 'AWP',
     aim: 82, gameSense: 70, utility: 44, clutch: 76, leadership: 41,
     form: 72, morale: 66, fatigue: 15, potential: 94, salary: 135, contractWeeks: 7,
-    traits: ['Prodigy', 'High variance'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Вундеркинд', 'Нестабильный пик'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
   {
     id: 'p-mezii', alias: 'mezii', firstName: 'William Merriman', realName: 'William Merriman', country: 'United Kingdom', team: 'Vitality', age: 27, role: 'Support',
     aim: 58, gameSense: 76, utility: 86, clutch: 61, leadership: 73,
     form: 59, morale: 78, fatigue: 5, potential: 76, salary: 95, contractWeeks: 12,
-    traits: ['Glue player', 'Utility nerd'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Связующее звено', 'Мастер гранат'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
   {
     id: 'p-ropz', alias: 'ropz', firstName: 'Robin Kool', realName: 'Robin Kool', country: 'Estonia', team: 'Vitality', age: 26, role: 'Rifler',
     aim: 73, gameSense: 72, utility: 64, clutch: 74, leadership: 58,
     form: 64, morale: 69, fatigue: 10, potential: 85, salary: 110, contractWeeks: 9,
-    traits: ['Closer', 'Flexible'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Клоузер', 'Гибкий'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
   {
     id: 'p-flamez', alias: 'flameZ', firstName: 'Shahar Shushan', realName: 'Shahar Shushan', country: 'Israel', team: 'Vitality', age: 23, role: 'Rifler',
     aim: 70, gameSense: 66, utility: 68, clutch: 58, leadership: 52,
     form: 60, morale: 72, fatigue: 3, potential: 83, salary: 85, contractWeeks: 11,
-    traits: ['Sixth man', 'Stable'],
-    bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+    traits: ['Шестой игрок', 'Стабильный'],
+    bio: 'Реальный профиль CS2-про. Игровые рейтинги вымышлены специально для этой симуляции.',
   },
 ]
 
@@ -247,8 +247,8 @@ export const createInitialState = (): GameState => ({
       id: 'welcome',
       week: 1,
       kind: 'media' as const,
-      title: 'A new project enters the circuit',
-      body: 'Twelve weeks. Six players. One starting five. Salaries, contracts and fatigue now matter every week: a strong roster can still fail if the club is managed badly.',
+      title: 'Новый проект выходит на сцену',
+      body: 'Двенадцать недель. Шесть игроков. Одна стартовая пятёрка. Зарплаты, контракты и усталость имеют значение каждую неделю: даже сильный состав можно развалить плохим менеджментом.',
     },
   ],
   lastPayroll: 0,
@@ -273,13 +273,13 @@ export const migrateState = (raw: unknown): GameState => {
         alias: identity.alias,
         firstName: identity.realName ?? identity.alias,
         realName: identity.realName ?? identity.alias,
-        country: identity.country ?? 'Unknown',
+        country: identity.country ?? 'Неизвестно',
         team: identity.team,
         age: identity.age ?? player.age,
         role: identity.role ?? player.role,
         bio: identity.realName
-          ? identity.realName + ' · ' + (identity.country ?? 'country unknown') + ' · profile team: ' + identity.team + '. Gameplay ratings are fictionalized for this manager save.'
-          : identity.alias + ' · Valve VRS roster snapshot team: ' + identity.team + ' (2026-09-07). Full profile metadata is not enriched yet; gameplay ratings and role are simulation data.',
+          ? identity.realName + ' · ' + (identity.country ?? 'страна неизвестна') + ' · команда в профиле: ' + identity.team + '. Игровые рейтинги вымышлены специально для этой симуляции.'
+          : identity.alias + ' · команда по срезу Valve VRS: ' + identity.team + ' (2026-09-07). Полные данные профиля пока не обогащены; рейтинг и роль являются данными симуляции.',
         salary: parsed.version === 1 ? Math.max(70, Math.round((player.salary ?? 200) * 0.45)) : player.salary,
       }
     }
@@ -314,15 +314,15 @@ const opponentNames = [
 const mapPool = ['Foundry', 'Harbor', 'Citadel', 'Metro', 'Rift', 'Archive'] as const
 
 const modeTuning: Record<MatchMode, { difficulty: number; baseReward: number; fans: number; label: string }> = {
-  scrim: { difficulty: -5, baseReward: 700, fans: 25, label: 'Practice circuit' },
-  showmatch: { difficulty: 1, baseReward: 950, fans: 70, label: 'Community showmatch' },
-  cup: { difficulty: 7, baseReward: 1450, fans: 150, label: 'Online cup' },
+  scrim: { difficulty: -5, baseReward: 700, fans: 25, label: 'Тренировочный контур' },
+  showmatch: { difficulty: 1, baseReward: 950, fans: 70, label: 'Шоуматч сообщества' },
+  cup: { difficulty: 7, baseReward: 1450, fans: 150, label: 'Онлайн-кубок' },
 }
 
 export const tacticInfo: Record<TacticalPlan, { name: string; description: string }> = {
-  balanced: { name: 'Balanced', description: 'No major modifier. Lowest variance and normal fatigue.' },
-  aggressive: { name: 'Aggressive', description: 'Aim-heavy, higher variance and more fatigue. Better for mechanical lineups.' },
-  structured: { name: 'Structured', description: 'Rewards game sense, utility and leadership. Lower variance.' },
+  balanced: { name: 'Сбалансированно', description: 'Без крупных модификаторов. Минимальный разброс и обычная усталость.' },
+  aggressive: { name: 'Агрессивно', description: 'Упор на стрельбу, выше разброс и усталость. Лучше подходит механически сильным составам.' },
+  structured: { name: 'Структурно', description: 'Вознаграждает понимание игры, гранаты и лидерство. Разброс ниже.' },
 }
 
 const generateOpponent = (state: GameState, mode: MatchMode, rng: () => number) => {
@@ -359,24 +359,24 @@ const narrative = (
   rng: () => number,
 ) => {
   const winHeads = [
-    mvp.alias + ' turns preparation into a series win',
-    'The starting five survives the pressure test',
-    'A coherent game plan produces a statement series',
+    mvp.alias + ' превращает подготовку в победу в серии',
+    'Стартовая пятёрка выдерживает проверку давлением',
+    'Цельный план на игру приносит убедительную серию',
   ]
   const lossHeads = [
-    'The series exposes a real management problem',
-    'Good rounds are not enough to hold the series',
-    'Pressure turns small roster weaknesses into a loss',
+    'Серия вскрывает реальную проблему менеджмента',
+    'Хороших раундов недостаточно, чтобы удержать серию',
+    'Под давлением мелкие слабости состава превращаются в поражение',
   ]
   const financial = net >= 0
-    ? ' The week finished ' + net + ' credits above payroll.'
-    : ' The result failed to cover payroll by ' + Math.abs(net) + ' credits.'
+    ? ' Неделя завершилась на ' + net + ' кредитов выше зарплатных расходов.'
+    : ' Дохода от результата не хватило на зарплаты: дефицит ' + Math.abs(net) + ' кредитов.'
   const detail = won
-    ? 'The win over ' + opponent + ' rewarded the ' + tactic + ' plan. ' + mvp.alias + ' led the server, while lineup continuity and condition shaped the map-to-map edge.'
-    : 'The loss to ' + opponent + ' punished the ' + tactic + ' plan. The staff now has to separate tactical mismatch from fatigue, contracts and simple variance.'
+    ? 'Победа над ' + opponent + ' оправдала выбранный план. ' + mvp.alias + ' стал лучшим на сервере, а стабильность состава и состояние игроков повлияли на перевес между картами.'
+    : 'Поражение от ' + opponent + ' показало слабости выбранного плана. Штабу теперь нужно отделить тактическую ошибку от усталости, контрактных проблем и обычного разброса.'
   return {
     headline: pick(won ? winHeads : lossHeads, rng),
-    detail: detail + financial + ' Mode: ' + modeTuning[mode].label + '.',
+    detail: detail + financial + ' Режим: ' + modeTuning[mode].label + '.',
   }
 }
 
@@ -395,10 +395,10 @@ export const weeklyPayroll = (state: GameState) =>
 
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   const active = getStartingFive(state.roster, state.startingFive)
-  if (active.length !== 5) return { ok: false, reason: 'Select exactly five starters.' }
-  if (active.some((p) => p.contractWeeks <= 0)) return { ok: false, reason: 'Renew or bench every expired starter.' }
+  if (active.length !== 5) return { ok: false, reason: 'Выбери ровно пять игроков в основу.' }
+  if (active.some((p) => p.contractWeeks <= 0)) return { ok: false, reason: 'Продли контракт или убери из основы каждого игрока с истёкшим контрактом.' }
   if (mode === 'cup' && state.wins < 2 && state.reputation < 45) {
-    return { ok: false, reason: 'Online Cup unlocks at 2 wins or 45 reputation.' }
+    return { ok: false, reason: 'Онлайн-кубок откроется после 2 побед или при 45 репутации.' }
   }
   return { ok: true, reason: '' }
 }
@@ -491,16 +491,16 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
         id: 'contracts-' + state.week,
         week: state.week + 1,
         kind: 'contract' as const,
-        title: 'A contract has expired',
-        body: expired.map((p) => p.alias).join(', ') + ' cannot start another match until renewed or replaced.',
+        title: 'Контракт истёк',
+        body: expired.map((p) => p.alias).join(', ') + ': нельзя выпускать на следующий матч без продления или замены.',
       }]
     : roster.some((p) => p.contractWeeks <= 2)
       ? [{
           id: 'contracts-warning-' + state.week,
           week: state.week + 1,
           kind: 'contract' as const,
-          title: 'Contract pressure is building',
-          body: roster.filter((p) => p.contractWeeks <= 2).map((p) => p.alias).join(', ') + ' are within two weeks of expiry.',
+          title: 'Контрактное давление растёт',
+          body: 'До окончания контрактов осталось не больше двух недель: ' + roster.filter((p) => p.contractWeeks <= 2).map((p) => p.alias).join(', ') + '.',
         }]
       : []
 
@@ -508,8 +508,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     id: 'finance-' + result.id,
     week: state.week,
     kind: 'finance' as const,
-    title: net >= 0 ? 'Match week covered payroll' : 'Payroll exceeded match income',
-    body: 'Prize and participation income: ' + reward + ' cr. Payroll: ' + payroll + ' cr. Net: ' + (net >= 0 ? '+' : '') + net + ' cr.',
+    title: net >= 0 ? 'Матчевая неделя покрыла зарплаты' : 'Зарплаты превысили доход от матча',
+    body: 'Доход за участие и результат: ' + reward + ' кр. Зарплаты: ' + payroll + ' кр. Итог: ' + (net >= 0 ? '+' : '') + net + ' кр.',
   }
 
   return {
@@ -593,8 +593,8 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
       id: 'lineup-' + state.week + '-' + playerId + '-' + startingFive.length,
       week: state.week,
       kind: 'lineup' as const,
-      title: isStarter ? player.alias + ' moves to the bench' : player.alias + ' enters the starting five',
-      body: 'Changing the active five costs short-term continuity. Stable lineups recover chemistry through matches.',
+      title: isStarter ? player.alias + ' отправляется в запас' : player.alias + ' выходит в стартовую пятёрку',
+      body: 'Изменение активной пятёрки временно снижает стабильность. Постоянный состав восстанавливает химию через матчи.',
     }, ...state.news].slice(0, 50),
   }
 }
@@ -602,7 +602,7 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
 const proPlayerIdentities = REAL_PLAYERS
 const simulationRoles: readonly Role[] = ['IGL', 'Entry', 'Rifler', 'AWP', 'Support']
 
-const traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
+const traits = ['Чистый аим', 'Ученик игры', 'Не боится большой сцены', 'Рабочая лошадка', 'Креативный коллер', 'Чутьё в позднем раунде'] as const
 
 const makeProspect = (
   state: GameState,
@@ -616,7 +616,7 @@ const makeProspect = (
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,
-    country: identity.country ?? 'Unknown',
+    country: identity.country ?? 'Неизвестно',
     team: identity.team,
     age: identity.age ?? 0,
     role: identity.role ?? pick(simulationRoles, rng),
@@ -633,8 +633,8 @@ const makeProspect = (
     contractWeeks: 8,
     traits: [pick(traits, rng), pick(traits, rng)],
     bio: identity.realName
-      ? identity.realName + ' · ' + (identity.country ?? 'country unknown') + ' · profile team: ' + identity.team + '. Ratings, wage and potential are fictionalized for gameplay.'
-      : identity.alias + ' · Valve VRS roster snapshot team: ' + identity.team + ' (2026-09-07). Full name, nationality and age are not enriched yet; role, ratings, wage and potential are simulation data.',
+      ? identity.realName + ' · ' + (identity.country ?? 'страна неизвестна') + ' · команда в профиле: ' + identity.team + '. Рейтинг, зарплата и потенциал вымышлены для игрового процесса.'
+      : identity.alias + ' · команда по срезу Valve VRS: ' + identity.team + ' (2026-09-07). Полное имя, национальность и возраст пока не обогащены; роль, рейтинг, зарплата и потенциал являются данными симуляции.',
   }
 }
 
@@ -658,8 +658,8 @@ export const scout = (state: GameState): GameState => {
       id: 'scout-' + state.scoutCycle,
       week: state.week,
       kind: 'scout' as const,
-      title: 'Scouting report delivered',
-      body: 'Three real CS2 aliases are drawn from the expanded player universe. Curated profiles include verified identity metadata; the long tail comes from Valve VRS roster snapshots dated 2026-09-07. Ratings, roles, salaries and potential are manager-simulation data.',
+      title: 'Скаутский отчёт готов',
+      body: 'Три реальных CS2-ника выбраны из расширенной базы игроков. Для проработанных профилей используются проверенные данные личности, длинный хвост берётся из срезов Valve VRS от 2026-09-07. Рейтинги, роли, зарплаты и потенциал рассчитывает менеджерская симуляция.',
     }, ...state.news].slice(0, 50),
   }
 }
@@ -679,8 +679,8 @@ export const signProspect = (state: GameState, playerId: string): GameState => {
       id: 'sign-' + playerId,
       week: state.week,
       kind: 'contract' as const,
-      title: prospect.alias + ' joins the project',
-      body: 'Signing fee: ' + fee + ' cr. Weekly salary: ' + prospect.salary + ' cr. The player starts on the bench.',
+      title: prospect.alias + ' присоединяется к проекту',
+      body: 'Подписание: ' + fee + ' кр. Недельная зарплата: ' + prospect.salary + ' кр. Игрок начинает в запасе.',
     }, ...state.news].slice(0, 50),
   }
 }
@@ -700,8 +700,8 @@ export const renewContract = (state: GameState, playerId: string): GameState => 
       id: 'renew-' + playerId + '-' + state.week,
       week: state.week,
       kind: 'contract' as const,
-      title: player.alias + ' signs a six-week extension',
-      body: 'Up-front extension cost: ' + cost + ' cr. Weekly salary remains ' + player.salary + ' cr.',
+      title: player.alias + ' продлевает контракт на шесть недель',
+      body: 'Стоимость продления: ' + cost + ' кр. Недельная зарплата остаётся ' + player.salary + ' кр.',
     }, ...state.news].slice(0, 50),
   }
 }
@@ -722,26 +722,26 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
       id: 'release-' + playerId + '-' + state.week,
       week: state.week,
       kind: 'contract' as const,
-      title: player.alias + ' leaves the project',
-      body: 'Severance cost: ' + severance + ' cr. Roster salary drops immediately.',
+      title: player.alias + ' покидает проект',
+      body: 'Компенсация: ' + severance + ' кр. Зарплатная нагрузка состава снижается сразу.',
     }, ...state.news].slice(0, 50),
   }
 }
 
 export const modeInfo: Record<MatchMode, { name: string; description: string; risk: string }> = {
   scrim: {
-    name: 'Practice Mix',
-    description: 'Lower pressure and softer opposition. Useful for stabilizing a changed lineup, but income is limited.',
+    name: 'Тренировочный микс',
+    description: 'Меньше давления и слабее соперник. Подходит для стабилизации изменённого состава, но доход ограничен.',
     risk: 'Low',
   },
   showmatch: {
-    name: 'Community Showmatch',
-    description: 'Public BO3 with meaningful fan growth and enough income to support a disciplined roster.',
+    name: 'Шоуматч сообщества',
+    description: 'Публичный BO3 с заметным ростом аудитории и доходом, достаточным для дисциплинированного состава.',
     risk: 'Medium',
   },
   cup: {
-    name: 'Online Cup',
-    description: 'Hard opposition and the best upside. Unlocks after 2 wins or 45 reputation.',
+    name: 'Онлайн-кубок',
+    description: 'Сильные соперники и лучший потенциальный выигрыш. Открывается после 2 побед или при 45 репутации.',
     risk: 'High',
   },
 }

@@ -377,3 +377,157 @@ footer {
   .debug-panel { grid-template-columns: repeat(2, 1fr); }
   footer { padding: 22px 20px 30px; flex-direction: column; }
 }
+
+
+/* v0.2 playable-core additions */
+.status-strip {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.status-strip > div,
+.lineup-summary,
+.roster-toolbar {
+  border: 1px solid var(--line);
+  background: #0d1118;
+}
+.status-strip > div { padding: 13px 15px; }
+.status-strip span,
+.lineup-summary span {
+  display: block;
+  color: #667181;
+  font: 700 8px/1.2 Space Mono, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.status-strip b { font: 700 10px/1.4 Space Mono, monospace; color: #dbe1e9; }
+
+.warning-stack {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+}
+.warning-stack.compact { margin-top: -12px; }
+.warning-stack div,
+.gate-reason {
+  border-left: 2px solid #ffd166;
+  background: rgba(255, 209, 102, .07);
+  color: #d8c17f;
+  padding: 10px 13px;
+  font-size: 11px;
+}
+.gate-reason { margin-top: 14px; }
+
+.performance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px;
+}
+.performance-row span {
+  border: 1px solid #28313d;
+  background: #0d1118;
+  color: #8d97a7;
+  padding: 7px 9px;
+  font: 700 9px/1 Space Mono, monospace;
+}
+.performance-row b { color: var(--cyan); }
+
+.lineup-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+.lineup-summary strong { font: 700 12px/1.4 Space Mono, monospace; }
+
+.tactic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 18px;
+}
+.tactic-card {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: #dbe1e9;
+  padding: 16px;
+  cursor: pointer;
+}
+.tactic-card:hover { border-color: #465163; }
+.tactic-card.selected {
+  border-color: var(--orange);
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 53, .16);
+  background: linear-gradient(135deg, rgba(255,107,53,.08), transparent), var(--panel);
+}
+.tactic-card span { display: block; font-weight: 800; margin-bottom: 6px; }
+.tactic-card small { display: block; color: #7f8998; line-height: 1.45; font-size: 10px; }
+
+.roster-toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  margin-bottom: 16px;
+}
+.roster-toolbar .metric { border: 0; border-right: 1px solid var(--line); }
+.roster-toolbar .metric:last-child { border-right: 0; }
+
+.player-card-starter {
+  border-color: #3a4655;
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+.lineup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+.lineup-actions > button:first-child { flex: 1; }
+.lineup-actions .release { color: #d77d82; }
+.lineup-actions .release:disabled { color: #59616d; }
+
+.director-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.director-note {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 20px;
+}
+.director-note > span {
+  font: 700 8px/1 Space Mono, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.director-note h2 { margin: 8px 0; font-size: 18px; }
+.director-note p { margin: 0; font-size: 12px; }
+.director-note.urgent { border-color: rgba(255,107,114,.38); }
+.director-note.urgent > span { color: var(--red); }
+.director-note.watch { border-color: rgba(255,209,102,.28); }
+.director-note.watch > span { color: #ffd166; }
+.director-note.good { border-color: rgba(110,231,168,.28); }
+.director-note.good > span { color: var(--green); }
+
+@media (max-width: 1000px) {
+  .status-strip { grid-template-columns: repeat(2, 1fr); }
+  .roster-toolbar { grid-template-columns: repeat(2, 1fr); }
+  .roster-toolbar .metric { border-bottom: 1px solid var(--line); }
+}
+
+@media (max-width: 640px) {
+  .status-strip,
+  .tactic-grid,
+  .director-grid { grid-template-columns: 1fr; }
+  .lineup-summary { align-items: flex-start; flex-direction: column; }
+  .roster-toolbar { grid-template-columns: 1fr 1fr; }
+  .lineup-actions { align-items: stretch; flex-direction: column; }
+  .reward-line { flex-wrap: wrap; line-height: 1.5; }
+}

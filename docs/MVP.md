@@ -1,96 +1,104 @@
-# ESPORT AI Manager v0.1
+# ESPORT AI Manager v0.2
 
 ## Product thesis
 
-The MVP keeps the strongest transferable management-game principles from the reference product without copying its visual identity, data, assets or IP:
+The playable loop should create management pressure, not just display management-themed UI.
 
-- short loop: inspect roster -> choose risk -> simulate -> receive rewards/story -> improve roster;
-- readable player cards and team OVR;
-- multiple match modes with different risk/reward;
-- persistent economy and progression;
-- contracts and roster pressure;
-- scouting as discovery;
-- a feed that turns simulation facts into a season narrative.
+The current core is deliberately small:
 
-The major change is AI-first architecture. Generative systems are an interpretation layer, not the authority for match outcomes or economy.
+`lineup -> prepare -> choose tactic/mode -> play BO3 -> settle payroll -> react to fatigue/contracts -> recruit/renew -> repeat`
 
-## Playable loop
+The deterministic simulation owns all consequential state. Narrative and advisory systems only interpret canonical facts.
 
-1. Start with five fictional players and 2,200 credits.
-2. Spend two staff actions between matches on training/rest.
-3. Pick Practice Mix, Community Showmatch or Online Cup.
-4. The seeded engine resolves a best-of-three series.
-5. Credits, fans, reputation, form, morale, fatigue and contracts update.
-6. The narrative director writes a recap from structured facts.
-7. Scout generated prospects, sign depth and renew contracts.
-8. Repeat and build season points.
+## What is actually implemented
 
-A first session should expose all core systems in 15-25 minutes and support a 2-3 hour sandbox without requiring an account or API key.
+### Roster and lineup
 
-## Deterministic core
+- six-player initial roster;
+- explicit five-player starting lineup;
+- bench management;
+- role coverage penalties for missing IGL/AWP;
+- lineup continuity that drops on changes and recovers through matches;
+- chemistry from roles, morale, leadership, continuity and fatigue;
+- training, rest, renewals and releases;
+- expired contracts cannot start.
 
-The deterministic layer owns:
+### Match simulation
 
-- player attributes and OVR;
-- active-five selection;
-- chemistry;
-- opponent rating;
-- match probability;
-- map scores;
-- rewards;
-- fan/reputation progression;
-- training/rest effects;
-- fatigue, morale and form;
-- contracts;
-- scouting ratings and costs.
+Each match is a seeded BO3. The engine uses:
 
-The transition model is conceptually:
+- active-five rating;
+- chemistry and continuity;
+- form, morale and fatigue;
+- role coverage;
+- selected tactical plan;
+- opponent strength;
+- map-to-map momentum;
+- deterministic RNG.
 
-`state + action + seed -> nextState`
+The result stores map scores, estimated map win chances, top performer, player performance ratings, MVP and a procedural recap.
 
-This makes saves debuggable and allows future simulation tests.
+### Economy
 
-## Generative layer
+Every match advances one week.
 
-v0.1 ships with a local procedural narrative director so the game works offline. A future LLM gateway should receive only structured canonical facts and return schema-validated presentation content such as:
+The club receives match income and pays the entire roster payroll. Signing depth therefore creates a recurring cost. Contract extensions have an up-front cost. Scouting, training and releases also consume credits.
 
-- press conference answers;
-- player personality dialogue;
-- rivalry and media framing;
-- scouting prose;
-- negotiation dialogue;
-- weekly story summaries.
+The economy is intentionally simple, but it now has an actual cashflow loop instead of a credits counter that only increases.
 
-The LLM must never choose winners, rewards, RNG results, ratings or transaction outcomes.
+### Scouting
 
-## Current screens
+A scouting action spends credits and generates three deterministic fictional prospects based on reputation and seed. Prospects have roles, ratings, potential, salary and a signing fee. New signings join the bench.
 
-- **HQ**: club health, latest result, season story and key KPIs.
-- **Play**: three risk/reward match formats.
-- **Roster**: player cards, form/morale/fatigue, training, rest and renewals.
-- **Scout**: seeded fictional prospects and signings.
-- **Inbox**: chronological club memory.
-- **AI Director**: architecture/debug view showing deterministic vs narrative responsibilities.
+### Progression
+
+Practice Mix, Community Showmatch and Online Cup have different opponent difficulty and reward profiles. Online Cup unlocks after two wins or 45 reputation.
+
+### Inbox and local director
+
+The Inbox records match, finance, lineup, scouting and contract events.
+
+The AI Director screen is currently a rule-based live advisor. It reads the actual save and flags:
+
+- incomplete lineups;
+- expiring contracts;
+- starter fatigue;
+- short cash runway;
+- missing IGL/AWP coverage.
+
+There is **no external LLM connected in v0.2**.
 
 ## Persistence
 
-The MVP stores a versioned save in browser localStorage under `esport-ai-manager-v1`. No authentication or backend is required.
+The current save is stored in browser localStorage under `esport-ai-manager-v2`.
 
-For the next phase, move canonical saves to SQLite in a desktop/local-server build while keeping the reducer-style simulation API.
+A v0.1 save is migrated into the new state shape. Legacy match history is intentionally reset during migration because v0.2 match records contain additional fields that did not exist in v0.1.
+
+## Still missing
+
+The following are not part of the current implementation:
+
+- backend/account persistence;
+- real LLM gateway and schema validation;
+- contract negotiation state machine;
+- tournament brackets and calendar events;
+- opponent organizations with persistent rosters and rivalries;
+- injuries/tilt/recovery events;
+- save export/import;
+- deterministic replay test suite;
+- richer map-specific team strengths and veto phase;
+- longer-term player development curves.
+
+## Next engineering priorities
+
+1. Add unit tests around deterministic state transitions and economy invariants.
+2. Add map veto plus map-specific strengths so BO3 preparation has another real decision.
+3. Add a 12-week calendar with objectives and a season-end state.
+4. Add contract negotiation with player demands and walk-away outcomes.
+5. Add opponent organizations that persist between meetings.
+6. Add export/import and then move canonical saves to a server or SQLite-backed build.
+7. Only then add an LLM gateway for presentation, with schema validation, caching, prompt versioning and a deterministic fallback.
 
 ## IP boundary
 
-This prototype intentionally uses a fictional esports universe. It contains no Counter-Strike branding, Valve assets, real players, real teams, logos, skins or tournament marks. Scouting replaces gambling-like paid pack opening.
-
-## v0.2 priorities
-
-1. Explicit starting-five / bench management and role conflicts.
-2. Player relationships and pairwise chemistry graph.
-3. Calendar with tournaments and season objectives.
-4. Contract negotiation state machine with agents.
-5. Injuries, tilt and recovery with transparent deterministic rules.
-6. LLM gateway with JSON schema, caching, fallback and prompt/version logging.
-7. Save export/import and deterministic replay tests.
-8. SQLite persistence for desktop/local builds.
-9. Tactical choices before maps that modify simulation parameters.
-10. Procedural opponent organizations with memory and rivalries.
+All players, teams, maps and organizations are fictional. The prototype contains no Valve assets, real player likenesses, skins or copied tournament branding.

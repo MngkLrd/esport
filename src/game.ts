@@ -1,4 +1,4 @@
-export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
+import { REAL_PLAYERS } from './players'\n\nexport type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
 export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
 
@@ -175,42 +175,42 @@ export const teamRating = (roster: Player[], startingFive?: string[], continuity
 
 const initialRoster: Player[] = [
   {
-    id: 'p-donk', alias: 'donk', firstName: 'Danil Kryshkovets', age: 19, role: 'Entry',
+    id: 'p-donk', alias: 'donk', firstName: 'Danil Kryshkovets', realName: 'Danil Kryshkovets', country: 'Russia', team: 'Spirit', age: 19, role: 'Entry',
     aim: 78, gameSense: 65, utility: 55, clutch: 63, leadership: 48,
     form: 68, morale: 74, fatigue: 12, potential: 90, salary: 105, contractWeeks: 8,
     traits: ['Fearless', 'Momentum'],
     bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
   },
   {
-    id: 'p-apex', alias: 'apEX', firstName: 'Dan Madesclaire', age: 33, role: 'IGL',
+    id: 'p-apex', alias: 'apEX', firstName: 'Dan Madesclaire', realName: 'Dan Madesclaire', country: 'France', team: 'Vitality', age: 33, role: 'IGL',
     aim: 62, gameSense: 82, utility: 79, clutch: 69, leadership: 88,
     form: 61, morale: 70, fatigue: 8, potential: 82, salary: 120, contractWeeks: 10,
     traits: ['Caller', 'Calm'],
     bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
   },
   {
-    id: 'p-zywoo', alias: 'ZywOo', firstName: 'Mathieu Herbaut', age: 25, role: 'AWP',
+    id: 'p-zywoo', alias: 'ZywOo', firstName: 'Mathieu Herbaut', realName: 'Mathieu Herbaut', country: 'France', team: 'Vitality', age: 25, role: 'AWP',
     aim: 82, gameSense: 70, utility: 44, clutch: 76, leadership: 41,
     form: 72, morale: 66, fatigue: 15, potential: 94, salary: 135, contractWeeks: 7,
     traits: ['Prodigy', 'High variance'],
     bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
   },
   {
-    id: 'p-mezii', alias: 'mezii', firstName: 'William Merriman', age: 27, role: 'Support',
+    id: 'p-mezii', alias: 'mezii', firstName: 'William Merriman', realName: 'William Merriman', country: 'United Kingdom', team: 'Vitality', age: 27, role: 'Support',
     aim: 58, gameSense: 76, utility: 86, clutch: 61, leadership: 73,
     form: 59, morale: 78, fatigue: 5, potential: 76, salary: 95, contractWeeks: 12,
     traits: ['Glue player', 'Utility nerd'],
     bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
   },
   {
-    id: 'p-ropz', alias: 'ropz', firstName: 'Robin Kool', age: 26, role: 'Rifler',
+    id: 'p-ropz', alias: 'ropz', firstName: 'Robin Kool', realName: 'Robin Kool', country: 'Estonia', team: 'Vitality', age: 26, role: 'Rifler',
     aim: 73, gameSense: 72, utility: 64, clutch: 74, leadership: 58,
     form: 64, morale: 69, fatigue: 10, potential: 85, salary: 110, contractWeeks: 9,
     traits: ['Closer', 'Flexible'],
     bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
   },
   {
-    id: 'p-flamez', alias: 'flameZ', firstName: 'Shahar Shushan', age: 23, role: 'Rifler',
+    id: 'p-flamez', alias: 'flameZ', firstName: 'Shahar Shushan', realName: 'Shahar Shushan', country: 'Israel', team: 'Vitality', age: 23, role: 'Rifler',
     aim: 70, gameSense: 66, utility: 68, clutch: 58, leadership: 52,
     form: 60, morale: 72, fatigue: 3, potential: 83, salary: 85, contractWeeks: 11,
     traits: ['Sixth man', 'Stable'],
@@ -252,34 +252,44 @@ export const createInitialState = (): GameState => ({
 
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
-  const parsed = raw as { version?: number; roster?: Player[]; [key: string]: unknown }
-  if (parsed.version === 3 && Array.isArray(parsed.roster)) return parsed as unknown as GameState
+  const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; [key: string]: unknown }
+  if (parsed.version === 4 && Array.isArray(parsed.roster)) return parsed as unknown as GameState
 
-  if ((parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 3 || parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
     const base = createInitialState()
     const identities = proPlayerIdentities
-    const roster = parsed.roster.map((player, index) => {
-      const identity = identities[index % identities.length]
+
+    const enrichIdentity = (player: Player, index: number): Player => {
+      const identity =
+        identities.find((candidate) => candidate.alias.toLowerCase() === player.alias.toLowerCase()) ??
+        identities[index % identities.length]
       return {
         ...player,
         alias: identity.alias,
-        firstName: identity.firstName,
+        firstName: identity.realName,
+        realName: identity.realName,
+        country: identity.country,
+        team: identity.team,
         age: identity.age,
         role: identity.role,
-        bio: 'Real CS2 pro identity. Gameplay ratings are fictionalized for this manager save.',
+        bio: identity.realName + ' · ' + identity.country + ' · current team: ' + identity.team + '. Gameplay ratings are fictionalized for this manager save.',
         salary: parsed.version === 1 ? Math.max(70, Math.round((player.salary ?? 200) * 0.45)) : player.salary,
       }
-    })
+    }
+
+    const roster = parsed.roster.map(enrichIdentity)
     if (roster.length === 5) roster.push({ ...initialRoster[5], traits: [...initialRoster[5].traits] })
+    const prospects = Array.isArray(parsed.prospects) ? parsed.prospects.map(enrichIdentity) : []
+
     return {
       ...base,
       ...(parsed as object),
-      version: 3,
+      version: 4,
       seasonLength: 12,
       roster,
       startingFive: Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id),
       lineupContinuity: typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 55,
-      prospects: [],
+      prospects,
       history: Array.isArray(parsed.history) ? parsed.history as MatchResult[] : [],
       news: Array.isArray(parsed.news) ? parsed.news as NewsItem[] : base.news,
       lastPayroll: typeof parsed.lastPayroll === 'number' ? parsed.lastPayroll : 0,
@@ -582,45 +592,7 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
   }
 }
 
-const proPlayerIdentities: Array<{ alias: string; firstName: string; age: number; role: Role }> = [
-  { alias: 'donk', firstName: 'Danil Kryshkovets', age: 19, role: 'Entry' },
-  { alias: 'magixx', firstName: 'Boris Vorobyev', age: 23, role: 'Support' },
-  { alias: 'zont1x', firstName: 'Myroslav Plakhotia', age: 21, role: 'Rifler' },
-  { alias: 'sh1ro', firstName: 'Dmitriy Sokolov', age: 25, role: 'AWP' },
-  { alias: 'tN1R', firstName: 'Andrey Tatarinovich', age: 25, role: 'Rifler' },
-  { alias: 'apEX', firstName: 'Dan Madesclaire', age: 33, role: 'IGL' },
-  { alias: 'ZywOo', firstName: 'Mathieu Herbaut', age: 25, role: 'AWP' },
-  { alias: 'flameZ', firstName: 'Shahar Shushan', age: 23, role: 'Entry' },
-  { alias: 'mezii', firstName: 'William Merriman', age: 27, role: 'Support' },
-  { alias: 'ropz', firstName: 'Robin Kool', age: 26, role: 'Rifler' },
-  { alias: 'NiKo', firstName: 'Nikola Kovač', age: 29, role: 'Rifler' },
-  { alias: 'TeSeS', firstName: 'René Madsen', age: 25, role: 'Support' },
-  { alias: 'm0NESY', firstName: 'Ilya Osipov', age: 21, role: 'AWP' },
-  { alias: 'kyousuke', firstName: 'Maksim Lukin', age: 18, role: 'Entry' },
-  { alias: 'karrigan', firstName: 'Finn Andersen', age: 36, role: 'IGL' },
-  { alias: 'b1t', firstName: 'Valerii Vakhovskyi', age: 23, role: 'Rifler' },
-  { alias: 'Aleksib', firstName: 'Aleksi Virolainen', age: 29, role: 'IGL' },
-  { alias: 'iM', firstName: 'Mihai Ivan', age: 27, role: 'Entry' },
-  { alias: 'w0nderful', firstName: 'Ihor Zhdanov', age: 21, role: 'AWP' },
-  { alias: 'makazze', firstName: 'Drin Shaqiri', age: 19, role: 'Rifler' },
-  { alias: 'yuurih', firstName: 'Yuri Boian', age: 26, role: 'Rifler' },
-  { alias: 'KSCERATO', firstName: 'Kaike Cerato', age: 27, role: 'Rifler' },
-  { alias: 'FalleN', firstName: 'Gabriel Toledo', age: 35, role: 'IGL' },
-  { alias: 'molodoy', firstName: 'Danil Golubenko', age: 21, role: 'AWP' },
-  { alias: 'YEKINDAR', firstName: 'Mareks Gaļinskis', age: 26, role: 'Entry' },
-  { alias: 'huNter-', firstName: 'Nemanja Kovač', age: 30, role: 'IGL' },
-  { alias: 'HeavyGod', firstName: 'Nikita Martynenko', age: 24, role: 'Rifler' },
-  { alias: 'matys', firstName: 'Matúš Šimko', age: 24, role: 'Entry' },
-  { alias: 'NertZ', firstName: 'Guy Iluz', age: 27, role: 'Rifler' },
-  { alias: 'r1nkle', firstName: 'Artem Moroz', age: 21, role: 'AWP' },
-  { alias: 'torzsi', firstName: 'Ádám Torzsás', age: 24, role: 'AWP' },
-  { alias: 'xertioN', firstName: 'Dorian Berman', age: 22, role: 'Entry' },
-  { alias: 'Spinx', firstName: 'Lotan Giladi', age: 26, role: 'Rifler' },
-  { alias: 'xelex', firstName: 'Adrian Vincze', age: 18, role: 'Rifler' },
-  { alias: 'PR', firstName: 'Oldřich Nový', age: 19, role: 'Rifler' },
-]
-
-const traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
+const proPlayerIdentities = REAL_PLAYERS\n\nconst traits = ['Raw aim', 'Student of the game', 'Big-stage nerve', 'Workhorse', 'Creative caller', 'Late-round instinct'] as const
 
 const makeProspect = (
   state: GameState,
@@ -647,7 +619,7 @@ const makeProspect = (
     salary: Math.round(70 + base * 0.72),
     contractWeeks: 8,
     traits: [pick(traits, rng), pick(traits, rng)],
-    bio: 'Real CS2 pro identity. Scouting ratings, wage and potential are fictionalized for gameplay.',
+    bio: identity.realName + ' · ' + identity.country + ' · current team: ' + identity.team + '. Ratings, wage and potential are fictionalized for gameplay.',
   }
 }
 
@@ -672,7 +644,7 @@ export const scout = (state: GameState): GameState => {
       week: state.week,
       kind: 'scout' as const,
       title: 'Scouting report delivered',
-      body: 'Three real CS2 pro identities are available. Ratings, salaries and potential are fictionalized for the manager simulation.',
+      body: 'Three real CS2 players are available. Name, nickname, nationality and current team come from the verified 2026-09-26 dataset; ratings, salaries and potential are fictionalized for the manager simulation.',
     }, ...state.news].slice(0, 50),
   }
 }

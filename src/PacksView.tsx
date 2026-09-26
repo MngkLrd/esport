@@ -4,15 +4,18 @@ import {
   PACK_POOL_STATS,
   RARITY_COLOR,
   RARITY_LABEL,
+  hydratePackState,
+  rollPack,
+} from './packs'
+import {
   packAliasCount,
   packCollectionStats,
-  rollPack,
   type PackCard,
   type PackId,
   type PackRarity,
   type PackRoll,
   type PackState,
-} from './packs'
+} from './packState'
 import { countryFlag, playerPhoto } from './playerVisuals'
 
 const SPIN_MS = 5200
@@ -187,7 +190,8 @@ export function PacksView({
   const [duplicate, setDuplicate] = useState(false)
   const [query, setQuery] = useState('')
   const [rarityFilter, setRarityFilter] = useState<'all' | PackRarity>('all')
-  const stats = useMemo(() => packCollectionStats(packState), [packState])
+  const viewState = useMemo(() => hydratePackState(packState), [packState])
+  const stats = useMemo(() => packCollectionStats(viewState), [viewState])
 
   useEffect(() => {
     if (!spinning) return
@@ -204,7 +208,7 @@ export function PacksView({
     if (!pack || credits < pack.price) return
 
     const nextRoll = rollPack(packId, packState.serial, saveId)
-    const isDuplicate = packAliasCount(packState, nextRoll.winner.alias) > 0
+    const isDuplicate = packAliasCount(viewState, nextRoll.winner.alias) > 0
     if (!onOpen(nextRoll)) return
 
     setRoll(nextRoll)
@@ -229,16 +233,16 @@ export function PacksView({
 
   const aliasCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const card of packState.inventory) {
+    for (const card of viewState.inventory) {
       const key = card.alias.toLocaleLowerCase('en-US')
       counts.set(key, (counts.get(key) ?? 0) + 1)
     }
     return counts
-  }, [packState.inventory])
+  }, [viewState.inventory])
 
   const collection = useMemo(() => {
     const seen = new Set<string>()
-    return packState.inventory.filter((card) => {
+    return viewState.inventory.filter((card) => {
       const key = card.alias.toLocaleLowerCase('en-US')
       if (seen.has(key)) return false
       seen.add(key)
@@ -248,7 +252,7 @@ export function PacksView({
       return [card.alias, card.realName ?? '', card.team, card.country ?? '']
         .some((value) => value.toLocaleLowerCase('ru-RU').includes(needle))
     })
-  }, [packState.inventory, query, rarityFilter])
+  }, [viewState.inventory, query, rarityFilter])
 
   return (
     <section className="screen packs-screen">
@@ -341,11 +345,11 @@ export function PacksView({
         </p>
       </div>
 
-      {packState.history.length > 0 && (
+      {viewState.history.length > 0 && (
         <div className="pack-history">
           <span>ПОСЛЕДНИЕ ДРОПЫ</span>
           <div>
-            {packState.history.slice(0, 8).map((card) => (
+            {viewState.history.slice(0, 8).map((card) => (
               <b key={card.id} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
                 {card.power} · {card.alias}
               </b>
@@ -362,7 +366,7 @@ export function PacksView({
         {stats.total > 0 && <button className="text-button release" onClick={resetCollection}>Очистить коллекцию</button>}
       </div>
 
-      {packState.inventory.length > 0 && (
+      {viewState.inventory.length > 0 && (
         <div className="collection-tools">
           <input
             value={query}
@@ -384,7 +388,7 @@ export function PacksView({
         </div>
       )}
 
-      {packState.inventory.length ? (
+      {viewState.inventory.length ? (
         collection.length ? (
           <div className="collection-grid">
             {collection.map((card) => (

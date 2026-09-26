@@ -266,6 +266,9 @@ export const migrateState = (raw: unknown): GameState => {
       roster,
       startingFive: roster.slice(0, 5).map((p) => p.id),
       lineupContinuity: 55,
+      prospects: [],
+      history: [],
+      news: base.news,
       lastPayroll: 0,
       lastWeekNet: 0,
     }

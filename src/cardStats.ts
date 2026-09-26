@@ -39,6 +39,7 @@ export interface PlayerCardStats {
   clutch: number
   confidence: 'low' | 'medium' | 'high'
   source: 'hltv'
+  window: HltvPlayerSnapshot['window']
   periodStart: string
   periodEnd: string
 }
@@ -101,6 +102,7 @@ export const cardStatsFromHltv = (
       ? (maps >= 60 ? 'high' : maps >= 20 ? 'medium' : 'low')
       : (populatedSkills >= 6 ? 'medium' : 'low'),
     source: 'hltv',
+    window: snapshot.window,
     periodStart: snapshot.periodStart,
     periodEnd: snapshot.periodEnd,
   }

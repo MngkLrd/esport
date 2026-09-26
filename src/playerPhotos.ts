@@ -91,6 +91,7 @@ export const PLAYER_PORTRAITS: Readonly<Record<string, PlayerPortrait>> = {
   "facecrack": { url: "https://img-cdn.hltv.org/playerbodyshot/fH1pSf8nLjsIx5-jOPTyjO.png?ixlib=java-2.1.0&w=400&s=05c42b4401c2d569324a60110bea4d0c", source: "PHSix/guess_cspro · Jan 2026" },
   "fallen": { url: "https://img-cdn.hltv.org/playerbodyshot/gQbb4I0TeHmxx7bYBOtd7T.png?ixlib=java-2.1.0&w=400&s=744dd676bd5ad23e4adfc8dc8fcbaa80", source: "jLidak/cs2_players_tracker · Aug 2026" },
   "fame": { url: "https://img-cdn.hltv.org/playerbodyshot/SI6kV-gdQS_-tMZNYokY5V.png?ixlib=java-2.1.0&w=400&s=af2cc20c5b59122dedf27c10c64b17d3", source: "Sopenfi/skindle · Spring 2026" },
+  "fajr": { url: "https://img-cdn.hltv.org/playerbodyshot/1OPskl1r_fYvASU_Y5c0QP.png?ixlib=java-2.1.0&s=f0471b6de710ed34fd5d9859c952cd3a&w=400", source: "HLTV profile · Sep 2026" },
   "faven": { url: "https://img-cdn.hltv.org/playerbodyshot/9wyNH2v2jzMRt6U2Iy4fT8.png?ixlib=java-2.1.0&w=400&s=30d2468081f66d506e43c70564b7dd09", source: "PHSix/guess_cspro · Jan 2026" },
   "fear": { url: "https://img-cdn.hltv.org/playerbodyshot/ESmMcx4tnTEkTFgzOLi-qd.png?ixlib=java-2.1.0&w=400&s=a1fe46e073e79da6fa935145b86d2169", source: "Sopenfi/skindle · Spring 2026" },
   "felps": { url: "https://img-cdn.hltv.org/playerbodyshot/--c2ByRiqU7ft18VCrUSVh.png?ixlib=java-2.1.0&w=400&s=ac44e44f795fc668abbf33752a522716", source: "Sopenfi/skindle · Spring 2026" },
@@ -331,9 +332,9 @@ export const PLAYER_PORTRAITS: Readonly<Record<string, PlayerPortrait>> = {
 } as const
 
 export const PLAYER_PORTRAIT_STATS = {
-  coveredPlayers: 317,
+  coveredPlayers: 318,
   playerUniverse: 1634,
-  coveragePercent: 19.4,
+  coveragePercent: 19.5,
   sourceCounts: {
     "jLidak/cs2_players_tracker · Aug 2026": 105,
     "Sopenfi/skindle · Spring 2026": 94,

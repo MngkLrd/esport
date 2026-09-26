@@ -23,3 +23,11 @@ jobs:
         run: npm run test:cards
       - name: Typecheck and build
         run: npm run build
+      - name: Build clean main source archive
+        run: git archive --format=zip --output=esport-main.zip origin/main
+      - name: Upload clean main source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: esport-main-source
+          path: esport-main.zip
+          if-no-files-found: error

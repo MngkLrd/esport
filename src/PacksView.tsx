@@ -103,8 +103,9 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
 function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean }) {
   const photo = playerPhoto(card.alias)
   const source = card.cardStats
-    ? 'HLTV data · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd +
-      ' · ' + card.cardStats.maps + ' карт' +
+    ? (card.cardStats.scoreSource === 'hltv-player-screen' ? 'HLTV current' : 'HLTV matches') +
+      ' · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd +
+      (card.cardStats.maps != null ? ' · ' + card.cardStats.maps + ' карт' : '') +
       (card.cardStats.rating != null ? ' · rating ' + card.cardStats.rating.toFixed(3) : '')
     : card.sourceRating != null
       ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
@@ -330,14 +331,13 @@ export function PacksView({
 
       <div className="pack-rating-note">
         <div>
-          <span>КАРТОЧКИ · HLTV DATA · ГОДОВОЙ СРЕЗ</span>
-          <strong>OVR и четыре стата считаются из фактической матчевой статистики за период карты.</strong>
+          <span>КАРТОЧКИ · HLTV CURRENT + HISTORY</span>
+          <strong>Прямые skill scores HLTV имеют приоритет; история используется как fallback.</strong>
         </div>
         <p>
-          АИМ учитывает ADR, убийства на карту и rating; УТЛ — KAST и round swing; ПОЗ — KAST, выживаемость и round swing;
-          КЛА — rating, round swing и выживаемость. Все показатели нормализуются относительно игроков того же периода,
-          а маленькие выборки стягиваются к 50. Сначала берутся последние 12 месяцев; если матчей нет — последний доступный
-          календарный год. Только при полном отсутствии данных остаётся <code>VRS</code>-fallback.
+          Для текущих профилей АИМ = Firepower, УТЛ = Utility, КЛА = Clutching, а ПОЗ собирается из Trading, Opening и Entrying.
+          Если прямых skill scores нет, карточка строится из HLTV-derived матчей за последние 12 месяцев или последний доступный
+          календарный год. Только когда подтверждённых матчевых данных нет вообще, игрок остаётся на <code>VRS</code>-fallback.
         </p>
       </div>
 

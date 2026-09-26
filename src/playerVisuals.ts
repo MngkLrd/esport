@@ -1,17 +1,6 @@
-// Visual layer for collectible-style player cards.
-// Portraits are loaded remotely; the repository does not re-host third-party photographs.
-// Missing portraits deliberately fall back to a generated monogram card instead of a broken image.
+import { PLAYER_PORTRAIT_STATS, portraitForAlias } from './playerPhotos'
 
 export type CardTier = 'gold' | 'elite' | 'rare' | 'silver'
-
-const PLAYER_PHOTOS: Record<string, string> = {
-  donk: 'https://www.game-settings.com/uploads/donk.webp',
-  apex: 'https://framerusercontent.com/images/LwIGyRGUFU1srH3RNBZ42a1jvDI.png?height=1044&width=830',
-  zywoo: 'https://profilerr.net/static/content/thumbs/560x583/a/ae/rps5ue---c560x583x50px50p--042acc2efbf4ec175762101e74d8baea.png',
-  mezii: 'https://configs-csgo.ru/upload/000/u1/8/3/ec31ed8b.png',
-  ropz: 'https://hel1.your-objectstorage.com/hel2/2025/08/22131615/ropz-Vitality.webp',
-  flamez: 'https://img-cdn.hltv.org/playerbodyshot/LUQi5dX9boyO0uDadUGht5.png?ixlib=java-2.1.0&s=1c5c46fe41e79b19a69b479d8abbbb41&w=400',
-}
 
 const FLAGS: Record<string, string> = {
   Russia: '🇷🇺',
@@ -34,8 +23,14 @@ const FLAGS: Record<string, string> = {
 }
 
 export function playerPhoto(alias: string) {
-  return PLAYER_PHOTOS[alias.toLocaleLowerCase('en-US')] ?? null
+  return portraitForAlias(alias)?.url ?? null
 }
+
+export function playerPhotoSource(alias: string) {
+  return portraitForAlias(alias)?.source ?? null
+}
+
+export { PLAYER_PORTRAIT_STATS }
 
 export function countryFlag(country: string) {
   return FLAGS[country] ?? '🌐'

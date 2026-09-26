@@ -26,10 +26,12 @@ import {
 } from './game'
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
 import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag, playerPhoto } from './playerVisuals'
+import { PacksView } from './PacksView'
+import { CreditsView } from './CreditsView'
 
 const SAVE_KEY = 'esport-ai-manager-v2'
 const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
-type Tab = 'HQ' | 'Play' | 'Roster' | 'Scout' | 'Inbox' | 'AI Director'
+type Tab = 'HQ' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'AI Director' | 'Credits'
 
 const format = new Intl.NumberFormat('en-US')
 
@@ -248,7 +250,7 @@ function App() {
     return notes.slice(0, 4)
   }, [state, starters, payroll, warnings])
 
-  const tabs: Tab[] = ['HQ', 'Play', 'Roster', 'Scout', 'Inbox', 'AI Director']
+  const tabs: Tab[] = ['HQ', 'Play', 'Roster', 'Packs', 'Scout', 'Inbox', 'AI Director', 'Credits']
 
   return (
     <div className="app-shell">
@@ -490,6 +492,13 @@ function App() {
           </section>
         )}
 
+        {tab === 'Packs' && (
+          <PacksView
+            credits={state.credits}
+            onSpend={(amount) => setState((current) => current.credits >= amount ? { ...current, credits: current.credits - amount } : current)}
+          />
+        )}
+
         {tab === 'Scout' && (
           <section className="screen">
             <div className="section-title">
@@ -616,11 +625,12 @@ function App() {
             <button className="danger-button" onClick={reset}>Reset save</button>
           </section>
         )}
+        {tab === 'Credits' && <CreditsView />}
       </main>
 
       <footer>
-        <span>ESPORT AI Manager v0.2 playable core</span>
-        <span>Fictional universe · versioned local save · deterministic simulation</span>
+        <span>ESPORT AI Manager · local fan project</span>
+        <button className="footer-link" onClick={() => openTab('Credits')}>Sources & credits</button>
       </footer>
     </div>
   )

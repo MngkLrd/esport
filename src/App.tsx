@@ -41,7 +41,7 @@ const TAB_LABELS: Record<Tab, string> = {
   Packs: 'Наборы',
   Scout: 'Скаутинг',
   Inbox: 'Лента',
-  'AI Director': 'AI-директор',
+  'AI Director': 'ИИ-директор',
   Credits: 'Источники',
 }
 
@@ -67,6 +67,12 @@ const RISK_LABELS: Record<string, string> = {
   Medium: 'Средний',
   High: 'Высокий',
 }
+
+const DIRECTOR_LEVEL_LABELS = {
+  urgent: 'СРОЧНО',
+  watch: 'ВНИМАНИЕ',
+  good: 'НОРМА',
+} as const
 
 const format = new Intl.NumberFormat('ru-RU')
 
@@ -124,10 +130,10 @@ function PlayerVisualCard({ player, starter = false, compact = false }: { player
         <span>{player.team}</span>
       </div>
       <div className="visual-stats">
-        <span><b>{player.aim}</b>AIM</span>
-        <span><b>{player.gameSense}</b>SEN</span>
-        <span><b>{player.utility}</b>UTL</span>
-        <span><b>{player.clutch}</b>CLU</span>
+        <span><b>{player.aim}</b>АИМ</span>
+        <span><b>{player.gameSense}</b>СЕНС</span>
+        <span><b>{player.utility}</b>УТИЛ</span>
+        <span><b>{player.clutch}</b>КЛАТЧ</span>
       </div>
       <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
     </div>
@@ -186,7 +192,7 @@ function PlayerCard({
 
       <div className="contract-row">
         <span className={expiring ? 'warning' : ''}>
-          {expired ? 'КОНТРАКТ ИСТЁК' : 'Контракт: ' + player.contractWeeks + ' нед.'} · {player.salary} cr/week
+          {expired ? 'КОНТРАКТ ИСТЁК' : 'Контракт: ' + player.contractWeeks + ' нед.'} · {player.salary} кр./нед.
         </span>
         <button className="text-button" onClick={onRenew} disabled={state.credits < player.salary * 4}>
           Extend {player.salary * 4}
@@ -368,13 +374,13 @@ function App() {
               <Metric label="Репутация" value={state.reputation + '/100'} />
               <Metric label="Очки сезона" value={state.seasonPoints} />
               <Metric label="Действия штаба" value={state.staffEnergy + '/3'} />
-              <Metric label="Итог недели" value={(state.lastWeekNet >= 0 ? '+' : '') + state.lastWeekNet + ' cr'} />
+              <Metric label="Итог недели" value={(state.lastWeekNet >= 0 ? '+' : '') + state.lastWeekNet + ' кр.'} />
             </div>
 
             <div className="status-strip">
-              <div><span>СТАРТОВАЯ ПЯТЁРКА</span><b>{starters.map((p) => p.alias).join(' · ') || 'Incomplete'}</b></div>
+              <div><span>СТАРТОВАЯ ПЯТЁРКА</span><b>{starters.map((p) => p.alias).join(' · ') || 'Не укомплектована'}</b></div>
               <div><span>СТАБИЛЬНОСТЬ</span><b>{state.lineupContinuity}/100</b></div>
-              <div><span>НЕДЕЛЬНАЯ ЗАРПЛАТА</span><b>{payroll} cr</b></div>
+              <div><span>НЕДЕЛЬНАЯ ЗАРПЛАТА</span><b>{payroll} кр.</b></div>
               <div><span>КУБОК</span><b>{state.wins >= 2 || state.reputation >= 45 ? 'ОТКРЫТ' : 'ЗАКРЫТ'}</b></div>
             </div>
 
@@ -433,7 +439,7 @@ function App() {
                 <div className="feed">
                   {state.news.slice(0, 5).map((item) => (
                     <div className="feed-item" key={item.id}>
-                      <span>W{item.week}</span>
+                      <span>Н{item.week}</span>
                       <div>
                         <strong>{item.title}</strong>
                         <p>{item.body}</p>
@@ -453,7 +459,7 @@ function App() {
                 <div className="eyebrow">МАТЧ-ЦЕНТР · РЕЙТ {rating} · ХИМ {chem}</div>
                 <h1>Прими решение до матча.</h1>
               </div>
-              <p>Каждый матч двигает календарь на неделю, списывает зарплату всего состава и расходует срок контрактов основы. Текущая зарплата: <b>{payroll} cr</b>.</p>
+              <p>Каждый матч двигает календарь на неделю, списывает зарплату всего состава и расходует срок контрактов основы. Текущая зарплата: <b>{payroll} кр.</b>.</p>
             </div>
 
             <div className="lineup-summary">
@@ -488,7 +494,7 @@ function App() {
                     <h2>{modeInfo[mode].name}</h2>
                     <p>{modeInfo[mode].description}</p>
                     <div className="mode-meta">
-                      <span>Best of 3 · инерция между картами</span>
+                      <span>BO3 · инерция между картами</span>
                       <span>Важны роли + состояние + стабильность</span>
                       <span>Доход считается с учётом зарплат</span>
                     </div>
@@ -529,7 +535,7 @@ function App() {
               <Metric label="Рейтинг команды" value={rating} accent />
               <Metric label="Химия" value={chem} />
               <Metric label="Стабильность" value={state.lineupContinuity} />
-              <Metric label="Зарплаты" value={payroll + ' cr/w'} />
+              <Metric label="Зарплаты" value={payroll + ' кр./нед.'} />
               <Metric label="Действия штаба" value={state.staffEnergy + '/3'} />
             </div>
 
@@ -595,7 +601,7 @@ function App() {
                       <p>{player.bio}</p>
                       <div className="scout-numbers">
                         <span>Потенциал <b>{player.potential}</b></span>
-                        <span>Зарплата <b>{player.salary}/w</b></span>
+                        <span>Зарплата <b>{player.salary}/нед.</b></span>
                         <span>Подписание <b>{fee}</b></span>
                       </div>
                       <div className="traits">{player.traits.map((trait) => <span key={trait}>{trait}</span>)}</div>
@@ -604,7 +610,7 @@ function App() {
                         disabled={state.credits < fee || state.roster.length >= 8}
                         onClick={() => setState((current) => signProspect(current, player.id))}
                       >
-                        Подписать в запас · {fee} cr
+                        Подписать в запас · {fee} кр.
                       </button>
                     </article>
                   )
@@ -649,7 +655,7 @@ function App() {
             <div className="director-grid">
               {directorNotes.map((note) => (
                 <article className={'director-note ' + note.level} key={note.title}>
-                  <span>{note.level}</span>
+                  <span>{DIRECTOR_LEVEL_LABELS[note.level]}</span>
                   <h2>{note.title}</h2>
                   <p>{note.body}</p>
                 </article>
@@ -661,7 +667,7 @@ function App() {
                 <span>01 · КАНОНИЧЕСКОЕ СОСТОЯНИЕ</span>
                 <h2>Источник истины — симуляция</h2>
                 <p>Стартовая пятёрка, контракты, зарплаты, усталость, вероятность на карте, оценки игроков и награды считаются детерминированными переходами состояния.</p>
-                <code>состояние + состав + тактика + режим + seed → новое состояние</code>
+                <code>состояние + состав + тактика + режим + сид → новое состояние</code>
               </article>
               <article>
                 <span>02 · ДИРЕКТОР СЕЙЧАС</span>
@@ -678,7 +684,7 @@ function App() {
             </div>
 
             <div className="debug-panel">
-              <div><span>Seed</span><b>{state.seed}</b></div>
+              <div><span>Сид</span><b>{state.seed}</b></div>
               <div><span>Рейтинг команды</span><b>{rating}</b></div>
               <div><span>Химия</span><b>{chem}</b></div>
               <div><span>Зарплаты</span><b>{payroll}</b></div>

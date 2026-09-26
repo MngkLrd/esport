@@ -17,11 +17,13 @@ The previous build exposed many management concepts but several of them were mos
 - signings add recurring salary, not only a one-off fee
 - expired contracts block a player from starting until renewed
 - players can be benched, renewed, trained, rested and released
-- scouting creates deterministic fictional prospects with fee + salary trade-offs
+- scouting draws from a large real-player alias/team snapshot, while gameplay ratings, wages and development remain simulation data
 - Online Cup has a real progression gate
 - Inbox records match, finance, lineup, scouting and contract events
 - AI Director is currently a **rule-based live advisor** over canonical state; it does not pretend an LLM is connected
 - versioned browser save with migration from the v0.1 save
+- collectible player packs with a deterministic pre-selected result, animated reveal reel and local card collection
+- in-app Credits page documenting GitHub references, source datasets and license boundaries
 
 The architecture rule remains:
 
@@ -51,6 +53,10 @@ Those are follow-up systems, not features claimed by the current build.
 
 The Vite base path is configured for this repository at `/esport/`. CI builds every branch and PR. The Pages workflow deploys `main`.
 
-## IP boundary
+## Fan-project and source boundary
 
-This is an original fictional esports universe. It does not use Counter-Strike/Valve branding, real teams, real players, logos, skins, tournament marks or scraped private data.
+This is a personal, non-commercial fan manager. It now uses public real-player aliases, team snapshot data and remotely loaded player photographs where a verified mapping exists. Gameplay ratings, pack power, wages, potential and match outcomes are our own simulation values.
+
+Public GitHub repositories are not treated as automatically reusable. The pack animation is our own React/TypeScript implementation informed by public case-opening references; repositories without a compatible license are credited as references rather than copied. See the in-app **Credits** page for authors, source links and license notes.
+
+Player photographs are not committed into this repository; the app currently loads matched portraits remotely and falls back to generated text cards when an image is unavailable.

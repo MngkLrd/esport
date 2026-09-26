@@ -118,7 +118,7 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
   }
 
   const resetCollection = () => {
-    if (!window.confirm('Clear only the pack collection and pack history? Club save stays untouched.')) return
+    if (!window.confirm('Очистить только коллекцию карт и историю наборов? Сохранение клуба останется без изменений.')) return
     setPackState(createPackState())
     setRoll(null)
     setSpinning(false)
@@ -129,18 +129,18 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
     <section className="screen packs-screen">
       <div className="section-title">
         <div>
-          <div className="eyebrow">PACK LAB · {PACK_POOL_STATS.totalPlayers.toLocaleString('en-US')} PLAYER POOL</div>
-          <h1>Open cards, chase names, build a collection.</h1>
+          <div className="eyebrow">ЛАБОРАТОРИЯ НАБОРОВ · {PACK_POOL_STATS.totalPlayers.toLocaleString('ru-RU')} ИГРОКОВ В ПУЛЕ</div>
+          <h1>Открывай карты, лови громкие имена, собирай коллекцию.</h1>
         </div>
-        <p>The result is selected before the animation starts. The reel only reveals it — no fake last-frame rerolls.</p>
+        <p>Результат выбирается до запуска анимации. Лента только показывает его: никаких скрытых перебросов в последний момент.</p>
       </div>
 
       <div className="pack-stats">
-        <div><span>OPENED</span><b>{stats.total}</b></div>
-        <div><span>UNIQUE</span><b>{stats.unique}</b></div>
-        <div><span>EPIC</span><b>{stats.epic}</b></div>
-        <div><span>LEGENDARY</span><b>{stats.legendary}</b></div>
-        <div><span>CREDITS</span><b>{credits.toLocaleString('en-US')}</b></div>
+        <div><span>ОТКРЫТО</span><b>{stats.total}</b></div>
+        <div><span>УНИКАЛЬНЫХ</span><b>{stats.unique}</b></div>
+        <div><span>ЭПИЧЕСКИХ</span><b>{stats.epic}</b></div>
+        <div><span>ЛЕГЕНДАРНЫХ</span><b>{stats.legendary}</b></div>
+        <div><span>КРЕДИТЫ</span><b>{credits.toLocaleString('ru-RU')}</b></div>
       </div>
 
       <div className="pack-shelf">
@@ -151,12 +151,12 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
             <h2>{pack.name}</h2>
             <p>{pack.description}</p>
             <div className="pack-odds">
-              <span><i style={{ background: RARITY_COLOR.rare }} /> Rare {pack.weights.rare}%</span>
-              <span><i style={{ background: RARITY_COLOR.epic }} /> Epic {pack.weights.epic}%</span>
-              <span><i style={{ background: RARITY_COLOR.legendary }} /> Legend {pack.weights.legendary}%</span>
+              <span><i style={{ background: RARITY_COLOR.rare }} /> Редкая {pack.weights.rare}%</span>
+              <span><i style={{ background: RARITY_COLOR.epic }} /> Эпическая {pack.weights.epic}%</span>
+              <span><i style={{ background: RARITY_COLOR.legendary }} /> Легендарная {pack.weights.legendary}%</span>
             </div>
             <button className="primary" disabled={spinning || credits < pack.price} onClick={() => openPack(pack.id)}>
-              {spinning ? 'Opening…' : 'Open · ' + pack.price + ' cr'}
+              {spinning ? 'Открывается…' : 'Открыть · ' + pack.price + ' кр.'}
             </button>
           </article>
         ))}
@@ -165,10 +165,10 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
       <div className={'pack-stage ' + (spinning ? 'is-spinning' : '') + (revealed ? 'is-revealed' : '')}>
         <div className="pack-stage-head">
           <div>
-            <span>CASE OPENING</span>
-            <strong>{roll ? roll.pack.name : 'Choose a pack above'}</strong>
+            <span>ОТКРЫТИЕ НАБОРА</span>
+            <strong>{roll ? roll.pack.name : 'Выбери набор выше'}</strong>
           </div>
-          {roll && <b style={{ color: RARITY_COLOR[roll.winner.rarity] }}>{revealed ? RARITY_LABEL[roll.winner.rarity] : 'ROLLING'}</b>}
+          {roll && <b style={{ color: RARITY_COLOR[roll.winner.rarity] }}>{revealed ? RARITY_LABEL[roll.winner.rarity] : 'КРУТИТСЯ'}</b>}
         </div>
 
         <div className="pack-reel-window">
@@ -184,22 +184,22 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
               {roll.reel.map((card, index) => <ReelCard key={card.id} card={card} winner={revealed && index === roll.winnerIndex} />)}
             </div>
           ) : (
-            <div className="pack-reel-placeholder">SELECT A PACK TO LOAD THE REEL</div>
+            <div className="pack-reel-placeholder">ВЫБЕРИ НАБОР, ЧТОБЫ ЗАПУСТИТЬ ЛЕНТУ</div>
           )}
         </div>
 
         {roll && revealed && (
           <div className="pack-winner">
             <div>
-              <span>NEW CARD #{roll.winner.serial + 1}</span>
+              <span>НОВАЯ КАРТА #{roll.winner.serial + 1}</span>
               <h2>{roll.winner.alias}</h2>
               <p>
-                {roll.winner.realName ?? 'Identity metadata pending'} · {roll.winner.team} · power {roll.winner.power}
-                {roll.winner.sourceRank ? ' · VRS team rank #' + roll.winner.sourceRank : ''}
+                {roll.winner.realName ?? 'Данные профиля пока не найдены'} · {roll.winner.team} · сила {roll.winner.power}
+                {roll.winner.sourceRank ? ' · рейтинг команды VRS #' + roll.winner.sourceRank : ''}
               </p>
             </div>
             <div className="pack-winner-actions">
-              <button className="secondary" onClick={() => openPack(roll.pack.id)} disabled={credits < roll.pack.price}>Open again · {roll.pack.price}</button>
+              <button className="secondary" onClick={() => openPack(roll.pack.id)} disabled={credits < roll.pack.price}>Открыть ещё · {roll.pack.price}</button>
             </div>
           </div>
         )}
@@ -207,10 +207,10 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
 
       <div className="collection-head">
         <div>
-          <div className="eyebrow">MY CARDS · {stats.total}</div>
-          <h2>Collection</h2>
+          <div className="eyebrow">МОИ КАРТЫ · {stats.total}</div>
+          <h2>Коллекция</h2>
         </div>
-        {stats.total > 0 && <button className="text-button release" onClick={resetCollection}>Clear collection</button>}
+        {stats.total > 0 && <button className="text-button release" onClick={resetCollection}>Очистить коллекцию</button>}
       </div>
 
       {packState.inventory.length ? (
@@ -219,9 +219,9 @@ export function PacksView({ credits, onSpend }: { credits: number; onSpend: (amo
         </div>
       ) : (
         <div className="empty-state pack-empty">
-          <span>NO CARDS YET</span>
-          <h2>Your first pack is waiting.</h2>
-          <p>Cards are separate from the signed roster for now, so opening packs cannot silently mutate the competitive lineup.</p>
+          <span>ПОКА НЕТ КАРТ</span>
+          <h2>Твой первый набор уже ждёт.</h2>
+          <p>Карты пока отделены от подписанного состава, поэтому открытие наборов не может незаметно изменить боевую пятёрку.</p>
         </div>
       )}
     </section>

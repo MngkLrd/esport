@@ -273,7 +273,7 @@ export const migrateState = (raw: unknown): GameState => {
         alias: identity.alias,
         firstName: identity.realName ?? identity.alias,
         realName: identity.realName ?? identity.alias,
-        country: identity.country ?? 'Unknown',
+        country: identity.country ?? 'Неизвестно',
         team: identity.team,
         age: identity.age ?? player.age,
         role: identity.role ?? player.role,
@@ -616,7 +616,7 @@ const makeProspect = (
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,
-    country: identity.country ?? 'Unknown',
+    country: identity.country ?? 'Неизвестно',
     team: identity.team,
     age: identity.age ?? 0,
     role: identity.role ?? pick(simulationRoles, rng),
@@ -634,7 +634,7 @@ const makeProspect = (
     traits: [pick(traits, rng), pick(traits, rng)],
     bio: identity.realName
       ? identity.realName + ' · ' + (identity.country ?? 'страна неизвестна') + ' · команда в профиле: ' + identity.team + '. Рейтинг, зарплата и потенциал вымышлены для игрового процесса.'
-      : identity.alias + ' · команда по срезу Valve VRS: ' + identity.team + ' (2026-09-07). Full name, nationality and age are not enriched yet; role, ratings, wage and potential are simulation data.',
+      : identity.alias + ' · команда по срезу Valve VRS: ' + identity.team + ' (2026-09-07). Полное имя, национальность и возраст пока не обогащены; роль, рейтинг, зарплата и потенциал являются данными симуляции.',
   }
 }
 
@@ -659,7 +659,7 @@ export const scout = (state: GameState): GameState => {
       week: state.week,
       kind: 'scout' as const,
       title: 'Скаутский отчёт готов',
-      body: 'Три реальных CS2-ника выбраны из расширенной базы игроков. Для проработанных профилей используются проверенные данные личности, long-tail берётся из срезов Valve VRS от 2026-09-07. Рейтинги, роли, зарплаты и потенциал рассчитывает менеджерская симуляция.',
+      body: 'Три реальных CS2-ника выбраны из расширенной базы игроков. Для проработанных профилей используются проверенные данные личности, длинный хвост берётся из срезов Valve VRS от 2026-09-07. Рейтинги, роли, зарплаты и потенциал рассчитывает менеджерская симуляция.',
     }, ...state.news].slice(0, 50),
   }
 }

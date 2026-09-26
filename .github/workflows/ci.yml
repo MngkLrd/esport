@@ -19,5 +19,7 @@ jobs:
           package-manager-cache: false
       - name: Install dependencies
         run: npm install
+      - name: Card pipeline smoke tests
+        run: npm run test:cards
       - name: Typecheck and build
         run: npm run build

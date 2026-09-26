@@ -62,7 +62,10 @@ export const cardStatsFromHltv = (
 ): PlayerCardStats | null => {
   if (!snapshot || snapshot.status !== 'ok' || !snapshot.cardScores) return null
 
-  const { aim, utility, positioning, clutch } = snapshot.cardScores
+  const aim = clamp(snapshot.cardScores.aim)
+  const utility = clamp(snapshot.cardScores.utility)
+  const positioning = clamp(snapshot.cardScores.positioning)
+  const clutch = clamp(snapshot.cardScores.clutch)
   const [aimWeight, utilityWeight, posWeight, clutchWeight] = overallWeights[role ?? 'Unknown']
   const ovr = clamp(
     aim * aimWeight +

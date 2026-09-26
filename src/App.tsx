@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import {
   canPlayMatch,
   chemistry,
@@ -26,15 +26,18 @@ import {
 } from './game'
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
 import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag, playerPhoto } from './playerVisuals'
-import { PacksView } from './PacksView'
 import {
   LEGACY_PACK_SAVE_KEY,
   clearPackCollection,
   collectPackWinner,
   migratePackState,
   type PackRoll,
-} from './packs'
+} from './packState'
 import { CreditsView } from './CreditsView'
+
+const PacksView = lazy(() =>
+  import('./PacksView').then((module) => ({ default: module.PacksView })),
+)
 
 const SAVE_KEY = 'esport-ai-manager-v2'
 const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
@@ -594,13 +597,24 @@ function App() {
         )}
 
         {tab === 'Packs' && (
-          <PacksView
-            credits={state.credits}
-            saveId={state.saveId}
-            packState={state.packs}
-            onOpen={commitPackRoll}
-            onClear={clearPacks}
-          />
+          <Suspense
+            fallback={(
+              <section className="screen">
+                <div className="empty-state">
+                  <span>НАГРАДЫ</span>
+                  <h2>Загружаю коллекцию и HLTV-карточки…</h2>
+                </div>
+              </section>
+            )}
+          >
+            <PacksView
+              credits={state.credits}
+              saveId={state.saveId}
+              packState={state.packs}
+              onOpen={commitPackRoll}
+              onClear={clearPacks}
+            />
+          </Suspense>
         )}
 
         {tab === 'Scout' && (

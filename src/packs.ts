@@ -1,51 +1,15 @@
-import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
+import { REAL_PLAYERS, type RealPlayerSeed } from './players'
 import { cardStatsForAlias, type PlayerCardStats } from './cardStats'
+import type {
+  PackCard,
+  PackDefinition,
+  PackId,
+  PackRarity,
+  PackRoll,
+  PackState,
+} from './packState'
 
-export type PackRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
-export type PackId = 'academy' | 'challenger' | 'major' | 'afterdark'
-
-export interface PackDefinition {
-  id: PackId
-  name: string
-  eyebrow: string
-  description: string
-  price: number
-  accent: string
-  weights: Record<PackRarity, number>
-}
-
-export interface PackCard {
-  id: string
-  alias: string
-  realName: string | null
-  country: string | null
-  team: string
-  role: RealPlayerRole | null
-  power: number
-  rarity: PackRarity
-  sourceRating: number | null
-  sourceRank: number | null
-  cardStats: PlayerCardStats | null
-  edition: string
-  packId: PackId
-  serial: number
-}
-
-export interface PackState {
-  version: 2
-  serial: number
-  inventory: PackCard[]
-  history: PackCard[]
-}
-
-export interface PackRoll {
-  pack: PackDefinition
-  winner: PackCard
-  reel: PackCard[]
-  winnerIndex: number
-}
-
-export const LEGACY_PACK_SAVE_KEY = 'esport-ai-manager-packs-v1'
+export * from './packState'
 
 export const PACKS: readonly PackDefinition[] = [
   {
@@ -122,6 +86,14 @@ const mulberry32 = (seed: number) => () => {
 
 const aliasNoise = (alias: string) => (hashSeed(alias.toLocaleLowerCase('en-US')) % 7) - 3
 
+const editionForStats = (stats: PlayerCardStats) => {
+  if (stats.window === 'calendar-year') return stats.periodEnd.slice(0, 4)
+  if (stats.window === 'past3m') {
+    return stats.periodStart.slice(5, 7) + '–' + stats.periodEnd.slice(5, 7) + " ’" + stats.periodEnd.slice(2, 4)
+  }
+  return "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
+}
+
 // Pack power prefers the current HLTV card OVR. Players without usable HLTV
 // statistics keep the old VRS/rating fallback so every roster entry remains packable.
 export const playerPower = (player: RealPlayerSeed) => {
@@ -132,6 +104,7 @@ export const playerPower = (player: RealPlayerSeed) => {
   if (player.rating != null) {
     return clamp(Math.round(60 + (player.rating - 0.8) * 62 + noise), 58, 99)
   }
+
   const rank = player.vrsRank ?? 401
   if (rank <= 10) return clamp(91 + noise, 88, 96)
   if (rank <= 30) return clamp(85 + noise, 82, 91)
@@ -154,6 +127,7 @@ const rankedPool = REAL_PLAYERS
   .sort((a, b) => b.power - a.power || a.player.alias.localeCompare(b.player.alias, 'en-US'))
 
 const rarityByAlias = new Map<string, PackRarity>()
+const playerByAlias = new Map<string, RealPlayerSeed>()
 const pools: Record<PackRarity, RealPlayerSeed[]> = {
   common: [],
   uncommon: [],
@@ -163,8 +137,10 @@ const pools: Record<PackRarity, RealPlayerSeed[]> = {
 }
 
 rankedPool.forEach(({ player }, index) => {
+  const key = player.alias.toLocaleLowerCase('en-US')
   const rarity = rarityForPercentile(index, rankedPool.length)
-  rarityByAlias.set(player.alias.toLocaleLowerCase('en-US'), rarity)
+  playerByAlias.set(key, player)
+  rarityByAlias.set(key, rarity)
   pools[rarity].push(player)
 })
 
@@ -175,6 +151,7 @@ const pickRarity = (weights: Record<PackRarity, number>, rng: () => number) => {
   const rarities = Object.keys(weights) as PackRarity[]
   const total = rarities.reduce((sum, rarity) => sum + weights[rarity], 0)
   let cursor = rng() * total
+
   for (const rarity of rarities) {
     cursor -= weights[rarity]
     if (cursor <= 0) return rarity
@@ -190,13 +167,7 @@ const pickPlayer = (rarity: PackRarity, rng: () => number) => {
 const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: number): PackCard => {
   const cardStats = cardStatsForAlias(player.alias, player.role)
   const power = cardStats?.ovr ?? playerPower(player)
-  const edition = cardStats
-    ? (cardStats.window === 'calendar-year'
-        ? cardStats.periodEnd.slice(0, 4)
-        : cardStats.window === 'past3m'
-          ? cardStats.periodStart.slice(5, 7) + '–' + cardStats.periodEnd.slice(5, 7) + " ’" + cardStats.periodEnd.slice(2, 4)
-          : "’" + cardStats.periodStart.slice(2, 4) + "–’" + cardStats.periodEnd.slice(2, 4))
-    : 'VRS'
+
   return {
     id: ['card', serial, slot, player.alias].join('-'),
     alias: player.alias,
@@ -209,55 +180,33 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     sourceRating: player.rating,
     sourceRank: player.vrsRank ?? null,
     cardStats,
-    edition,
+    edition: cardStats ? editionForStats(cardStats) : 'VRS',
     packId,
     serial,
   }
 }
 
-export const createPackState = (): PackState => ({
-  version: 2,
-  serial: 0,
-  inventory: [],
-  history: [],
+const hydrateCard = (card: PackCard): PackCard => {
+  if (card.cardStats) return card
+
+  const player = playerByAlias.get(card.alias.toLocaleLowerCase('en-US'))
+  const stats = cardStatsForAlias(card.alias, card.role)
+  if (!stats) return card
+
+  return {
+    ...card,
+    power: stats.ovr,
+    rarity: player ? rarityForPlayer(player) : card.rarity,
+    cardStats: stats,
+    edition: editionForStats(stats),
+  }
+}
+
+export const hydratePackState = (state: PackState): PackState => ({
+  ...state,
+  inventory: state.inventory.map(hydrateCard),
+  history: state.history.map(hydrateCard),
 })
-
-const migrateCard = (raw: unknown): PackCard | null => {
-  if (!raw || typeof raw !== 'object') return null
-  const card = raw as Partial<PackCard>
-  if (typeof card.alias !== 'string' || typeof card.power !== 'number' || typeof card.packId !== 'string') return null
-  return {
-    ...(card as PackCard),
-    sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
-    sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
-    cardStats: card.cardStats ?? cardStatsForAlias(card.alias, card.role ?? null),
-    edition: typeof card.edition === 'string'
-      ? card.edition
-      : (() => {
-          const stats = cardStatsForAlias(card.alias, card.role ?? null)
-          if (!stats) return 'VRS'
-          return stats.window === 'calendar-year'
-            ? stats.periodEnd.slice(0, 4)
-            : stats.window === 'past3m'
-              ? stats.periodStart.slice(5, 7) + '–' + stats.periodEnd.slice(5, 7) + " ’" + stats.periodEnd.slice(2, 4)
-              : "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
-        })(),
-  }
-}
-
-export const migratePackState = (raw: unknown): PackState => {
-  if (!raw || typeof raw !== 'object') return createPackState()
-  const parsed = raw as { version?: number; serial?: number; inventory?: unknown[]; history?: unknown[] }
-  if ((parsed.version !== 1 && parsed.version !== 2) || !Array.isArray(parsed.inventory)) return createPackState()
-  return {
-    version: 2,
-    serial: typeof parsed.serial === 'number' ? Math.max(0, Math.floor(parsed.serial)) : 0,
-    inventory: parsed.inventory.map(migrateCard).filter((card): card is PackCard => Boolean(card)),
-    history: Array.isArray(parsed.history)
-      ? parsed.history.map(migrateCard).filter((card): card is PackCard => Boolean(card)).slice(0, 60)
-      : [],
-  }
-}
 
 export const rollPack = (packId: PackId, serial: number, saveId: string): PackRoll => {
   const pack = PACKS.find((candidate) => candidate.id === packId) ?? PACKS[0]
@@ -265,47 +214,16 @@ export const rollPack = (packId: PackId, serial: number, saveId: string): PackRo
   const winnerRarity = pickRarity(pack.weights, rng)
   const winnerPlayer = pickPlayer(winnerRarity, rng)
   const winnerIndex = 37
+
   const reel = Array.from({ length: 46 }, (_, index) => {
     const visualRarity = pickRarity(pack.weights, rng)
     return toCard(pickPlayer(visualRarity, rng), pack.id, serial, index)
   })
+
   const winner = toCard(winnerPlayer, pack.id, serial, winnerIndex)
   reel[winnerIndex] = winner
   return { pack, winner, reel, winnerIndex }
 }
-
-export const collectPackWinner = (state: PackState, winner: PackCard): PackState => ({
-  version: 2,
-  serial: Math.max(state.serial + 1, winner.serial + 1),
-  inventory: [winner, ...state.inventory],
-  history: [winner, ...state.history].slice(0, 60),
-})
-
-export const clearPackCollection = (state: PackState): PackState => ({
-  version: 2,
-  serial: state.serial,
-  inventory: [],
-  history: [],
-})
-
-export const packCollectionStats = (state: PackState) => {
-  const aliases = state.inventory.map((card) => card.alias.toLocaleLowerCase('en-US'))
-  const unique = new Set(aliases).size
-  const legendary = state.inventory.filter((card) => card.rarity === 'legendary').length
-  const epic = state.inventory.filter((card) => card.rarity === 'epic').length
-  const bestPower = state.inventory.reduce((best, card) => Math.max(best, card.power), 0)
-  return {
-    total: state.inventory.length,
-    unique,
-    duplicates: state.inventory.length - unique,
-    legendary,
-    epic,
-    bestPower,
-  }
-}
-
-export const packAliasCount = (state: PackState, alias: string) =>
-  state.inventory.filter((card) => card.alias.toLocaleLowerCase('en-US') === alias.toLocaleLowerCase('en-US')).length
 
 export const PACK_POOL_STATS = {
   totalPlayers: REAL_PLAYERS.length,

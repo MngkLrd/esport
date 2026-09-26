@@ -103,7 +103,9 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
 function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean }) {
   const photo = playerPhoto(card.alias)
   const source = card.cardStats
-    ? 'HLTV · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd
+    ? 'HLTV data · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd +
+      ' · ' + card.cardStats.maps + ' карт' +
+      (card.cardStats.rating != null ? ' · rating ' + card.cardStats.rating.toFixed(3) : '')
     : card.sourceRating != null
       ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
       : card.sourceRank
@@ -328,13 +330,14 @@ export function PacksView({
 
       <div className="pack-rating-note">
         <div>
-          <span>КАРТОЧКИ · HLTV LAST 12 MONTHS</span>
-          <strong>OVR строится из реальных skill scores HLTV за период карты.</strong>
+          <span>КАРТОЧКИ · HLTV DATA · ГОДОВОЙ СРЕЗ</span>
+          <strong>OVR и четыре стата считаются из фактической матчевой статистики за период карты.</strong>
         </div>
         <p>
-          АИМ = Firepower, УТЛ = Utility, КЛА = Clutching. ПОЗ — ролевая смесь Trading, Opening и Entrying.
-          Итоговый OVR взвешивает эти четыре показателя с учётом роли игрока. Карты без достаточного HLTV-снапшота
-          временно используют старый VRS-балансировочный fallback и явно помечаются изданием <code>VRS</code>.
+          АИМ учитывает ADR, убийства на карту и rating; УТЛ — KAST и round swing; ПОЗ — KAST, выживаемость и round swing;
+          КЛА — rating, round swing и выживаемость. Все показатели нормализуются относительно игроков того же периода,
+          а маленькие выборки стягиваются к 50. Сначала берутся последние 12 месяцев; если матчей нет — последний доступный
+          календарный год. Только при полном отсутствии данных остаётся <code>VRS</code>-fallback.
         </p>
       </div>
 

@@ -1,0 +1,36 @@
+name: HLTV mobile smoke
+
+on:
+  push:
+    branches:
+      - feat/hltv-card-snapshots
+    paths:
+      - .github/workflows/hltv-mobile-smoke.yml
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check curl_cffi
+      - name: Probe PlayerScreen and search
+        run: |
+          python - <<'PY'
+          from curl_cffi import requests
+          s=requests.Session(impersonate="chrome120")
+          s.headers.update({
+              "User-Agent":"org.hltv.android/3.0.34;release(Android; Pixel 8; Android 14)",
+              "Referer":"https://www.hltv.org/",
+              "Accept":"application/json, text/plain, */*",
+          })
+          base="https://www.hltv.org/mobile"
+          p=s.get(base+"/PlayerScreen",params={"playerId":11893},timeout=20)
+          print("PlayerScreen",p.status_code,p.text[:700])
+          q=s.get(base+"/v2/search",params={"term":"donk"},timeout=20)
+          print("Search",q.status_code,q.text[:700])
+          p.raise_for_status()
+          q.raise_for_status()
+          PY

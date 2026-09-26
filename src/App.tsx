@@ -25,6 +25,7 @@ import {
   type TacticalPlan,
 } from './game'
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
+import { CARD_TIER_LABEL, cardTier, countryFlag, playerPhoto } from './playerVisuals'
 
 const SAVE_KEY = 'esport-ai-manager-v2'
 const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
@@ -47,6 +48,51 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
     <div className={'metric ' + (accent ? 'metric-accent' : '')}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  )
+}
+
+function PlayerVisualCard({ player, starter = false, compact = false }: { player: Player; starter?: boolean; compact?: boolean }) {
+  const ovr = overall(player)
+  const tier = cardTier(ovr)
+  const photo = playerPhoto(player.alias)
+  const initials = player.alias.slice(0, 3).toUpperCase()
+  const role = player.role === 'Rifler' ? 'RIF' : player.role === 'Support' ? 'SUP' : player.role === 'Entry' ? 'ENT' : player.role
+
+  return (
+    <div className={'visual-player-card tier-' + tier + (starter ? ' is-starter' : '') + (compact ? ' compact' : '')}>
+      <div className="visual-card-shine" />
+      <div className="visual-card-top">
+        <div>
+          <strong>{ovr}</strong>
+          <span>{role}</span>
+        </div>
+        {starter && <b className="starter-star">★</b>}
+      </div>
+      <div className="visual-country">{countryFlag(player.country)} <span>{player.country}</span></div>
+      <div className="visual-photo">
+        <div className="visual-monogram">{initials}</div>
+        {photo && (
+          <img
+            src={photo}
+            alt={player.realName + ' (' + player.alias + ')'}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(event) => { event.currentTarget.style.display = 'none' }}
+          />
+        )}
+      </div>
+      <div className="visual-identity">
+        <strong>{player.alias}</strong>
+        <span>{player.team}</span>
+      </div>
+      <div className="visual-stats">
+        <span><b>{player.aim}</b>AIM</span>
+        <span><b>{player.gameSense}</b>SEN</span>
+        <span><b>{player.utility}</b>UTL</span>
+        <span><b>{player.clutch}</b>CLU</span>
+      </div>
+      <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
     </div>
   )
 }
@@ -404,6 +450,18 @@ function App() {
               <p>Bench tired players, protect contracts, maintain role coverage and control payroll. Lineup changes reduce continuity temporarily.</p>
             </div>
 
+            <div className="lineup-card-grid">
+              {[...state.roster]
+                .sort((a, b) => Number(state.startingFive.includes(b.id)) - Number(state.startingFive.includes(a.id)) || overall(b) - overall(a))
+                .map((player) => (
+                  <PlayerVisualCard
+                    key={'visual-' + player.id}
+                    player={player}
+                    starter={state.startingFive.includes(player.id)}
+                  />
+                ))}
+            </div>
+
             <div className="roster-toolbar">
               <Metric label="Team OVR" value={rating} accent />
               <Metric label="Chemistry" value={chem} />
@@ -459,13 +517,10 @@ function App() {
                   const fee = player.salary * 3
                   return (
                     <article className="prospect-card" key={player.id}>
-                      <div className="player-head">
-                        <div>
-                          <div className="eyebrow">{player.country} · {player.team} · {player.role}</div>
-                          <h2>{player.alias}</h2>
-                          <p>{player.realName !== player.alias ? player.realName : 'Identity metadata pending'} · {player.age > 0 ? player.age + ' y.o.' : 'age unknown'}</p>
-                        </div>
-                        <div className="ovr">{overall(player)}</div>
+                      <PlayerVisualCard player={player} compact />
+                      <div className="prospect-identity-line">
+                        <span>{player.realName !== player.alias ? player.realName : 'Identity metadata pending'}</span>
+                        <span>{player.age > 0 ? player.age + ' y.o.' : 'age unknown'}</span>
                       </div>
                       <p>{player.bio}</p>
                       <div className="scout-numbers">

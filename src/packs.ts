@@ -141,14 +141,20 @@ export const playerPower = (player: RealPlayerSeed) => {
   return clamp(63 + noise - Math.floor((rank - 160) / 90), 54, 70)
 }
 
-export const rarityForPower = (power: number): PackRarity => {
-  if (power >= 91) return 'legendary'
-  if (power >= 84) return 'epic'
-  if (power >= 76) return 'rare'
-  if (power >= 67) return 'uncommon'
+const rarityForPercentile = (index: number, total: number): PackRarity => {
+  const percentile = (index + 1) / Math.max(1, total)
+  if (percentile <= 0.025) return 'legendary'
+  if (percentile <= 0.10) return 'epic'
+  if (percentile <= 0.30) return 'rare'
+  if (percentile <= 0.60) return 'uncommon'
   return 'common'
 }
 
+const rankedPool = REAL_PLAYERS
+  .map((player) => ({ player, power: playerPower(player) }))
+  .sort((a, b) => b.power - a.power || a.player.alias.localeCompare(b.player.alias, 'en-US'))
+
+const rarityByAlias = new Map<string, PackRarity>()
 const pools: Record<PackRarity, RealPlayerSeed[]> = {
   common: [],
   uncommon: [],
@@ -157,7 +163,14 @@ const pools: Record<PackRarity, RealPlayerSeed[]> = {
   legendary: [],
 }
 
-for (const player of REAL_PLAYERS) pools[rarityForPower(playerPower(player))].push(player)
+rankedPool.forEach(({ player }, index) => {
+  const rarity = rarityForPercentile(index, rankedPool.length)
+  rarityByAlias.set(player.alias.toLocaleLowerCase('en-US'), rarity)
+  pools[rarity].push(player)
+})
+
+const rarityForPlayer = (player: RealPlayerSeed): PackRarity =>
+  rarityByAlias.get(player.alias.toLocaleLowerCase('en-US')) ?? 'common'
 
 const pickRarity = (weights: Record<PackRarity, number>, rng: () => number) => {
   const rarities = Object.keys(weights) as PackRarity[]
@@ -189,7 +202,7 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
     team: player.team,
     role: player.role,
     power,
-    rarity: rarityForPower(power),
+    rarity: rarityForPlayer(player),
     sourceRating: player.rating,
     sourceRank: player.vrsRank ?? null,
     cardStats,

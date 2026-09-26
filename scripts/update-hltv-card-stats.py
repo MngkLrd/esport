@@ -6,7 +6,9 @@ import bisect
 import datetime as dt
 import json
 import math
+import random
 import re
+import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -59,14 +61,49 @@ def metadata_profile_ids() -> dict[str, int]:
 
 
 def get_json(path: str, params: dict[str, Any]) -> Any:
-    response = requests.get(
-        API_BASE + path,
-        params=params,
-        timeout=60,
-        headers={"User-Agent": "esport-ai-manager/0.3 (+https://github.com/MngkLrd/esport)"},
-    )
-    response.raise_for_status()
-    return response.json()
+    last_error: Exception | None = None
+    for attempt in range(5):
+        try:
+            response = requests.get(
+                API_BASE + path,
+                params=params,
+                timeout=60,
+                headers={"User-Agent": "esport-ai-manager/0.3 (+https://github.com/MngkLrd/esport)"},
+            )
+            response.raise_for_status()
+            return response.json()
+        except (requests.RequestException, ValueError) as exc:
+            last_error = exc
+            if attempt == 4:
+                break
+            time.sleep(min(8.0, 0.8 * (2 ** attempt) + random.uniform(0.1, 0.5)))
+    raise RuntimeError(str(last_error) if last_error else f"Unable to fetch {path}")
+
+
+def fetch_annual_population(start_date: str, end_date: str) -> list[dict[str, Any]]:
+    page_size = 250
+    offset = 0
+    rows: list[dict[str, Any]] = []
+    while True:
+        page = get_json("/players/stats", {
+            "mapid": 0,
+            "sideid": 0,
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": page_size,
+            "offset": offset,
+            "min_played": 1,
+        })
+        if not isinstance(page, list):
+            raise RuntimeError("Unexpected /players/stats payload")
+        rows.extend(row for row in page if isinstance(row, dict))
+        print(f"Fetched annual stats page offset={offset}: {len(page)} rows", flush=True)
+        if len(page) < page_size:
+            break
+        offset += page_size
+        if offset > 10000:
+            raise RuntimeError("Pagination safety limit exceeded")
+    return rows
 
 
 def as_float(value: Any) -> float | None:
@@ -128,17 +165,7 @@ def main() -> None:
     aliases = repo_aliases()
     known_ids = metadata_profile_ids()
 
-    rows = get_json("/players/stats", {
-        "mapid": 0,
-        "sideid": 0,
-        "start_date": args.start_date,
-        "end_date": args.end_date,
-        "limit": 5000,
-        "offset": 0,
-        "min_played": 1,
-    })
-    if not isinstance(rows, list):
-        raise RuntimeError("Unexpected /players/stats payload")
+    rows = fetch_annual_population(args.start_date, args.end_date)
     if len(rows) < 100:
         raise RuntimeError(f"Coverage gate failed: API returned only {len(rows)} active players")
 

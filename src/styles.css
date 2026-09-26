@@ -1255,3 +1255,98 @@ footer {
   .credits-list article { align-items: stretch; flex-direction: column; }
   .credits-list a { align-self: flex-start; }
 }
+
+
+/* first-run welcome */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 107, 53, .12), transparent 30%),
+    rgba(5, 7, 10, .93);
+  backdrop-filter: blur(10px);
+}
+.welcome-panel {
+  width: min(880px, 100%);
+  border: 1px solid #323b47;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.025), transparent 28%),
+    #0c1016;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .55);
+  padding: 34px;
+}
+.welcome-brand {
+  color: var(--orange-2);
+  font: 900 11px/1 Space Mono, monospace;
+  letter-spacing: .2em;
+  margin-bottom: 28px;
+}
+.welcome-panel h1 {
+  max-width: 720px;
+  margin: 9px 0 12px;
+  font-size: clamp(30px, 5vw, 54px);
+  line-height: .98;
+}
+.welcome-panel > p {
+  max-width: 700px;
+  margin: 0;
+  color: #96a1af;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 28px 0;
+}
+.welcome-grid article {
+  min-height: 150px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.018);
+  padding: 18px;
+}
+.welcome-grid b {
+  display: block;
+  color: var(--orange);
+  font: 900 9px/1 Space Mono, monospace;
+  margin-bottom: 22px;
+}
+.welcome-grid strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.welcome-grid span {
+  color: #7f8997;
+  font-size: 10px;
+  line-height: 1.55;
+}
+.welcome-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.welcome-actions button {
+  min-width: 190px;
+}
+.welcome-panel > small {
+  display: block;
+  margin-top: 16px;
+  color: #596370;
+  font: 700 7px/1.4 Space Mono, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+@media (max-width: 700px) {
+  .welcome-overlay { padding: 12px; align-items: start; overflow-y: auto; }
+  .welcome-panel { margin: 12px 0; padding: 22px; }
+  .welcome-grid { grid-template-columns: 1fr; }
+  .welcome-grid article { min-height: 0; }
+  .welcome-actions { align-items: stretch; flex-direction: column; }
+  .welcome-actions button { width: 100%; }
+}

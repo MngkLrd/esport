@@ -27,6 +27,13 @@ import {
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
 import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag, playerPhoto } from './playerVisuals'
 import { PacksView } from './PacksView'
+import {
+  LEGACY_PACK_SAVE_KEY,
+  clearPackCollection,
+  collectPackWinner,
+  migratePackState,
+  type PackRoll,
+} from './packs'
 import { CreditsView } from './CreditsView'
 
 const SAVE_KEY = 'esport-ai-manager-v2'
@@ -80,7 +87,17 @@ function loadState(): GameState {
   try {
     const raw = localStorage.getItem(SAVE_KEY) ?? localStorage.getItem(LEGACY_SAVE_KEY)
     if (!raw) return createInitialState()
-    return migrateState(JSON.parse(raw))
+
+    let next = migrateState(JSON.parse(raw))
+    const legacyPacks = localStorage.getItem(LEGACY_PACK_SAVE_KEY)
+    if (legacyPacks) {
+      const migratedPacks = migratePackState(JSON.parse(legacyPacks))
+      if (next.packs.inventory.length === 0 && migratedPacks.inventory.length > 0) {
+        next = { ...next, packs: migratedPacks }
+      }
+      localStorage.removeItem(LEGACY_PACK_SAVE_KEY)
+    }
+    return next
   } catch {
     return createInitialState()
   }
@@ -254,12 +271,29 @@ function App() {
   }
 
   const reset = () => {
-    if (window.confirm('Сбросить текущее сохранение и начать новый проект?')) {
+    if (window.confirm('Сбросить текущее сохранение и начать новый проект? Коллекция наборов этого сейва тоже будет удалена.')) {
       const fresh = createInitialState()
       localStorage.setItem(SAVE_KEY, JSON.stringify(fresh))
       setState(fresh)
       setTab('HQ')
     }
+  }
+
+  const commitPackRoll = (roll: PackRoll) => {
+    if (state.credits < roll.pack.price || state.packs.serial !== roll.winner.serial) return false
+    setState((current) => {
+      if (current.credits < roll.pack.price || current.packs.serial !== roll.winner.serial) return current
+      return {
+        ...current,
+        credits: current.credits - roll.pack.price,
+        packs: collectPackWinner(current.packs, roll.winner),
+      }
+    })
+    return true
+  }
+
+  const clearPacks = () => {
+    setState((current) => ({ ...current, packs: clearPackCollection(current.packs) }))
   }
 
   const finishWelcome = (next: Tab = 'HQ') => {
@@ -562,7 +596,10 @@ function App() {
         {tab === 'Packs' && (
           <PacksView
             credits={state.credits}
-            onSpend={(amount) => setState((current) => current.credits >= amount ? { ...current, credits: current.credits - amount } : current)}
+            saveId={state.saveId}
+            packState={state.packs}
+            onOpen={commitPackRoll}
+            onClear={clearPacks}
           />
         )}
 

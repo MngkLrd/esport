@@ -94,10 +94,10 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
 function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean }) {
   const photo = playerPhoto(card.alias)
   const source = card.sourceRating != null
-    ? 'rating seed ' + card.sourceRating.toFixed(2)
+    ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
     : card.sourceRank
-      ? 'VRS rank #' + card.sourceRank
-      : 'VRS long-tail'
+      ? 'место команды VRS #' + card.sourceRank
+      : 'пул VRS'
 
   return (
     <div
@@ -312,7 +312,7 @@ export function PacksView({
           <strong>Это игровая шкала, а не официальный рейтинг игрока.</strong>
         </div>
         <p>
-          Для профилей с индивидуальным rating используется формула <code>60 + (rating − 0.80) × 62</code> и стабильный
+          Для профилей с индивидуальным рейтингом используется формула <code>60 + (rating − 0.80) × 62</code> и стабильный
           модификатор ника от −3 до +3. Для остальных базовый диапазон задаёт место команды в VRS. В текущем пуле
           профессионалов фактический диапазон примерно 54–99.
         </p>

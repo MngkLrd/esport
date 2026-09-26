@@ -61,7 +61,7 @@ function CollectionCard({ card }: { card: PackCard }) {
     <article className={'collection-card rarity-' + card.rarity} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
       <div className="collection-card-top">
         <b>{card.power}</b>
-        <span>{card.role ?? 'PRO'}</span>
+        <span>{card.role ?? 'ПРО'}</span>
       </div>
       <div className="collection-photo">
         <span>{card.alias.slice(0, 3).toUpperCase()}</span>
@@ -77,7 +77,7 @@ function CollectionCard({ card }: { card: PackCard }) {
       </div>
       <div className="collection-identity">
         <strong>{card.alias}</strong>
-        <span>{countryFlag(card.country ?? 'Unknown')} {card.team}</span>
+        <span>{countryFlag(card.country ?? 'Неизвестно')} {card.team}</span>
       </div>
       <div className="collection-rarity">{RARITY_LABEL[card.rarity]}</div>
     </article>

@@ -241,7 +241,7 @@ export const createInitialState = (): GameState => ({
     {
       id: 'welcome',
       week: 1,
-      kind: 'media',
+      kind: 'media' as const,
       title: 'A new project enters the circuit',
       body: 'Twelve weeks. Six players. One starting five. Salaries, contracts and fatigue now matter every week: a strong roster can still fail if the club is managed badly.',
     },
@@ -252,8 +252,8 @@ export const createInitialState = (): GameState => ({
 
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
-  const parsed = raw as Partial<GameState> & { version?: number; roster?: Player[] }
-  if (parsed.version === 2 && Array.isArray(parsed.roster)) return parsed as GameState
+  const parsed = raw as { version?: number; roster?: Player[]; [key: string]: unknown }
+  if (parsed.version === 2 && Array.isArray(parsed.roster)) return parsed as unknown as GameState
   if (parsed.version === 1 && Array.isArray(parsed.roster)) {
     const base = createInitialState()
     const roster = parsed.roster.map((p) => ({ ...p, salary: Math.max(70, Math.round((p.salary ?? 200) * 0.45)) }))
@@ -457,7 +457,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     ? [{
         id: 'contracts-' + state.week,
         week: state.week + 1,
-        kind: 'contract',
+        kind: 'contract' as const,
         title: 'A contract has expired',
         body: expired.map((p) => p.alias).join(', ') + ' cannot start another match until renewed or replaced.',
       }]
@@ -465,7 +465,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
       ? [{
           id: 'contracts-warning-' + state.week,
           week: state.week + 1,
-          kind: 'contract',
+          kind: 'contract' as const,
           title: 'Contract pressure is building',
           body: roster.filter((p) => p.contractWeeks <= 2).map((p) => p.alias).join(', ') + ' are within two weeks of expiry.',
         }]
@@ -474,7 +474,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const financeNews: NewsItem = {
     id: 'finance-' + result.id,
     week: state.week,
-    kind: 'finance',
+    kind: 'finance' as const,
     title: net >= 0 ? 'Match week covered payroll' : 'Payroll exceeded match income',
     body: 'Prize and participation income: ' + reward + ' cr. Payroll: ' + payroll + ' cr. Net: ' + (net >= 0 ? '+' : '') + net + ' cr.',
   }
@@ -494,7 +494,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     lineupContinuity: clamp(state.lineupContinuity + (won ? 3 : 1), 0, 100),
     history: [result, ...state.history].slice(0, 30),
     news: [
-      { id: 'news-' + result.id, week: state.week, kind: 'match', title: story.headline, body: story.detail },
+      { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail },
       financeNews,
       ...contractNews,
       ...state.news,
@@ -559,7 +559,7 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
     news: [{
       id: 'lineup-' + state.week + '-' + playerId + '-' + startingFive.length,
       week: state.week,
-      kind: 'lineup',
+      kind: 'lineup' as const,
       title: isStarter ? player.alias + ' moves to the bench' : player.alias + ' enters the starting five',
       body: 'Changing the active five costs short-term continuity. Stable lineups recover chemistry through matches.',
     }, ...state.news].slice(0, 50),
@@ -609,7 +609,7 @@ export const scout = (state: GameState): GameState => {
     news: [{
       id: 'scout-' + state.scoutCycle,
       week: state.week,
-      kind: 'scout',
+      kind: 'scout' as const,
       title: 'Scouting report delivered',
       body: 'Three prospects are available. Signing one adds salary to every future match week, not just a one-off fee.',
     }, ...state.news].slice(0, 50),
@@ -630,7 +630,7 @@ export const signProspect = (state: GameState, playerId: string): GameState => {
     news: [{
       id: 'sign-' + playerId,
       week: state.week,
-      kind: 'contract',
+      kind: 'contract' as const,
       title: prospect.alias + ' joins the project',
       body: 'Signing fee: ' + fee + ' cr. Weekly salary: ' + prospect.salary + ' cr. The player starts on the bench.',
     }, ...state.news].slice(0, 50),
@@ -651,7 +651,7 @@ export const renewContract = (state: GameState, playerId: string): GameState => 
     news: [{
       id: 'renew-' + playerId + '-' + state.week,
       week: state.week,
-      kind: 'contract',
+      kind: 'contract' as const,
       title: player.alias + ' signs a six-week extension',
       body: 'Up-front extension cost: ' + cost + ' cr. Weekly salary remains ' + player.salary + ' cr.',
     }, ...state.news].slice(0, 50),
@@ -673,7 +673,7 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
     news: [{
       id: 'release-' + playerId + '-' + state.week,
       week: state.week,
-      kind: 'contract',
+      kind: 'contract' as const,
       title: player.alias + ' leaves the project',
       body: 'Severance cost: ' + severance + ' cr. Roster salary drops immediately.',
     }, ...state.news].slice(0, 50),

@@ -13,16 +13,20 @@ export interface HltvSkillScores {
 
 export interface HltvPlayerSnapshot {
   alias: string
+  playerId: number | null
   profileUrl: string | null
   status: 'ok' | 'no-data' | 'unmatched' | 'error'
+  window: 'past3m' | 'year'
   periodStart: string
   periodEnd: string
   maps: number | null
-  rating20: number | null
+  rating: number | null
+  ratingVersion: string | null
   kpr: number | null
   dpr: number | null
   adr: number | null
   kast: number | null
+  multiKillPct: number | null
   skills: HltvSkillScores
   error?: string | null
 }
@@ -85,14 +89,17 @@ export const cardStatsFromHltv = (
     clutch * clutchWeight,
   )
 
-  const maps = snapshot.maps ?? 0
+  const maps = snapshot.maps
+  const populatedSkills = Object.values(snapshot.skills).filter((value) => value != null).length
   return {
     ovr,
     aim,
     utility,
     positioning,
     clutch,
-    confidence: maps >= 60 ? 'high' : maps >= 20 ? 'medium' : 'low',
+    confidence: maps != null
+      ? (maps >= 60 ? 'high' : maps >= 20 ? 'medium' : 'low')
+      : (populatedSkills >= 6 ? 'medium' : 'low'),
     source: 'hltv',
     periodStart: snapshot.periodStart,
     periodEnd: snapshot.periodEnd,

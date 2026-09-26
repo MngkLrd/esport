@@ -18,10 +18,11 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 API_BASE = "https://api.csapi.de"
+DIRECT_HLTV_SNAPSHOT = ROOT / "data/hltv-mobile-player-screen-2026-09-26.json"
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Build collectible card snapshots from HLTV-derived match stats.")
+    p = argparse.ArgumentParser(description="Build collectible cards from HLTV player and match statistics.")
     p.add_argument("--start-date", required=True)
     p.add_argument("--end-date", required=True)
     p.add_argument("--oldest-year", type=int, default=2012)
@@ -53,13 +54,27 @@ def metadata_profile_ids() -> dict[str, int]:
     out: dict[str, int] = {}
     for match in re.finditer(r'^\s*"([^"]+)":\s*\{([^\n]+)\}', text, re.M):
         alias, body = match.groups()
-        url_match = re.search(r'profileUrl:"([^"]+)"', body)
+        url_match = re.search(r'"profileUrl"\s*:\s*"([^"]+)"', body)
         if not url_match:
             continue
         id_match = re.search(r'/(?:player|stats/players)/(\d+)(?:/|$)', url_match.group(1))
         if id_match:
             out[alias.casefold()] = int(id_match.group(1))
     return out
+
+
+def direct_hltv_players() -> dict[str, dict[str, Any]]:
+    if not DIRECT_HLTV_SNAPSHOT.exists():
+        return {}
+    payload = json.loads(DIRECT_HLTV_SNAPSHOT.read_text(encoding="utf-8"))
+    players = payload.get("players") if isinstance(payload, dict) else None
+    if not isinstance(players, dict):
+        return {}
+    return {
+        str(key).casefold(): value
+        for key, value in players.items()
+        if isinstance(value, dict)
+    }
 
 
 def normalized_alias(value: str) -> str:
@@ -120,6 +135,13 @@ def as_float(value: Any) -> float | None:
         return None
 
 
+def as_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def percentile(values: list[float], value: float, higher_is_better: bool = True) -> float:
     if len(values) <= 1:
         return 0.5
@@ -136,14 +158,14 @@ def to_card_scale(p: float) -> float:
 
 
 def stabilize(score: float, maps: int) -> int:
-    # Shrink tiny samples toward 50. At 50 maps the percentile score is fully trusted.
     confidence = min(1.0, math.sqrt(max(0, maps) / 50.0))
     return int(round(max(1.0, min(99.0, 50.0 + (score - 50.0) * confidence))))
 
 
-def weighted(parts: list[tuple[float, float]]) -> float:
-    total = sum(weight for _, weight in parts)
-    return sum(value * weight for value, weight in parts) / total if total else 50.0
+def weighted(parts: list[tuple[float | None, float]], fallback: float = 50.0) -> float:
+    present = [(value, weight) for value, weight in parts if value is not None]
+    total = sum(weight for _, weight in present)
+    return sum(float(value) * weight for value, weight in present) / total if total else fallback
 
 
 def score_population(rows: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -179,7 +201,6 @@ def score_population(rows: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
         p_kills = to_card_scale(percentile(kills_map_values, kills_per_map))
         p_survival = to_card_scale(percentile(deaths_map_values, deaths_per_map, higher_is_better=False))
 
-        # These are our card categories, derived only from factual HLTV match metrics.
         aim = stabilize(weighted([(p_adr, .45), (p_kills, .35), (p_rating, .20)]), maps)
         utility = stabilize(weighted([(p_kast, .62), (p_swing, .38)]), maps)
         positioning = stabilize(weighted([(p_kast, .45), (p_survival, .35), (p_swing, .20)]), maps)
@@ -241,6 +262,7 @@ def snapshot_from_row(
         "profileUrl": f"https://www.hltv.org/player/{player_id}/{quote(alias)}",
         "status": "ok",
         "matchMethod": match_method,
+        "scoreSource": "hltv-match-derived",
         "window": window,
         "periodStart": start_date,
         "periodEnd": end_date,
@@ -249,18 +271,76 @@ def snapshot_from_row(
     }
 
 
-def empty_snapshot(alias: str, player_id: int | None, start_date: str, end_date: str, status: str) -> dict[str, Any]:
+def snapshot_from_direct(alias: str, row: dict[str, Any]) -> dict[str, Any] | None:
+    if row.get("status") != "ok":
+        return None
+    skills = row.get("skills")
+    if not isinstance(skills, dict):
+        return None
+
+    firepower = as_float(skills.get("firepower"))
+    utility = as_float(skills.get("utility"))
+    clutching = as_float(skills.get("clutching"))
+    trading = as_float(skills.get("trading"))
+    opening = as_float(skills.get("opening"))
+    entrying = as_float(skills.get("entrying"))
+    populated = sum(value is not None for value in (firepower, utility, clutching, trading, opening, entrying))
+    if populated < 5:
+        return None
+
+    positioning = int(round(weighted([
+        (trading, .40),
+        (opening, .35),
+        (entrying, .25),
+    ])))
+
+    return {
+        "alias": alias,
+        "playerId": as_int(row.get("playerId")),
+        "profileUrl": row.get("profileUrl"),
+        "status": "ok",
+        "matchMethod": "hltv-player-screen",
+        "scoreSource": "hltv-player-screen",
+        "window": "past3m",
+        "periodStart": str(row.get("periodStart") or "2026-06-26"),
+        "periodEnd": str(row.get("periodEnd") or "2026-09-26"),
+        "raw": {
+            "maps": None,
+            "rating": as_float(row.get("rating")),
+            "adr": as_float(row.get("adr")),
+            "kast": as_float(row.get("kast")),
+            "roundSwing": None,
+            "killsPerMap": None,
+            "deathsPerMap": None,
+        },
+        "cardScores": {
+            "aim": int(round(firepower if firepower is not None else 50)),
+            "utility": int(round(utility if utility is not None else 50)),
+            "positioning": max(1, min(99, positioning)),
+            "clutch": int(round(clutching if clutching is not None else 50)),
+        },
+    }
+
+
+def empty_snapshot(
+    alias: str,
+    player_id: int | None,
+    start_date: str,
+    end_date: str,
+    status: str,
+) -> dict[str, Any]:
     return {
         "alias": alias,
         "playerId": player_id,
         "profileUrl": f"https://www.hltv.org/player/{player_id}/{quote(alias)}" if player_id else None,
         "status": status,
         "matchMethod": "hltv-id" if player_id else None,
+        "scoreSource": None,
         "window": "last12m",
         "periodStart": start_date,
         "periodEnd": end_date,
         "raw": {
-            "maps": 0,
+            "maps": None,
             "rating": None,
             "adr": None,
             "kast": None,
@@ -275,9 +355,28 @@ def empty_snapshot(alias: str, player_id: int | None, start_date: str, end_date:
 def main() -> None:
     args = parse_args()
     aliases = repo_aliases()
-    known_ids = metadata_profile_ids()
+    metadata_ids = metadata_profile_ids()
+    direct = direct_hltv_players()
+
+    known_ids = {
+        key: player_id
+        for key, row in direct.items()
+        if (player_id := as_int(row.get("playerId"))) is not None
+    }
+    known_ids.update(metadata_ids)
+
     snapshots: dict[str, dict[str, Any]] = {}
     remaining = {alias.casefold(): alias for alias in aliases}
+
+    direct_matches = 0
+    for key, alias in list(remaining.items()):
+        row = direct.get(key)
+        snapshot = snapshot_from_direct(alias, row) if row else None
+        if snapshot is None:
+            continue
+        snapshots[key] = snapshot
+        direct_matches += 1
+        del remaining[key]
 
     current_rows = fetch_population(args.start_date, args.end_date)
     current_scored = score_population(current_rows)
@@ -316,14 +415,19 @@ def main() -> None:
             historical_matches += 1
             del remaining[key]
 
+    direct_recognized = 0
     for key, alias in remaining.items():
+        direct_row = direct.get(key)
         player_id = known_ids.get(key)
+        recognized = player_id is not None or (direct_row is not None and direct_row.get("status") != "unmatched")
+        if recognized:
+            direct_recognized += 1
         snapshots[key] = empty_snapshot(
             alias,
             player_id,
             args.start_date,
             args.end_date,
-            "no-data" if player_id is not None else "unmatched",
+            "no-data" if recognized else "unmatched",
         )
 
     with_stats = sum(1 for s in snapshots.values() if s["status"] == "ok")
@@ -331,25 +435,27 @@ def main() -> None:
     unmatched = sum(1 for s in snapshots.values() if s["status"] == "unmatched")
 
     meta = {
-        "source": "HLTV-derived match statistics",
-        "provider": "api.csapi.de",
-        "window": "last12m+latest-year-fallback",
-        "windowLabel": "Last 12 months, then latest available calendar year",
+        "source": "HLTV statistics",
+        "providers": ["HLTV mobile PlayerScreen", "api.csapi.de HLTV-derived aggregates"],
+        "window": "current+last12m+latest-year-fallback",
+        "windowLabel": "Current HLTV form, then last 12 months, then latest available calendar year",
         "startDate": args.start_date,
         "endDate": args.end_date,
         "generatedAt": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "requestedPlayers": len(aliases),
+        "knownProfileIds": len(known_ids),
+        "directPlayerScreenStats": direct_matches,
         "providerCurrentPlayers": len(current_rows),
-        "currentWindowStats": current_matches,
+        "currentWindowFallbackStats": current_matches,
         "historicalFallbackStats": historical_matches,
         "withStats": with_stats,
-        "noData": no_data,
+        "recognizedNoStats": no_data,
         "unmatched": unmatched,
         "errors": 0,
         "matchMethods": methods,
         "yearsScanned": years_scanned,
     }
-    if with_stats < 100:
+    if with_stats < 1000:
         raise RuntimeError(f"Repo coverage gate failed: only {with_stats}/{len(aliases)} requested players have stats")
 
     ts_rows = [

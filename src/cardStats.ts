@@ -37,6 +37,7 @@ export interface PlayerCardStats extends DerivedCardScores {
   ovr: number
   confidence: 'low' | 'medium' | 'high'
   source: 'hltv'
+  scoreSource: NonNullable<HltvPlayerSnapshot['scoreSource']>
   window: HltvPlayerSnapshot['window']
   periodStart: string
   periodEnd: string
@@ -81,6 +82,7 @@ export const cardStatsFromHltv = (
       ? 'medium'
       : (maps != null && maps >= 60 ? 'high' : maps != null && maps >= 20 ? 'medium' : 'low'),
     source: 'hltv',
+    scoreSource: snapshot.scoreSource!,
     window: snapshot.window,
     periodStart: snapshot.periodStart,
     periodEnd: snapshot.periodEnd,

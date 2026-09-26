@@ -25,7 +25,7 @@ import {
   type TacticalPlan,
 } from './game'
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
-import { CARD_TIER_LABEL, cardTier, countryFlag, playerPhoto } from './playerVisuals'
+import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag, playerPhoto } from './playerVisuals'
 
 const SAVE_KEY = 'esport-ai-manager-v2'
 const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
@@ -509,7 +509,7 @@ function App() {
               <div className="empty-state">
                 <span>SCOUTING DESK</span>
                 <h2>No active report</h2>
-                <p>Spend 300 credits to draw three deterministic candidates from {format.format(VRS_STATS.players)} real CS2 aliases across {format.format(VRS_STATS.teams)} teams in the Valve VRS snapshot ({VRS_SNAPSHOT_DATE}). Reputation raises the gameplay-rating floor.</p>
+                <p>Spend 300 credits to draw three deterministic candidates from {format.format(VRS_STATS.players)} real CS2 aliases across {format.format(VRS_STATS.teams)} teams in the Valve VRS snapshot ({VRS_SNAPSHOT_DATE}). The portrait layer currently resolves {format.format(PLAYER_PORTRAIT_STATS.coveredPlayers)} real HLTV CDN bodyshots; unmatched aliases keep the card fallback. Reputation raises the gameplay-rating floor.</p>
               </div>
             ) : (
               <div className="prospect-grid">

@@ -2,7 +2,7 @@ import type { PlayerCardStats } from './cardStats'
 import type { RealPlayerRole } from './players'
 
 export type PackRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
-export type PackId = 'academy' | 'challenger' | 'major' | 'afterdark'
+export type PackId = 'welcome' | 'academy' | 'challenger' | 'major' | 'afterdark'
 
 export interface PackDefinition {
   id: PackId
@@ -20,6 +20,8 @@ export interface PackCard {
   realName: string | null
   country: string | null
   team: string
+  age: number | null
+  profileId: number | null
   role: RealPlayerRole | null
   power: number
   rarity: PackRarity
@@ -66,6 +68,8 @@ const migrateCard = (raw: unknown): PackCard | null => {
 
   return {
     ...(card as PackCard),
+    age: typeof card.age === 'number' ? card.age : null,
+    profileId: typeof card.profileId === 'number' ? card.profileId : null,
     sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
     sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
     cardStats: card.cardStats ?? null,
@@ -93,6 +97,13 @@ export const collectPackWinner = (state: PackState, winner: PackCard): PackState
   serial: Math.max(state.serial + 1, winner.serial + 1),
   inventory: [winner, ...state.inventory],
   history: [winner, ...state.history].slice(0, 60),
+})
+
+export const collectPackCards = (state: PackState, cards: PackCard[]): PackState => ({
+  version: 2,
+  serial: state.serial,
+  inventory: [...cards, ...state.inventory],
+  history: [...cards, ...state.history].slice(0, 60),
 })
 
 export const clearPackCollection = (state: PackState): PackState => ({

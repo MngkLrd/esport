@@ -192,9 +192,9 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
   const cardStats = cardStatsForAlias(player.alias, player.role)
   const power = cardStats?.ovr ?? playerPower(player)
   const edition = cardStats
-    ? (cardStats.window === 'year'
+    ? (cardStats.window === 'calendar-year'
         ? cardStats.periodEnd.slice(0, 4)
-        : cardStats.periodStart.slice(5, 7) + '–' + cardStats.periodEnd.slice(5, 7) + " ’" + cardStats.periodEnd.slice(2, 4))
+        : "’" + cardStats.periodStart.slice(2, 4) + "–’" + cardStats.periodEnd.slice(2, 4))
     : 'VRS'
   return {
     id: ['card', serial, slot, player.alias].join('-'),
@@ -235,9 +235,9 @@ const migrateCard = (raw: unknown): PackCard | null => {
       : (() => {
           const stats = cardStatsForAlias(card.alias, card.role ?? null)
           if (!stats) return 'VRS'
-          return stats.window === 'year'
+          return stats.window === 'calendar-year'
             ? stats.periodEnd.slice(0, 4)
-            : stats.periodStart.slice(5, 7) + '–' + stats.periodEnd.slice(5, 7) + " ’" + stats.periodEnd.slice(2, 4)
+            : "’" + stats.periodStart.slice(2, 4) + "–’" + stats.periodEnd.slice(2, 4)
         })(),
   }
 }

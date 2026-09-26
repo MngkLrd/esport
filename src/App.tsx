@@ -24,6 +24,7 @@ import {
   type Player,
   type TacticalPlan,
 } from './game'
+import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
 
 const SAVE_KEY = 'esport-ai-manager-v2'
 const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
@@ -450,7 +451,7 @@ function App() {
               <div className="empty-state">
                 <span>SCOUTING DESK</span>
                 <h2>No active report</h2>
-                <p>Spend 300 credits to generate three deterministic fictional candidates. Reputation raises the market floor.</p>
+                <p>Spend 300 credits to draw three deterministic candidates from {format.format(VRS_STATS.players)} real CS2 aliases across {format.format(VRS_STATS.teams)} teams in the Valve VRS snapshot ({VRS_SNAPSHOT_DATE}). Reputation raises the gameplay-rating floor.</p>
               </div>
             ) : (
               <div className="prospect-grid">
@@ -462,7 +463,7 @@ function App() {
                         <div>
                           <div className="eyebrow">{player.country} · {player.team} · {player.role}</div>
                           <h2>{player.alias}</h2>
-                          <p>{player.realName} · {player.age} y.o.</p>
+                          <p>{player.realName !== player.alias ? player.realName : 'Identity metadata pending'} · {player.age > 0 ? player.age + ' y.o.' : 'age unknown'}</p>
                         </div>
                         <div className="ovr">{overall(player)}</div>
                       </div>

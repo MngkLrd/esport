@@ -22,7 +22,7 @@ The previous build exposed many management concepts but several of them were mos
 - Inbox records match, finance, lineup, scouting and contract events
 - AI Director is currently a **rule-based live advisor** over canonical state; it does not pretend an LLM is connected
 - versioned browser save with migration from the v0.1 save
-- collectible player packs with a deterministic pre-selected result, animated reveal reel and local card collection
+- collectible player packs bound to the club save, with deterministic per-save rolls, animated reel + cinematic reveal, duplicate tracking, filters and collection history
 - in-app Credits page documenting GitHub references, source datasets and license boundaries
 
 The architecture rule remains:
@@ -55,7 +55,7 @@ The Vite base path is configured for this repository at `/esport/`. CI builds ev
 
 ## Fan-project and source boundary
 
-This is a personal, non-commercial fan manager. It now uses public real-player aliases, team snapshot data and remotely loaded player photographs where a verified mapping exists. Gameplay ratings, pack power, wages, potential and match outcomes are our own simulation values.
+This is a personal, non-commercial fan manager. It now uses public real-player aliases, team snapshot data and remotely loaded player photographs where a verified mapping exists. Gameplay ratings, pack power, wages, potential and match outcomes are our own simulation values. Pack power uses a 1–100 presentation scale: curated profiles use the public individual rating as a seed, while long-tail players use their Valve VRS team rank; a stable alias modifier keeps ties from collapsing to identical values.
 
 Public GitHub repositories are not treated as automatically reusable. The pack animation is our own React/TypeScript implementation informed by public case-opening references; repositories without a compatible license are credited as references rather than copied. See the in-app **Credits** page for authors, source links and license notes.
 

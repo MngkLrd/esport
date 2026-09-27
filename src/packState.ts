@@ -2,7 +2,7 @@ import type { PlayerCardStats } from './cardStats'
 import type { RealPlayerRole } from './players'
 
 export type PackRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
-export type PackId = 'academy' | 'challenger' | 'major' | 'afterdark'
+export type PackId = 'welcome' | 'academy' | 'challenger' | 'major' | 'afterdark'
 
 export interface PackDefinition {
   id: PackId
@@ -16,10 +16,13 @@ export interface PackDefinition {
 
 export interface PackCard {
   id: string
+  playerKey: string
   alias: string
   realName: string | null
   country: string | null
   team: string
+  age: number | null
+  profileId: number | null
   role: RealPlayerRole | null
   power: number
   rarity: PackRarity
@@ -66,6 +69,9 @@ const migrateCard = (raw: unknown): PackCard | null => {
 
   return {
     ...(card as PackCard),
+    playerKey: typeof card.playerKey === 'string' && card.playerKey ? card.playerKey : 'alias:' + card.alias.toLocaleLowerCase('en-US'),
+    age: typeof card.age === 'number' ? card.age : null,
+    profileId: typeof card.profileId === 'number' ? card.profileId : null,
     sourceRating: typeof card.sourceRating === 'number' ? card.sourceRating : null,
     sourceRank: typeof card.sourceRank === 'number' ? card.sourceRank : null,
     cardStats: card.cardStats ?? null,
@@ -95,6 +101,13 @@ export const collectPackWinner = (state: PackState, winner: PackCard): PackState
   history: [winner, ...state.history].slice(0, 60),
 })
 
+export const collectPackCards = (state: PackState, cards: PackCard[]): PackState => ({
+  version: 2,
+  serial: state.serial,
+  inventory: [...cards, ...state.inventory],
+  history: [...cards, ...state.history].slice(0, 60),
+})
+
 export const clearPackCollection = (state: PackState): PackState => ({
   version: 2,
   serial: state.serial,
@@ -103,8 +116,8 @@ export const clearPackCollection = (state: PackState): PackState => ({
 })
 
 export const packCollectionStats = (state: PackState) => {
-  const aliases = state.inventory.map((card) => card.alias.toLocaleLowerCase('en-US'))
-  const unique = new Set(aliases).size
+  const identities = state.inventory.map((card) => cardKey(card))
+  const unique = new Set(identities).size
   const legendary = state.inventory.filter((card) => card.rarity === 'legendary').length
   const epic = state.inventory.filter((card) => card.rarity === 'epic').length
   const bestPower = state.inventory.reduce((best, card) => Math.max(best, card.power), 0)
@@ -123,3 +136,9 @@ export const packAliasCount = (state: PackState, alias: string) =>
   state.inventory.filter(
     (card) => card.alias.toLocaleLowerCase('en-US') === alias.toLocaleLowerCase('en-US'),
   ).length
+
+export const cardKey = (card: Pick<PackCard, 'alias' | 'edition'>) =>
+  card.alias.toLocaleLowerCase('en-US') + '::' + card.edition.toLocaleLowerCase('en-US')
+
+export const packCardCount = (state: PackState, card: Pick<PackCard, 'alias' | 'edition'>) =>
+  state.inventory.filter((entry) => cardKey(entry) === cardKey(card)).length

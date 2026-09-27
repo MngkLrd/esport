@@ -1,0 +1,10 @@
+ESPORT AI Manager — review package
+
+Source snapshot:
+main @ 7444ee017c15e091fc5288766682105233329af0
+Date: 2026-09-27
+Live: https://mngklrd.github.io/esport/
+
+Start with PROJECT_AUDIT_RU.md, then README.md and docs/MVP.md.
+
+The unfinished feature branch feat/welcome-pack-card-ux is intentionally excluded.

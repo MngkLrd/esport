@@ -515,6 +515,7 @@ export const migrateState = (raw: unknown): GameState => {
       return {
         ...player,
         alias: identity.alias,
+        profileId: player.profileId ?? profileIdFromUrl(identity.profileUrl),
         firstName: identity.realName ?? identity.alias,
         realName: identity.realName ?? identity.alias,
         country: identity.country ?? 'Неизвестно',
@@ -960,6 +961,10 @@ export const toggleStarter = (state: GameState, playerId: string): GameState => 
 }
 
 const proPlayerIdentities = REAL_PLAYERS
+const profileIdFromUrl = (profileUrl: string | null | undefined) => {
+  const match = profileUrl?.match(/\/player\/(\d+)/)
+  return match ? Number(match[1]) : null
+}
 const simulationRoles: readonly Role[] = ['IGL', 'Entry', 'Rifler', 'AWP', 'Support']
 
 const traits = ['Чистый аим', 'Ученик игры', 'Не боится большой сцены', 'Рабочая лошадка', 'Креативный коллер', 'Чутьё в позднем раунде'] as const
@@ -975,6 +980,7 @@ const makeProspect = (
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
     playerKey: 'alias:' + identity.alias.toLocaleLowerCase('en-US'),
     acquiredCardId: null,
+    profileId: profileIdFromUrl(identity.profileUrl),
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,

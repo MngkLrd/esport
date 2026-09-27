@@ -83,7 +83,6 @@ export function CardDetails({
                 <span><b>{playerState.salary}</b>Кр./нед.</span>
                 <span><b>{playerState.potential}</b>Потенциал</span>
               </div>
-              <p className="card-detail-state-note">Форма и состояние меняются решениями менеджера, а базовые показатели остаются данными карты.</p>
             </>
           )}
 

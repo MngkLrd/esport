@@ -31,6 +31,7 @@ import { CreditsView } from './CreditsView'
 import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
+import { RosterBoard } from './RosterBoard'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 
@@ -518,11 +519,12 @@ function App() {
         )}
 
         {tab === 'Roster' && (
-          <section className="screen roster-screen">
-            <div className="roster-heading"><div><span className="eyebrow">TEAM SHEET · {state.roster.length}/8 PLAYERS</span><h1>Люди, которые играют за клуб.</h1><p>Стартовая пятёрка собрана сверху. Запас остаётся рядом, чтобы решения принимались по состоянию, а не по красивой сетке карточек.</p></div><div className="roster-score"><b>{rating}</b><span>OVR КОМАНДЫ</span><small>{chem} химия · {state.lineupContinuity} стабильность</small></div></div>
-            <div className="roster-sheet-summary"><span><b>{state.startingFive.length}/5</b> СТАРТ</span><span><b>{state.roster.length - starters.length}</b> ЗАПАС</span><span><b>{payroll}</b> КР./НЕД.</span><span><b>{state.staffEnergy}/3</b> ДЕЙСТВИЯ</span><button className="secondary" onClick={() => openTab('Scout')}>Найти игрока</button></div>
-            <div className="roster-sheet"><div className="roster-sheet-label"><span>STARTING FIVE</span><small>КЛИК ПО ИГРОКУ — ДОСЬЕ</small></div>{[...state.roster].sort((a, b) => Number(state.startingFive.includes(b.id)) - Number(state.startingFive.includes(a.id)) || overall(b) - overall(a)).map((player) => <RosterRow key={player.id} player={player} starter={state.startingFive.includes(player.id)} state={state} onOpen={() => setSelectedPlayer(player)} onTrain={() => setState((current) => trainPlayer(current, player.id))} onRest={() => setState((current) => restPlayer(current, player.id))} onRenew={() => setState((current) => renewContract(current, player.id))} onToggleStarter={() => setState((current) => toggleStarter(current, player.id))} onRelease={() => setState((current) => releasePlayer(current, player.id))} />)}</div>
-          </section>
+          <RosterBoard
+            state={state}
+            setState={setState}
+            onOpenPlayer={setSelectedPlayer}
+            onOpenScout={() => openTab('Scout')}
+          />
         )}
 
         {tab === 'Packs' && (

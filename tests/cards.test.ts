@@ -16,7 +16,7 @@ import {
   playerPower,
   rollPack,
 } from '../src/packs'
-import { playerPhoto } from '../src/playerVisuals'
+import { countryFlag, playerPhoto } from '../src/playerVisuals'
 import type { PackCard } from '../src/packState'
 
 describe('HLTV collectible card pipeline', () => {
@@ -158,6 +158,7 @@ describe('HLTV collectible card pipeline', () => {
 
         for (const card of roll.reel) {
           expect(card.country).toBeTruthy()
+          expect(countryFlag(card.country!)).not.toBe('🌐')
           expect(card.cardStats).not.toBeNull()
           expect(card.role).toBeTruthy()
           expect(playerPhoto(card.alias)).toContain('hltv')

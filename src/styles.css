@@ -1017,12 +1017,12 @@ footer {
   will-change: transform;
   transform: translate3d(-72px,0,0);
 }
-.pack-stage.is-spinning .pack-reel-track,
-.pack-stage.is-revealed .pack-reel-track {
+.pack-purchase-modal.is-spinning .pack-reel-track,
+.pack-purchase-modal.is-revealed .pack-reel-track {
   transform: translate3d(calc(-1 * (var(--winner-index) * var(--card-step) + 72px)),0,0);
   transition: transform var(--spin-ms) cubic-bezier(.08,.62,.12,1);
 }
-.pack-stage.is-revealed .pack-reel-track { transition: none; }
+.pack-purchase-modal.is-revealed .pack-reel-track { transition: none; }
 
 .pack-reel-card {
   --rarity: #9aa5b1;
@@ -1315,7 +1315,7 @@ footer {
 .footer-link:hover { color: var(--orange-2); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pack-stage.is-spinning .pack-reel-track { transition-duration: .01ms; }
+  .pack-purchase-modal.is-spinning .pack-reel-track { transition-duration: .01ms; }
   .visual-player-card:hover .visual-card-shine { animation: none; }
 }
 

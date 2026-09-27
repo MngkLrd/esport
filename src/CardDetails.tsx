@@ -54,7 +54,7 @@ export function CardDetails({
           </div>
           <div className="card-detail-name">
             <h2>{card.alias}</h2>
-            <p>{card.realName ?? 'Имя не указано'}</p>
+            {card.realName && <p>{card.realName}</p>}
           </div>
         </div>
 

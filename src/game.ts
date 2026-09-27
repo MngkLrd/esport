@@ -551,8 +551,6 @@ export const migrateState = (raw: unknown): GameState => {
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
-      packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
-      managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
       packs,
     }
   }

@@ -239,7 +239,6 @@ export function RosterBoard({
         <div>
           <span className="eyebrow">SQUAD BOARD · {state.roster.length}/8 PLAYERS</span>
           <h1>Собери боевую пятёрку.</h1>
-          <p>Перетаскивай карточки между слотами или жми плюс. Слот сам ранжирует принадлежащие клубу карты по пригодности.</p>
         </div>
         <div className="roster-score">
           <b>{rating}</b>
@@ -259,7 +258,7 @@ export function RosterBoard({
       <div className="fifa-squad-overview">
       <div className="lineup-board">
         <div className="lineup-board-head">
-          <div><span>STARTING FIVE</span><small>DRAG & DROP · КЛИК ПО + — ПОДБОР КАРТ</small></div>
+          <div><span>STARTING FIVE</span></div>
           <div className="lineup-board-pulse"><b>{chem}</b><span>CHEM</span></div>
         </div>
 
@@ -301,7 +300,6 @@ export function RosterBoard({
                   <button type="button" className="lineup-empty-card" onClick={() => setPickerSlot(slot)}>
                     <span className="lineup-empty-plus">+</span>
                     <strong>Добавить {ROLE_LABELS[slot]}</strong>
-                    <small>Лучшие карты будут сверху</small>
                   </button>
                 )}
               </article>
@@ -328,7 +326,7 @@ export function RosterBoard({
 
       <div className="bench-board">
         <div className="bench-board-head">
-          <div><span>BENCH / CLUB CARDS</span><small>ПЕРЕТАЩИ КАРТУ В НУЖНЫЙ СЛОТ</small></div>
+          <div><span>BENCH / CLUB CARDS</span></div>
           <b>{bench.length}</b>
         </div>
 
@@ -368,7 +366,6 @@ export function RosterBoard({
               <div>
                 <span className="eyebrow">SLOT PICKER · {ROLE_LABELS[pickerSlot]}</span>
                 <h2 id="lineup-picker-title">Выбери карту для слота.</h2>
-                <p>Все доступные игроки и принадлежащие клубу карты отсортированы по пригодности для этой позиции.</p>
               </div>
               <button type="button" className="lineup-picker-close" onClick={() => setPickerSlot(null)} aria-label="Закрыть">×</button>
             </div>

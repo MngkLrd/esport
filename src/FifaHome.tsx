@@ -38,7 +38,7 @@ export function FifaHome({
           <div className="fifa-mode-copy">
             <span>NEXT MATCH</span>
             <h1>MATCHDAY</h1>
-            <p>{last ? 'Последняя серия: ' + (last.won ? 'победа' : 'поражение') + ' против ' + last.opponent : 'Подготовь пятёрку, план игры и запускай BO3.'}</p>
+            {last && <p>{'Последняя серия: ' + (last.won ? 'победа' : 'поражение') + ' против ' + last.opponent}</p>}
           </div>
           <b className="fifa-mode-arrow">→</b>
         </button>
@@ -49,7 +49,6 @@ export function FifaHome({
           <div className="fifa-mini-map">
             <i className="pin p1" /><i className="pin p2" /><i className="pin p3" /><i className="pin p4" />
           </div>
-          <p>Турниры, поездки и стоимость обслуживания по регионам.</p>
         </button>
 
         <button className="fifa-mode-tile fifa-squad-tile" onClick={() => onOpen('Roster')}>
@@ -62,21 +61,18 @@ export function FifaHome({
               </span>
             ))}
           </div>
-          <p>Overview, stats, роли и drag & drop состава.</p>
         </button>
 
         <button className="fifa-mode-tile fifa-transfer-tile" onClick={() => onOpen('Scout')}>
           <div className="fifa-tile-kicker">MARKET</div>
           <h2>TRANSFERS</h2>
           <strong>{state.credits.toLocaleString('ru-RU')} <small>CLUB CASH</small></strong>
-          <p>Скаутинг, shortlist и переговоры по контрактам.</p>
         </button>
 
         <button className="fifa-mode-tile fifa-packs-tile" onClick={() => onOpen('Packs')}>
           <div className="fifa-tile-kicker">COLLECTION</div>
           <h2>PACKS</h2>
           <strong>{state.packTokens.toLocaleString('ru-RU')} <small>PACK TOKENS</small></strong>
-          <p>Паки, спин и коллекция игроков.</p>
         </button>
 
         <button className="fifa-mode-tile fifa-profile-tile" onClick={() => onOpen('Profile')}>
@@ -84,7 +80,6 @@ export function FifaHome({
           <h2>MANAGER</h2>
           <strong>LVL {level.level}</strong>
           <div className="fifa-profile-progress"><i style={{ width: level.percent + '%' }} /></div>
-          <p>Уровень менеджера, сезонный прогресс и milestones.</p>
         </button>
       </div>
 

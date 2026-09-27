@@ -2,13 +2,10 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import {
   canPlayMatch,
   chemistry,
-  createInitialState,
   getStartingFive,
   lineupWarnings,
-  migrateState,
   modeInfo,
   overall,
-  playMatch,
   releasePlayer,
   renewContract,
   restPlayer,
@@ -25,23 +22,25 @@ import {
   type TacticalPlan,
 } from './game'
 import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
-import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag, playerPhoto } from './playerVisuals'
+import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag } from './playerVisuals'
 import {
-  LEGACY_PACK_SAVE_KEY,
   clearPackCollection,
-  collectPackWinner,
-  migratePackState,
   type PackRoll,
 } from './packState'
 import { CreditsView } from './CreditsView'
+import { createBrowserSaveRepository } from './saveRepository'
+import { rollWelcomePack } from './welcomePack'
+import { PlayerPortrait } from './PlayerPortrait'
+import { executeGameCommand } from './gameCommands'
+import type { PackCard } from './packState'
+
+const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
 const PacksView = lazy(() =>
   import('./PacksView').then((module) => ({ default: module.PacksView })),
 )
 
-const SAVE_KEY = 'esport-ai-manager-v2'
-const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
-const WELCOME_KEY = 'esport-ai-manager-welcome-ru-v1'
+const saveRepository = createBrowserSaveRepository()
 type Tab = 'HQ' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'AI Director' | 'Credits'
 
 const TAB_LABELS: Record<Tab, string> = {
@@ -86,26 +85,6 @@ const DIRECTOR_LEVEL_LABELS = {
 
 const format = new Intl.NumberFormat('ru-RU')
 
-function loadState(): GameState {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY) ?? localStorage.getItem(LEGACY_SAVE_KEY)
-    if (!raw) return createInitialState()
-
-    let next = migrateState(JSON.parse(raw))
-    const legacyPacks = localStorage.getItem(LEGACY_PACK_SAVE_KEY)
-    if (legacyPacks) {
-      const migratedPacks = migratePackState(JSON.parse(legacyPacks))
-      if (next.packs.inventory.length === 0 && migratedPacks.inventory.length > 0) {
-        next = { ...next, packs: migratedPacks }
-      }
-      localStorage.removeItem(LEGACY_PACK_SAVE_KEY)
-    }
-    return next
-  } catch {
-    return createInitialState()
-  }
-}
-
 function Metric({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
     <div className={'metric ' + (accent ? 'metric-accent' : '')}>
@@ -115,15 +94,14 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
   )
 }
 
-function PlayerVisualCard({ player, starter = false, compact = false }: { player: Player; starter?: boolean; compact?: boolean }) {
+function PlayerVisualCard({ player, starter = false, compact = false, onClick }: { player: Player; starter?: boolean; compact?: boolean; onClick?: () => void }) {
   const ovr = overall(player)
   const tier = cardTier(ovr)
-  const photo = playerPhoto(player.alias)
   const initials = player.alias.slice(0, 3).toUpperCase()
   const role = player.role === 'Rifler' ? 'РИФ' : player.role === 'Support' ? 'САП' : player.role === 'Entry' ? 'ЕНТ' : player.role
 
   return (
-    <div className={'visual-player-card tier-' + tier + (starter ? ' is-starter' : '') + (compact ? ' compact' : '')}>
+    <button type="button" aria-label={'Открыть профиль ' + player.alias} onClick={onClick} className={'visual-player-card tier-' + tier + (starter ? ' is-starter' : '') + (compact ? ' compact' : '')}>
       <div className="visual-card-shine" />
       <div className="visual-card-top">
         <div>
@@ -135,15 +113,7 @@ function PlayerVisualCard({ player, starter = false, compact = false }: { player
       <div className="visual-country">{countryFlag(player.country)} <span>{player.country}</span></div>
       <div className="visual-photo">
         <div className="visual-monogram">{initials}</div>
-        {photo && (
-          <img
-            src={photo}
-            alt={player.realName + ' (' + player.alias + ')'}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            onError={(event) => { event.currentTarget.style.display = 'none' }}
-          />
-        )}
+        <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.realName + ' (' + player.alias + ')'} />
       </div>
       <div className="visual-identity">
         <strong>{player.alias}</strong>
@@ -156,7 +126,7 @@ function PlayerVisualCard({ player, starter = false, compact = false }: { player
         <span><b>{player.clutch}</b>КЛАТЧ</span>
       </div>
       <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
-    </div>
+    </button>
   )
 }
 
@@ -189,7 +159,7 @@ function PlayerCard({
         <div>
           <div className="eyebrow">{countryFlag(player.country)} {player.country} · {player.team} · {ROLE_LABELS[player.role]} · {isStarter ? 'ОСНОВА' : 'ЗАПАС'}</div>
           <h3>{player.alias}</h3>
-          <p>{player.realName} · {player.age} лет · РЕЙТ {overall(player)} · ПОТ {player.potential}</p>
+          <p>{player.realName} · {player.age == null ? 'Возраст —' : player.age + ' лет'} · РЕЙТ {overall(player)} · ПОТ {player.potential}</p>
         </div>
         <div className="ovr">{overall(player)}</div>
       </div>
@@ -236,12 +206,86 @@ function PlayerCard({
   )
 }
 
+function PlayerProfileModal({ player, onClose }: { player: Player; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div className="card-detail-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="card-detail-modal player-profile-modal" role="dialog" aria-modal="true" aria-label={'Профиль ' + player.alias} onMouseDown={(event) => event.stopPropagation()}>
+        <button className="card-detail-close" onClick={onClose} aria-label="Закрыть">×</button>
+        <div className="card-detail-hero">
+          <div className="card-detail-rating"><strong>{overall(player)}</strong><span>{ROLE_LABELS[player.role]}</span></div>
+          <div className="card-detail-portrait"><span>{player.alias.slice(0, 3).toUpperCase()}</span><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="eager" /></div>
+          <div className="card-detail-name"><h2>{player.alias}</h2><p>{player.realName}</p></div>
+        </div>
+        <div className="card-detail-content">
+          <div className="card-detail-kicker">ТЕКУЩЕЕ СОСТОЯНИЕ КЛУБА</div>
+          <h3>{countryFlag(player.country)} {player.team}</h3>
+          <div className="card-detail-facts"><span><b>Форма</b>{player.form}</span><span><b>Мораль</b>{player.morale}</span><span><b>Усталость</b>{player.fatigue}</span><span><b>Контракт</b>{player.contractWeeks} нед.</span><span><b>Зарплата</b>{player.salary} кр./нед.</span><span><b>Потенциал</b>{player.potential}</span></div>
+          <div className="card-detail-section-title">Базовые характеристики</div>
+          <div className="card-detail-scores"><span><b>{player.aim}</b>АИМ</span><span><b>{player.utility}</b>УТИЛИТИ</span><span><b>{player.gameSense}</b>ПОЗИЦИЯ</span><span><b>{player.clutch}</b>КЛАТЧ</span></div>
+          <p className="card-detail-empty">База игрока приходит из карточки, а форма, мораль и усталость меняются решениями менеджера.</p>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function HqStarterRow({ player, index, onOpen }: { player: Player; index: number; onOpen: () => void }) {
+  const role = ROLE_LABELS[player.role]
+  return (
+    <button type="button" className="hq-starter-row" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
+      <span className="hq-starter-number">0{index + 1}</span>
+      <span className="hq-starter-portrait"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
+      <span className="hq-starter-copy"><strong>{player.alias}</strong><small>{role} · {player.team}</small></span>
+      <span className="hq-starter-form"><b>{overall(player)}</b><i style={{ width: player.form + '%' }} /><small>{player.form} F / {player.fatigue} T</small></span>
+      <span className="hq-starter-arrow">↗</span>
+    </button>
+  )
+}
+
+function RosterRow({ player, starter, state, onOpen, onTrain, onRest, onRenew, onToggleStarter, onRelease }: {
+  player: Player
+  starter: boolean
+  state: GameState
+  onOpen: () => void
+  onTrain: () => void
+  onRest: () => void
+  onRenew: () => void
+  onToggleStarter: () => void
+  onRelease: () => void
+}) {
+  const expiring = player.contractWeeks <= 2
+  const expired = player.contractWeeks <= 0
+  const canStart = starter || (state.startingFive.length < 5 && !expired)
+  return (
+    <article className={'roster-player-row ' + (starter ? 'is-starter' : 'is-bench')}>
+      <button className="roster-player-main" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
+        <span className="roster-player-state"><b>{starter ? 'START' : 'BENCH'}</b><i /></span>
+        <span className="roster-player-photo"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
+        <span className="roster-player-identity"><strong>{player.alias}</strong><small>{player.realName} · {countryFlag(player.country)} {player.country} · {player.team}</small></span>
+        <span className="roster-player-role"><b>{ROLE_LABELS[player.role]}</b><small>{player.traits.slice(0, 2).join(' · ')}</small></span>
+        <span className="roster-player-ovr"><b>{overall(player)}</b><small>OVR · POT {player.potential}</small></span>
+        <span className="roster-player-bars"><label>Форма <i><em style={{ width: player.form + '%' }} /></i><b>{player.form}</b></label><label>Мораль <i><em style={{ width: player.morale + '%' }} /></i><b>{player.morale}</b></label><label>Усталость <i className="danger"><em style={{ width: player.fatigue + '%' }} /></i><b>{player.fatigue}</b></label></span>
+        <span className="roster-player-contract"><b className={expiring ? 'warning' : ''}>{expired ? 'ИСТЁК' : player.contractWeeks + ' нед.'}</b><small>{player.salary} кр./нед.</small></span>
+      </button>
+      <div className="roster-row-actions"><button className={starter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>{starter ? 'В запас' : 'В старт'}</button><button onClick={onRenew} disabled={state.credits < player.salary * 4}>Продлить · {player.salary * 4}</button><button onClick={onTrain} disabled={state.staffEnergy < 1 || state.credits < 120}>Тренировка</button><button onClick={onRest} disabled={state.staffEnergy < 1}>Отдых</button><button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < player.salary}>Убрать</button></div>
+    </article>
+  )
+}
+
 function App() {
-  const [state, setState] = useState<GameState>(loadState)
+  const [state, setState] = useState<GameState>(() => saveRepository.load())
   const [tab, setTab] = useState<Tab>('HQ')
   const [tactic, setTactic] = useState<TacticalPlan>('balanced')
   const [seenNewsId, setSeenNewsId] = useState<string | null>(null)
-  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem(WELCOME_KEY) !== '1')
+  const [welcomeStep, setWelcomeStep] = useState<'intro' | 'reveal' | 'complete'>('intro')
+  const [welcomeRevealed, setWelcomeRevealed] = useState(0)
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+  const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
   const rating = useMemo(
@@ -258,7 +302,7 @@ function App() {
   const unread = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
 
   useEffect(() => {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+    saveRepository.save(state)
   }, [state])
 
   const openTab = (next: Tab) => {
@@ -269,16 +313,17 @@ function App() {
   const play = (mode: MatchMode) => {
     const gate = canPlayMatch(state, mode)
     if (!gate.ok) return
-    setState((current) => playMatch(current, mode, tactic))
+    setState((current) => executeGameCommand(current, { type: 'PLAY_MATCH', mode, tactic }).state)
     setTab('HQ')
   }
 
   const reset = () => {
     if (window.confirm('Сбросить текущее сохранение и начать новый проект? Коллекция наборов этого сейва тоже будет удалена.')) {
-      const fresh = createInitialState()
-      localStorage.setItem(SAVE_KEY, JSON.stringify(fresh))
+      const fresh = saveRepository.reset()
       setState(fresh)
       setTab('HQ')
+      setWelcomeStep('intro')
+      setWelcomeRevealed(0)
     }
   }
 
@@ -286,11 +331,7 @@ function App() {
     if (state.credits < roll.pack.price || state.packs.serial !== roll.winner.serial) return false
     setState((current) => {
       if (current.credits < roll.pack.price || current.packs.serial !== roll.winner.serial) return current
-      return {
-        ...current,
-        credits: current.credits - roll.pack.price,
-        packs: collectPackWinner(current.packs, roll.winner),
-      }
+      return executeGameCommand(current, { type: 'OPEN_PACK', roll }).state
     })
     return true
   }
@@ -299,10 +340,12 @@ function App() {
     setState((current) => ({ ...current, packs: clearPackCollection(current.packs) }))
   }
 
-  const finishWelcome = (next: Tab = 'HQ') => {
-    localStorage.setItem(WELCOME_KEY, '1')
-    setShowWelcome(false)
-    setTab(next)
+  const welcomeCards = useMemo(() => rollWelcomePack(state.saveId), [state.saveId])
+
+  const finishWelcome = () => {
+    setState((current) => executeGameCommand(current, { type: 'OPEN_WELCOME_PACK', cards: welcomeCards }).state)
+    setWelcomeStep('complete')
+    setTab('HQ')
   }
 
   const directorNotes = useMemo(() => {
@@ -339,26 +382,44 @@ function App() {
 
   return (
     <div className="app-shell">
-      {showWelcome && (
+      {!state.welcomeComplete && (
         <div className="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
           <section className="welcome-panel">
             <div className="welcome-brand">ESPORT AI MANAGER</div>
-            <div className="eyebrow">НОВЫЙ СЕЗОН · 12 НЕДЕЛЬ</div>
-            <h1 id="welcome-title">Ты управляешь клубом, а не полоской прогресса.</h1>
-            <p>В основе лежат реальные CS2-профили и публичные данные, но рейтинг, зарплаты, потенциал и результаты матчей рассчитывает игровая симуляция.</p>
-            <div className="welcome-grid">
-              <article><b>01</b><strong>Собери пятёрку</strong><span>Роли, форма, усталость и стабильность состава влияют на силу команды.</span></article>
-              <article><b>02</b><strong>Следи за деньгами</strong><span>Контракты и зарплаты списываются по неделям. Глубина состава тоже стоит денег.</span></article>
-              <article><b>03</b><strong>Проживи сезон</strong><span>Каждая серия двигает календарь, меняет состояние игроков и оставляет запись в истории клуба.</span></article>
-            </div>
-            <div className="welcome-actions">
-              <button className="primary" onClick={() => finishWelcome('HQ')}>Начать сезон</button>
-              <button className="secondary" onClick={() => finishWelcome('Roster')}>Сначала посмотреть состав</button>
-            </div>
-            <small>Сохранение хранится локально в браузере.</small>
+            {welcomeStep === 'intro' && <>
+              <div className="eyebrow">ПЕРВЫЙ СЕЙВ · СТАРТОВЫЙ НАБОР</div>
+              <h1 id="welcome-title">Собери свою первую пятёрку.</h1>
+              <p>Один набор, пять ролей, один клуб. Карты станут игроками состава и останутся в коллекции.</p>
+              <div className="welcome-grid">
+                <article><b>01</b><strong>Пять игроков</strong><span>IGL, AWP, Entry, Support и Rifler — роли закрыты заранее.</span></article>
+                <article><b>02</b><strong>Один результат</strong><span>Открытие привязано к этому сейву и не меняется после перезагрузки.</span></article>
+                <article><b>03</b><strong>Дальше — сезон</strong><span>Состав, матч, деньги и последствия начинаются сразу после открытия.</span></article>
+              </div>
+              <div className="welcome-actions"><button className="primary" onClick={() => { setWelcomeStep('reveal'); setWelcomeRevealed(0) }}>Открыть стартовый набор</button></div>
+            </>}
+            {welcomeStep !== 'intro' && <>
+              <div className="eyebrow">WELCOME PACK · {Math.min(welcomeRevealed, 5)}/5</div>
+              <h1 id="welcome-title">Ваша первая пятёрка</h1>
+              <div className="welcome-card-grid">
+                {welcomeCards.map((card, index) => {
+                  const visible = index < welcomeRevealed
+                  return <button key={card.id} className={'welcome-card ' + (visible ? 'is-visible' : '')} onClick={() => visible && setSelectedCard(card)} aria-label={visible ? 'Карточка ' + card.alias : 'Скрытая карта'}>
+                    {visible ? <><b>{card.power}</b><strong>{card.alias}</strong><span>{card.role} · {card.team}</span><em>{card.edition}</em></> : <span>?</span>}
+                  </button>
+                })}
+              </div>
+              <div className="welcome-actions">
+                {welcomeRevealed < 5 && <button className="secondary" onClick={() => setWelcomeRevealed(5)}>Показать сразу</button>}
+                {welcomeRevealed < 5 && <button className="primary" onClick={() => setWelcomeRevealed((count) => Math.min(5, count + 1))}>Открыть карту</button>}
+                {welcomeRevealed >= 5 && <button className="primary" onClick={finishWelcome}>Перейти в штаб</button>}
+              </div>
+            </>}
+            <small>Карты раскрываются один раз и сохраняются вместе с сейвом.</small>
           </section>
         </div>
       )}
+      {selectedCard && <Suspense fallback={null}><CardDetails card={selectedCard} onClose={() => setSelectedCard(null)} /></Suspense>}
+      {selectedPlayer && <PlayerProfileModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark">E</div>
@@ -376,223 +437,91 @@ function App() {
         </div>
       </header>
 
-      <nav className="tabs">
-        {tabs.map((item) => (
-          <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>
-            {TAB_LABELS[item]}
-            {item === 'Inbox' && unread > 0 && <span className="badge">{unread}</span>}
-          </button>
-        ))}
+      <nav className="tabs domain-nav">
+        <div className="nav-group"><span className="nav-group-label">КЛУБ</span>{(['HQ', 'Play', 'Roster'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}</button>)}</div>
+        <div className="nav-group"><span className="nav-group-label">КОЛЛЕКЦИЯ</span>{(['Packs', 'Scout'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}</button>)}</div>
+        <div className="nav-group nav-group-utility"><span className="nav-group-label">ЖУРНАЛ</span>{(['Inbox', 'AI Director', 'Credits'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}{item === 'Inbox' && unread > 0 && <span className="badge">{unread}</span>}</button>)}</div>
       </nav>
 
       <main>
         {tab === 'HQ' && (
-          <section className="screen">
-            <div className="hero">
-              <div>
-                <div className="eyebrow">СЕЗОН 0 · НЕДЕЛЯ {state.week}</div>
-                <h1>Управляй клубом, а не только результатом.</h1>
-                <p>
-                  Стартовая пятёрка, усталость, роли, контракты и недельная зарплата напрямую влияют на бюджет и силу команды. Каждый матч двигает неделю вперёд, поэтому доход от серии не бывает бесплатным.
-                </p>
-                <div className="hero-actions">
-                  <button className="primary" onClick={() => openTab('Play')}>Подготовиться к матчу</button>
-                  <button className="secondary" onClick={() => openTab('Roster')}>Управление пятёркой</button>
+          <section className="screen hq-screen">
+            {state.seasonEnded && state.seasonSummary && (
+              <article className="season-summary-panel broadcast-summary">
+                <div className="eyebrow">СЕЗОН {state.seasonSummary.season} · ИТОГ</div>
+                <h1>Финальный свисток.</h1>
+                <div className="season-summary-grid">
+                  <span><b>{state.seasonSummary.wins}–{state.seasonSummary.losses}</b>Результат</span>
+                  <span><b>{state.seasonSummary.points}</b>Очки</span>
+                  <span><b>{state.seasonSummary.reputation}</b>Репутация</span>
+                  <span><b>{state.seasonSummary.credits}</b>Кредиты</span>
+                  <span><b>{state.seasonSummary.bestPlayer ?? '—'}</b>Лучший игрок</span>
                 </div>
-              </div>
-              <div className="rating-orb">
-                <span>КОМАНДА</span>
-                <strong>{rating}</strong>
-                <small>{chem} химия</small>
-              </div>
-            </div>
-
-            <div className="kpi-grid">
-              <Metric label="Репутация" value={state.reputation + '/100'} />
-              <Metric label="Очки сезона" value={state.seasonPoints} />
-              <Metric label="Действия штаба" value={state.staffEnergy + '/3'} />
-              <Metric label="Итог недели" value={(state.lastWeekNet >= 0 ? '+' : '') + state.lastWeekNet + ' кр.'} />
-            </div>
-
-            <div className="status-strip">
-              <div><span>СТАРТОВАЯ ПЯТЁРКА</span><b>{starters.map((p) => p.alias).join(' · ') || 'Не укомплектована'}</b></div>
-              <div><span>СТАБИЛЬНОСТЬ</span><b>{state.lineupContinuity}/100</b></div>
-              <div><span>НЕДЕЛЬНАЯ ЗАРПЛАТА</span><b>{payroll} кр.</b></div>
-              <div><span>КУБОК</span><b>{state.wins >= 2 || state.reputation >= 45 ? 'ОТКРЫТ' : 'ЗАКРЫТ'}</b></div>
-            </div>
-
-            {warnings.length > 0 && (
-              <div className="warning-stack">
-                {warnings.map((warning) => <div key={warning}>{warning}</div>)}
-              </div>
+                <p>{state.seasonSummary.objective.completed ? 'Цель владельца выполнена.' : 'Цель владельца не выполнена: ' + state.seasonSummary.objective.value + '/' + state.seasonSummary.objective.target + ' побед.'}</p>
+                <button className="primary" onClick={() => setState((current) => executeGameCommand(current, { type: 'START_NEXT_SEASON' }).state)}>Начать сезон {state.season + 1}</button>
+              </article>
             )}
-
-            <div className="two-col">
-              <article className="panel">
-                <div className="panel-head">
-                  <div>
-                    <div className="eyebrow">ПОСЛЕДНЯЯ СЕРИЯ</div>
-                    <h2>{last ? last.opponent : 'Матчей ещё не было'}</h2>
-                  </div>
-                  {last && <span className={last.won ? 'result win' : 'result loss'}>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'}</span>}
-                </div>
-                {last ? (
-                  <>
-                    <div className="map-row">
-                      {last.maps.map((map) => (
-                        <div key={map.map}>
-                          <span>{map.map} · {map.winChance}%</span>
-                          <strong>{map.us}:{map.them}</strong>
-                        </div>
-                      ))}
-                    </div>
-                    <h3 className="story-title">{last.headline}</h3>
-                    <p className="muted">{last.detail}</p>
-                    <div className="performance-row">
-                      {last.performances.slice(0, 3).map((perf) => (
-                        <span key={perf.playerId}>{perf.alias} <b>{perf.rating}</b></span>
-                      ))}
-                    </div>
-                    <div className="reward-line">
-                      <span>MVP {last.mvp}</span>
-                      <span>Доход +{last.reward}</span>
-                      <span>Зарплаты -{last.payroll}</span>
-                      <span>Итог {last.net >= 0 ? '+' : ''}{last.net}</span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="empty">Выбери стартовую пятёрку и тактику, затем сыграй BO3. После первой серии появятся вероятности по картам, оценки игроков и реальный денежный итог недели.</p>
-                )}
-              </article>
-
-              <article className="panel">
-                <div className="panel-head">
-                  <div>
-                    <div className="eyebrow">ЛЕНТА МЕНЕДЖЕРА</div>
-                    <h2>Что изменилось</h2>
-                  </div>
-                  <button className="text-button" onClick={() => openTab('Inbox')}>Открыть всё</button>
-                </div>
-                <div className="feed">
-                  {state.news.slice(0, 5).map((item) => (
-                    <div className="feed-item" key={item.id}>
-                      <span>Н{item.week}</span>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
+            <div className="hq-intro-line">
+              <div><span className="eyebrow">КЛУБНЫЙ ПУЛЬТ · СЕЗОН {state.season}</span><h1>Неделя {state.week}: играем составом.</h1></div>
+              <div className="hq-week-mark"><small>WEEK</small><b>{String(state.week).padStart(2, '0')}</b><span>/{state.seasonLength}</span></div>
             </div>
+
+            <div className="hq-layout">
+              <aside className="team-dossier">
+                <div className="hq-section-head"><span>STARTING FIVE</span><button className="text-button" onClick={() => openTab('Roster')}>Изменить</button></div>
+                <div className="team-dossier-score"><strong>{rating}</strong><span>OVR КЛУБА</span><i>{chem} ХИМИЯ</i></div>
+                <div className="hq-starter-list">
+                  {starters.length ? starters.map((player, index) => <HqStarterRow key={player.id} player={player} index={index} onOpen={() => setSelectedPlayer(player)} />) : <p className="empty">Стартовая пятёрка не собрана.</p>}
+                </div>
+                <div className="team-dossier-foot"><span><b>{state.lineupContinuity}</b> СТАБИЛЬНОСТЬ</span><span><b>{payroll}</b> КР./НЕД.</span><span><b>{state.staffEnergy}/3</b> ШТАБ</span></div>
+              </aside>
+
+              <section className="match-desk">
+                <div className="hq-section-head"><span>СЛЕДУЮЩЕЕ РЕШЕНИЕ</span><span className="desk-status">BO3 · НЕДЕЛЯ {state.week}</span></div>
+                <div className="match-desk-main">
+                  <div className="match-crest match-crest-home"><b>{starters[0]?.team?.slice(0, 3).toUpperCase() || 'CLB'}</b><small>НАШ КЛУБ</small></div>
+                  <div className="match-versus"><span>{modeInfo.scrim.name}</span><strong>VS</strong><small>соперник определяется перед стартом серии</small></div>
+                  <div className="match-crest match-crest-away"><b>?</b><small>СОПЕРНИК</small></div>
+                </div>
+                <div className="match-plan-line"><div><span>ПЛАН</span><strong>{tacticInfo[tactic].name}</strong><small>{tacticInfo[tactic].description}</small></div><button className="text-button" onClick={() => openTab('Play')}>Настроить</button></div>
+                <button className="hq-primary-action" onClick={() => openTab('Play')}>Подготовиться к матчу <span>→</span></button>
+                {last && <div className="latest-result"><div><span>ПОСЛЕДНЯЯ СЕРИЯ · {last.opponent}</span><strong>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} · {last.mvp}</strong></div><b>{last.maps.map((map) => map.us + ':' + map.them).join('  ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть recap</button></div>}
+              </section>
+
+              <aside className="club-pulse">
+                <div className="hq-section-head"><span>CLUB PULSE</span><button className="text-button" onClick={() => openTab('Inbox')}>Лента</button></div>
+                <div className="pulse-score"><b>{state.reputation}</b><span>РЕПУТАЦИЯ</span><i>{state.reputation >= 45 ? 'КУБОК ОТКРЫТ' : 'КУБОК ЗАКРЫТ'}</i></div>
+                <div className="pulse-rail"><span><b>{state.credits.toLocaleString('ru-RU')}</b> КРЕДИТЫ</span><span><b>{state.lastWeekNet >= 0 ? '+' : ''}{state.lastWeekNet}</b> ИТОГ НЕДЕЛИ</span><span><b>{state.wins}–{state.losses}</b> СЕРИИ</span></div>
+                <div className="pulse-alerts">{(warnings.length ? warnings.slice(0, 2) : directorNotes.slice(0, 2).map((note) => note.title)).map((note) => <div key={note}><span>!</span><p>{note}</p></div>)}</div>
+              </aside>
+            </div>
+
+            <div className="hq-news-strip"><span>ПОСЛЕДНИЕ ИЗМЕНЕНИЯ</span>{state.news.slice(0, 3).map((item) => <button key={item.id} onClick={() => openTab('Inbox')}><b>Н{item.week}</b><span>{item.title}</span><i>→</i></button>)}</div>
           </section>
         )}
 
         {tab === 'Play' && (
-          <section className="screen">
-            <div className="section-title">
-              <div>
-                <div className="eyebrow">МАТЧ-ЦЕНТР · РЕЙТ {rating} · ХИМ {chem}</div>
-                <h1>Прими решение до матча.</h1>
-              </div>
-              <p>Каждый матч двигает календарь на неделю, списывает зарплату всего состава и расходует срок контрактов основы. Текущая зарплата: <b>{payroll} кр.</b>.</p>
+          <section className="screen tactical-screen">
+            <div className="tactical-heading"><div><span className="eyebrow">TACTICAL DESK · WEEK {state.week}</span><h1>Решение до серии.</h1><p>Собери пятёрку, выбери план и запусти BO3. Соперник появится внутри симуляции.</p></div><div className="tactical-budget"><span>ЗАРПЛАТА</span><b>{payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
+            <div className="tactical-board">
+              <section className="tactical-team tactical-team-home"><div className="tactical-team-label">НАШ КЛУБ · {rating} OVR</div><div className="tactical-team-name">{starters.map((player) => player.alias).join(' · ')}</div><div className="tactical-team-meta"><span>{chem} химия</span><span>{state.lineupContinuity} стабильность</span></div><div className="tactical-mini-roster">{starters.map((player) => <button key={player.id} onClick={() => setSelectedPlayer(player)}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><b>{player.alias}</b><small>{ROLE_LABELS[player.role]}</small></button>)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>Изменить пятёрку</button></section>
+              <div className="tactical-vs"><span>BO3</span><strong>VS</strong><small>сила соперника рассчитывается перед стартом</small></div>
+              <section className="tactical-opponent"><span className="eyebrow">СЕРИЯ</span><h2>{modeInfo.scrim.name}</h2><p>{modeInfo.scrim.description}</p><div className="opponent-line"><b>?</b><span>СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН</span></div></section>
             </div>
-
-            <div className="lineup-summary">
-              <div>
-                <span>АКТИВНАЯ ПЯТЁРКА</span>
-                <strong>{starters.length === 5 ? starters.map((p) => p.alias).join(' · ') : starters.length + '/5 выбрано'}</strong>
-              </div>
-              <button className="secondary" onClick={() => openTab('Roster')}>Изменить состав</button>
+            <div className="tactical-control">
+              <div className="tactical-plans"><div className="control-label">ПЛАН ИГРЫ</div>{(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}><span>{tacticInfo[plan].name}</span><small>{tacticInfo[plan].description}</small></button>)}</div>
+              <div className="tactical-modes"><div className="control-label">УРОВЕНЬ СЕРИИ</div>{(['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => { const gate = canPlayMatch(state, mode); return <button key={mode} className={'tactical-mode ' + (mode === 'scrim' ? 'selected' : '')} disabled={!gate.ok} onClick={() => play(mode)}><span>{modeInfo[mode].name}</span><small>{RISK_LABELS[modeInfo[mode].risk]} · {gate.ok ? 'готово' : gate.reason}</small></button> })}</div>
+              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong><button className="hq-primary-action" disabled={!canPlayMatch(state, 'scrim').ok} onClick={() => play('scrim')}>Начать серию <span>→</span></button>{warnings.length > 0 && <small>{warnings[0]}</small>}</div>
             </div>
-
-            {warnings.length > 0 && (
-              <div className="warning-stack compact">
-                {warnings.map((warning) => <div key={warning}>{warning}</div>)}
-              </div>
-            )}
-
-            <div className="tactic-grid">
-              {(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => (
-                <button key={plan} className={'tactic-card ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}>
-                  <span>{tacticInfo[plan].name}</span>
-                  <small>{tacticInfo[plan].description}</small>
-                </button>
-              ))}
-            </div>
-
-            <div className="mode-grid">
-              {(['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => {
-                const gate = canPlayMatch(state, mode)
-                return (
-                  <article className="mode-card" key={mode}>
-                    <span className={'risk risk-' + modeInfo[mode].risk.toLowerCase()}>{RISK_LABELS[modeInfo[mode].risk] ?? modeInfo[mode].risk} риск</span>
-                    <h2>{modeInfo[mode].name}</h2>
-                    <p>{modeInfo[mode].description}</p>
-                    <div className="mode-meta">
-                      <span>BO3 · инерция между картами</span>
-                      <span>Важны роли + состояние + стабильность</span>
-                      <span>Доход считается с учётом зарплат</span>
-                    </div>
-                    {!gate.ok && <div className="gate-reason">{gate.reason}</div>}
-                    <button className="primary" disabled={!gate.ok} onClick={() => play(mode)}>
-                      Играть с планом: {tacticInfo[tactic].name}
-                    </button>
-                  </article>
-                )
-              })}
-            </div>
+            {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
           </section>
         )}
 
         {tab === 'Roster' && (
-          <section className="screen">
-            <div className="section-title">
-              <div>
-                <div className="eyebrow">СОСТАВ · {state.roster.length}/8 · ОСНОВА {state.startingFive.length}/5</div>
-                <h1>Запас теперь действительно нужен.</h1>
-              </div>
-              <p>Давай отдых уставшим, следи за контрактами, закрывай нужные роли и контролируй зарплаты. Перестановки временно снижают стабильность состава.</p>
-            </div>
-
-            <div className="lineup-card-grid">
-              {[...state.roster]
-                .sort((a, b) => Number(state.startingFive.includes(b.id)) - Number(state.startingFive.includes(a.id)) || overall(b) - overall(a))
-                .map((player) => (
-                  <PlayerVisualCard
-                    key={'visual-' + player.id}
-                    player={player}
-                    starter={state.startingFive.includes(player.id)}
-                  />
-                ))}
-            </div>
-
-            <div className="roster-toolbar">
-              <Metric label="Рейтинг команды" value={rating} accent />
-              <Metric label="Химия" value={chem} />
-              <Metric label="Стабильность" value={state.lineupContinuity} />
-              <Metric label="Зарплаты" value={payroll + ' кр./нед.'} />
-              <Metric label="Действия штаба" value={state.staffEnergy + '/3'} />
-            </div>
-
-            <div className="roster-grid">
-              {[...state.roster]
-                .sort((a, b) => Number(state.startingFive.includes(b.id)) - Number(state.startingFive.includes(a.id)) || overall(b) - overall(a))
-                .map((player) => (
-                  <PlayerCard
-                    key={player.id}
-                    player={player}
-                    state={state}
-                    isStarter={state.startingFive.includes(player.id)}
-                    onTrain={() => setState((current) => trainPlayer(current, player.id))}
-                    onRest={() => setState((current) => restPlayer(current, player.id))}
-                    onRenew={() => setState((current) => renewContract(current, player.id))}
-                    onToggleStarter={() => setState((current) => toggleStarter(current, player.id))}
-                    onRelease={() => setState((current) => releasePlayer(current, player.id))}
-                  />
-                ))}
-            </div>
+          <section className="screen roster-screen">
+            <div className="roster-heading"><div><span className="eyebrow">TEAM SHEET · {state.roster.length}/8 PLAYERS</span><h1>Люди, которые играют за клуб.</h1><p>Стартовая пятёрка собрана сверху. Запас остаётся рядом, чтобы решения принимались по состоянию, а не по красивой сетке карточек.</p></div><div className="roster-score"><b>{rating}</b><span>OVR КОМАНДЫ</span><small>{chem} химия · {state.lineupContinuity} стабильность</small></div></div>
+            <div className="roster-sheet-summary"><span><b>{state.startingFive.length}/5</b> СТАРТ</span><span><b>{state.roster.length - starters.length}</b> ЗАПАС</span><span><b>{payroll}</b> КР./НЕД.</span><span><b>{state.staffEnergy}/3</b> ДЕЙСТВИЯ</span><button className="secondary" onClick={() => openTab('Scout')}>Найти игрока</button></div>
+            <div className="roster-sheet"><div className="roster-sheet-label"><span>STARTING FIVE</span><small>КЛИК ПО ИГРОКУ — ДОСЬЕ</small></div>{[...state.roster].sort((a, b) => Number(state.startingFive.includes(b.id)) - Number(state.startingFive.includes(a.id)) || overall(b) - overall(a)).map((player) => <RosterRow key={player.id} player={player} starter={state.startingFive.includes(player.id)} state={state} onOpen={() => setSelectedPlayer(player)} onTrain={() => setState((current) => trainPlayer(current, player.id))} onRest={() => setState((current) => restPlayer(current, player.id))} onRenew={() => setState((current) => renewContract(current, player.id))} onToggleStarter={() => setState((current) => toggleStarter(current, player.id))} onRelease={() => setState((current) => releasePlayer(current, player.id))} />)}</div>
           </section>
         )}
 
@@ -611,6 +540,7 @@ function App() {
               credits={state.credits}
               saveId={state.saveId}
               packState={state.packs}
+              roster={state.roster}
               onOpen={commitPackRoll}
               onClear={clearPacks}
             />
@@ -618,68 +548,22 @@ function App() {
         )}
 
         {tab === 'Scout' && (
-          <section className="screen">
-            <div className="section-title">
-              <div>
-                <div className="eyebrow">СКАУТИНГ · СОСТАВ {state.roster.length}/8</div>
-                <h1>Ищи игроков под конкретную задачу.</h1>
-              </div>
-              <button className="primary" disabled={state.credits < 300} onClick={() => setState((current) => scout(current))}>
-                Найти 3 кандидатов · 300 кр.
-              </button>
-            </div>
-            <div className="callout">
-              <strong>Правило экономики</strong>
-              <span>У подписания две цены: разовый трансферный платёж и недельная зарплата. Глубина состава помогает с усталостью и ролями, но раздутый ростер быстро съедает запас денег.</span>
-            </div>
-            {state.prospects.length === 0 ? (
-              <div className="empty-state">
-                <span>СКАУТСКИЙ ОТДЕЛ</span>
-                <h2>Нет активного отчёта</h2>
-                <p>Потрать 300 кредитов, чтобы получить трёх кандидатов из {format.format(VRS_STATS.players)} реальных CS2-ников из {format.format(VRS_STATS.teams)} команд в срезе Valve VRS ({VRS_SNAPSHOT_DATE}). Сейчас слой портретов находит {format.format(PLAYER_PORTRAIT_STATS.coveredPlayers)} реальных портретов из HLTV CDN; для остальных остаётся текстовая карточка. Репутация повышает нижнюю границу игрового рейтинга.</p>
-              </div>
-            ) : (
-              <div className="prospect-grid">
-                {state.prospects.map((player) => {
-                  const fee = player.salary * 3
-                  return (
-                    <article className="prospect-card" key={player.id}>
-                      <PlayerVisualCard player={player} compact />
-                      <div className="prospect-identity-line">
-                        <span>{player.realName !== player.alias ? player.realName : 'Данные профиля пока не найдены'}</span>
-                        <span>{player.age > 0 ? player.age + ' лет' : 'возраст неизвестен'}</span>
-                      </div>
-                      <p>{player.bio}</p>
-                      <div className="scout-numbers">
-                        <span>Потенциал <b>{player.potential}</b></span>
-                        <span>Зарплата <b>{player.salary}/нед.</b></span>
-                        <span>Подписание <b>{fee}</b></span>
-                      </div>
-                      <div className="traits">{player.traits.map((trait) => <span key={trait}>{trait}</span>)}</div>
-                      <button
-                        className="primary"
-                        disabled={state.credits < fee || state.roster.length >= 8}
-                        onClick={() => setState((current) => signProspect(current, player.id))}
-                      >
-                        Подписать в запас · {fee} кр.
-                      </button>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
+          <section className="screen scout-screen">
+            <div className="scout-heading"><div><span className="eyebrow">PRO SCOUTING DATABASE · {state.roster.length}/8</span><h1>Найди следующего игрока.</h1><p>Скаутский отчёт появляется только после заказа. Смотри на роль и состояние состава, а не на случайную витрину.</p></div><button className="hq-primary-action" disabled={state.credits < 300} onClick={() => setState((current) => scout(current))}>Заказать отчёт · 300 <span>→</span></button></div>
+            <div className="scout-desk"><aside className="scout-brief"><span className="control-label">ЗАПРОС ШТАБА</span><h2>{starters.length < 5 ? 'Закрыть недостающую роль' : 'Добавить глубину составу'}</h2><p>{starters.length < 5 ? 'Найди игрока, который вернёт пятёрку к игровому состоянию.' : 'Следующий кандидат отправится в запас. Подписание добавит трансферный платёж и зарплату.'}</p><div className="scout-brief-stats"><span><b>{state.roster.length}</b> / 8 ростер</span><span><b>{state.credits.toLocaleString('ru-RU')}</b> кр. бюджет</span><span><b>{format.format(VRS_STATS.players)}</b> игроков в базе</span></div><div className="scout-watchlist">{starters.slice(0, 3).map((player) => <div key={player.id}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><span><b>{player.alias}</b><small>{ROLE_LABELS[player.role]} · форма {player.form}</small></span></div>)}</div></aside><section className="scout-report"><div className="scout-report-head"><span>ПОСЛЕДНИЙ ОТЧЁТ</span><small>VRS · {VRS_SNAPSHOT_DATE}</small></div>{state.prospects.length === 0 ? <div className="scout-empty"><b>—</b><h2>Отчёт ещё не заказан.</h2><p>300 кредитов откроют три реальные кандидатуры из {format.format(VRS_STATS.players)} игроков и {format.format(VRS_STATS.teams)} команд. Портреты появятся там, где есть проверенная связка.</p></div> : <div className="scout-table">{state.prospects.map((player) => { const fee = player.salary * 3; return <article key={player.id} className="scout-candidate"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><div><span>{ROLE_LABELS[player.role]} · {player.country} · {player.team}</span><h2>{player.alias}</h2><p>{player.bio}</p></div><div className="scout-candidate-meta"><b>{overall(player)}</b><span>POT {player.potential}</span><span>{player.salary} кр./нед.</span></div><button className="primary" disabled={state.credits < fee || state.roster.length >= 8} onClick={() => setState((current) => signProspect(current, player.id))}>Подписать · {fee}</button></article> })}</div>}</section></div>
           </section>
         )}
 
         {tab === 'Inbox' && (
-          <section className="screen narrow">
+          <section className="screen newsroom-screen">
             <div className="section-title">
               <div>
-                <div className="eyebrow">ЛЕНТА КЛУБА · {state.news.length} СОБЫТИЙ</div>
-                <h1>Сезон запоминает последствия.</h1>
+                <div className="eyebrow">CLUB NEWSROOM · {state.news.length} СОБЫТИЙ</div>
+                <h1>Новости, которые меняют сезон.</h1>
               </div>
+              <p>Матчи, деньги и состав собраны в одну хронику. Здесь видно, почему клуб оказался в текущей точке.</p>
             </div>
-            <div className="timeline">
+            <div className="newsroom-layout"><div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div><div className="timeline">
               {state.news.map((item) => (
                 <article key={item.id}>
                   <div className="timeline-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
@@ -690,7 +574,7 @@ function App() {
                   </div>
                 </article>
               ))}
-            </div>
+            </div></div>
           </section>
         )}
 

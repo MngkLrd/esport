@@ -1,5 +1,5 @@
 import { REAL_PLAYERS } from './players'
-import { createPackState, type PackState } from './packState'
+import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
@@ -7,12 +7,15 @@ export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
 
 export interface Player {
   id: string
+  playerKey?: string
+  acquiredCardId?: string | null
+  profileId?: number | null
   alias: string
   firstName: string
   realName: string
   country: string
   team: string
-  age: number
+  age: number | null
   role: Role
   aim: number
   gameSense: number
@@ -45,6 +48,7 @@ export interface PlayerPerformance {
 
 export interface MatchResult {
   id: string
+  season?: number
   week: number
   mode: MatchMode
   tactic: TacticalPlan
@@ -62,6 +66,19 @@ export interface MatchResult {
   mvp: string
 }
 
+export interface SeasonSummary {
+  season: number
+  wins: number
+  losses: number
+  points: number
+  reputation: number
+  fans: number
+  credits: number
+  bestPlayer: string | null
+  payroll: number
+  objective: { label: string; target: number; value: number; completed: boolean }
+}
+
 export interface NewsItem {
   id: string
   week: number
@@ -71,11 +88,14 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 5
+  version: 7
   saveId: string
   seed: number
+  season: number
   week: number
   seasonLength: number
+  seasonEnded: boolean
+  seasonSummary: SeasonSummary | null
   credits: number
   fans: number
   reputation: number
@@ -84,6 +104,7 @@ export interface GameState {
   streak: number
   seasonPoints: number
   staffEnergy: number
+  welcomeComplete: boolean
   roster: Player[]
   startingFive: string[]
   lineupContinuity: number
@@ -187,6 +208,78 @@ export const teamRating = (roster: Player[], startingFive?: string[], continuity
   return Math.round(clamp(raw * 0.87 + chemistry(roster, active.map((p) => p.id), continuity) * 0.13))
 }
 
+export const playerFromPackCard = (card: PackCard, index: number): Player => {
+  const role = card.role ?? 'Rifler'
+  const aim = card.cardStats?.aim ?? card.power
+  const gameSense = card.cardStats?.positioning ?? clamp(card.power - 2)
+  const utility = card.cardStats?.utility ?? clamp(card.power - 5)
+  const clutch = card.cardStats?.clutch ?? clamp(card.power - 1)
+  const leadership = role === 'IGL'
+    ? clamp(gameSense + 12)
+    : role === 'Support'
+      ? clamp(gameSense + 3)
+      : clamp(gameSense - 8)
+  const age = card.age
+  const potential = clamp(card.power + Math.max(2, 27 - (age ?? 25)) + (role === 'Entry' ? 3 : 0), 45, 99)
+  const salary = Math.max(55, Math.round(35 + card.power * 1.05))
+
+  return {
+    id: 'welcome-' + index + '-' + card.alias.toLocaleLowerCase('en-US'),
+    playerKey: card.playerKey,
+    acquiredCardId: card.id,
+    profileId: card.profileId,
+    alias: card.alias,
+    firstName: card.realName ?? card.alias,
+    realName: card.realName ?? card.alias,
+    country: card.country ?? 'Неизвестно',
+    team: card.team,
+    age,
+    role,
+    aim,
+    gameSense,
+    utility,
+    clutch,
+    leadership,
+    form: 60,
+    morale: 72,
+    fatigue: 0,
+    potential,
+    salary,
+    contractWeeks: 10 + (index % 3),
+    traits: role === 'IGL'
+      ? ['Коллер', 'Структура']
+      : role === 'AWP'
+        ? ['Снайпер', 'Контроль карты']
+        : role === 'Support'
+          ? ['Командный игрок', 'Гранаты']
+          : role === 'Entry'
+            ? ['Первый контакт', 'Темп']
+            : ['Рифлер', 'Гибкий'],
+    bio: (card.realName ?? card.alias) + ' · ' + (card.country ?? 'страна неизвестна') + ' · ' + card.team + '.',
+  }
+}
+
+export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState => {
+  if (state.welcomeComplete || state.roster.length > 0 || cards.length !== 5) return state
+  const roster = cards.map(playerFromPackCard)
+  const aliases = roster.map((player) => player.alias).join(' · ')
+  return {
+    ...state,
+    welcomeComplete: true,
+    roster,
+    startingFive: roster.map((player) => player.id),
+    lineupContinuity: 50,
+    packs: collectPackCards(state.packs, cards),
+    news: [{
+      id: 'welcome-complete-' + state.saveId,
+      week: 1,
+      kind: 'lineup' as const,
+      title: 'Первая пятёрка собрана',
+      body: aliases + ' теперь составляют стартовую пятёрку клуба.',
+    }, ...state.news].slice(0, 50),
+  }
+}
+
 const initialRoster: Player[] = [
   {
     id: 'p-donk', alias: 'donk', firstName: 'Danil Kryshkovets', realName: 'Danil Kryshkovets', country: 'Russia', team: 'Spirit', age: 19, role: 'Entry',
@@ -233,11 +326,14 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 5,
+  version: 7,
   saveId: createSaveId(),
   seed: 271828,
+  season: 1,
   week: 1,
   seasonLength: 12,
+  seasonEnded: false,
+  seasonSummary: null,
   credits: 3200,
   fans: 340,
   reputation: 38,
@@ -246,9 +342,10 @@ export const createInitialState = (): GameState => ({
   streak: 0,
   seasonPoints: 0,
   staffEnergy: 3,
-  roster: initialRoster.map((p) => ({ ...p, traits: [...p.traits] })),
-  startingFive: initialRoster.slice(0, 5).map((p) => p.id),
-  lineupContinuity: 62,
+  welcomeComplete: false,
+  roster: [],
+  startingFive: [],
+  lineupContinuity: 50,
   prospects: [],
   scoutCycle: 0,
   history: [],
@@ -258,7 +355,7 @@ export const createInitialState = (): GameState => ({
       week: 1,
       kind: 'media' as const,
       title: 'Новый проект выходит на сцену',
-      body: 'Двенадцать недель. Шесть игроков. Одна стартовая пятёрка. Зарплаты, контракты и усталость имеют значение каждую неделю: даже сильный состав можно развалить плохим менеджментом.',
+      body: 'Двенадцать недель начинаются с welcome-пака. Пять выпавших игроков становятся первой стартовой пятёркой клуба.',
     },
   ],
   lastPayroll: 0,
@@ -266,15 +363,45 @@ export const createInitialState = (): GameState => ({
   packs: createPackState(),
 })
 
+const normalizePlayers = (players: Player[], packs: PackState): Player[] => players.map((player) => {
+  const card = packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === player.alias.toLocaleLowerCase('en-US'))
+  return {
+    ...player,
+    playerKey: player.playerKey ?? 'alias:' + player.alias.toLocaleLowerCase('en-US'),
+    acquiredCardId: player.acquiredCardId ?? card?.id ?? null,
+  }
+})
+
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if (parsed.version === 5 && Array.isArray(parsed.roster)) {
+  if (parsed.version === 7 && Array.isArray(parsed.roster)) {
+    const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     return {
       ...(parsed as unknown as GameState),
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
-      packs: parsed.packs?.version === 2 ? parsed.packs : createPackState(),
+      welcomeComplete: Boolean(parsed.welcomeComplete),
+      season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonEnded: Boolean(parsed.seasonEnded),
+      seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
+      roster: normalizePlayers(parsed.roster, packs),
+      packs,
     }
+  }
+
+  if ((parsed.version === 6 || parsed.version === 5) && Array.isArray(parsed.roster)) {
+    const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
+    return {
+      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete'>),
+      version: 7,
+      saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
+      season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonEnded: Boolean(parsed.seasonEnded),
+      seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
+      roster: normalizePlayers(parsed.roster, packs),
+      packs,
+    } as GameState
   }
 
   if ((parsed.version === 4 || parsed.version === 3 || parsed.version === 2 || parsed.version === 1) && Array.isArray(parsed.roster)) {
@@ -308,8 +435,12 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 5,
+      version: 7,
       saveId: createSaveId(),
+      welcomeComplete: true,
+      season: 1,
+      seasonEnded: false,
+      seasonSummary: null,
       seasonLength: 12,
       roster,
       startingFive: Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id),
@@ -413,6 +544,8 @@ export const weeklyPayroll = (state: GameState) =>
   state.roster.reduce((sum, player) => sum + (player.contractWeeks > 0 ? player.salary : 0), 0)
 
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
+  if (!state.welcomeComplete) return { ok: false, reason: 'Сначала открой стартовый набор и собери пятёрку.' }
+  if (state.seasonEnded || state.week > state.seasonLength) return { ok: false, reason: 'Сезон завершён. Открой итог и начни следующий сезон.' }
   const active = getStartingFive(state.roster, state.startingFive)
   if (active.length !== 5) return { ok: false, reason: 'Выбери ровно пять игроков в основу.' }
   if (active.some((p) => p.contractWeeks <= 0)) return { ok: false, reason: 'Продли контракт или убери из основы каждого игрока с истёкшим контрактом.' }
@@ -488,6 +621,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const expired = roster.filter((p) => p.contractWeeks === 0)
   const result: MatchResult = {
     id: 'm-' + state.week + '-' + state.history.length,
+    season: state.season,
     week: state.week,
     mode,
     tactic,
@@ -531,9 +665,40 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     body: 'Доход за участие и результат: ' + reward + ' кр. Зарплаты: ' + payroll + ' кр. Итог: ' + (net >= 0 ? '+' : '') + net + ' кр.',
   }
 
+  const seasonEnded = state.week >= state.seasonLength
+  const seasonPerformances = [result, ...state.history.filter((match) => match.season === state.season)].reduce<Record<string, { alias: string; total: number }>>((scores, match) => {
+    for (const performance of match.performances) {
+      const current = scores[performance.playerId] ?? { alias: performance.alias, total: 0 }
+      scores[performance.playerId] = { alias: current.alias, total: current.total + performance.rating }
+    }
+    return scores
+  }, {})
+  const bestPlayer = Object.values(seasonPerformances).sort((a, b) => b.total - a.total)[0]?.alias ?? mvp.alias
+  const seasonSummary: SeasonSummary | null = seasonEnded
+    ? {
+        season: state.season,
+        wins: state.wins + (won ? 1 : 0),
+        losses: state.losses + (won ? 0 : 1),
+        points: state.seasonPoints + (won ? (mode === 'cup' ? 5 : mode === 'showmatch' ? 3 : 1) : 0),
+        reputation: clamp(state.reputation + (won ? (mode === 'cup' ? 5 : 3) : -1)),
+        fans: Math.max(0, state.fans + fansDelta),
+        credits: Math.max(0, state.credits + net),
+        bestPlayer,
+        payroll,
+        objective: {
+          label: 'Выиграть минимум 5 матчей',
+          target: 5,
+          value: state.wins + (won ? 1 : 0),
+          completed: state.wins + (won ? 1 : 0) >= 5,
+        },
+      }
+    : null
+
   return {
     ...state,
-    week: state.week + 1,
+    week: seasonEnded ? state.week : state.week + 1,
+    seasonEnded,
+    seasonSummary,
     credits: Math.max(0, state.credits + net),
     fans: Math.max(0, state.fans + fansDelta),
     reputation: clamp(state.reputation + (won ? (mode === 'cup' ? 5 : 3) : -1)),
@@ -553,6 +718,35 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     ].slice(0, 50),
     lastPayroll: payroll,
     lastWeekNet: net,
+  }
+}
+
+export const startNextSeason = (state: GameState): GameState => {
+  if (!state.seasonEnded) return state
+  const roster = state.roster.map((player) => ({
+    ...player,
+    fatigue: clamp(Math.round(player.fatigue * 0.35)),
+    morale: clamp(Math.round((player.morale + 60) / 2)),
+    form: clamp(Math.round((player.form + 55) / 2)),
+  }))
+  return {
+    ...state,
+    season: state.season + 1,
+    week: 1,
+    seasonEnded: false,
+    seasonSummary: null,
+    wins: 0,
+    losses: 0,
+    streak: 0,
+    seasonPoints: 0,
+    roster,
+    news: [{
+      id: 'season-start-' + (state.season + 1),
+      week: 1,
+      kind: 'media' as const,
+      title: 'Начался новый сезон',
+      body: 'Контракты и коллекция продолжаются. Форма и усталость игроков восстановлены частично.',
+    }, ...state.news].slice(0, 50),
   }
 }
 
@@ -632,12 +826,14 @@ const makeProspect = (
   const base = Math.round(54 + state.reputation * 0.22 + rng() * 14)
   return {
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
+    playerKey: 'alias:' + identity.alias.toLocaleLowerCase('en-US'),
+    acquiredCardId: null,
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,
     country: identity.country ?? 'Неизвестно',
     team: identity.team,
-    age: identity.age ?? 0,
+        age: identity.age,
     role: identity.role ?? pick(simulationRoles, rng),
     aim: clamp(base + Math.round((rng() - 0.5) * 14)),
     gameSense: clamp(base + Math.round((rng() - 0.5) * 14)),

@@ -2,7 +2,13 @@
 
 A small single-player esports management prototype with a deterministic simulation core and a local narrative/decision-support layer.
 
-## v0.2 playable core
+## v0.3 P0 playable core
+
+The current P0 slice is end-to-end: a new save opens with a deterministic five-card welcome pack, turns those cards into the first roster, persists the save locally, runs a seeded BO3 match, records the weekly economy, and closes a season with a summary before the next season can start.
+
+The implementation keeps card identity, roster state, and command boundaries in one versioned save model. The browser UI is a view over that model; it does not create a second source of truth for the welcome flow or match results.
+
+### v0.2 playable core
 
 The previous build exposed many management concepts but several of them were mostly labels. v0.2 makes the core loop consequential:
 
@@ -63,3 +69,8 @@ This is a personal, non-commercial fan manager. It now uses public real-player a
 Public GitHub repositories are not treated as automatically reusable. The pack animation is our own React/TypeScript implementation informed by public case-opening references; repositories without a compatible license are credited as references rather than copied. See the in-app **Credits** page for authors, source links and license notes.
 
 Player photographs are not committed into this repository; the app currently loads matched portraits remotely and falls back to generated text cards when an image is unavailable.
+## v0.4 visual architecture
+
+The P0 loop is now presented through a team-first club desk instead of a dashboard of equal-weight cards. HQ keeps the starting five, next tactical decision, club pulse and season news in one editorial frame. Match is a tactical desk, Roster is a team sheet, Scout is a report workspace and Inbox is a newsroom. The design rules are documented in `DESIGN.md`; the grayscale HQ alternatives and selection rationale are in `docs/HQ_GRAYSCALE_CONCEPTS.md`.
+
+The browser pass targets 1366×768 and 1920×1080. Management screens use restrained dark surfaces and dividers; collectible colour and motion remain in Packs and Collection.

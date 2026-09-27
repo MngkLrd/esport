@@ -8,7 +8,8 @@ import {
   rollPack,
 } from './packs'
 import {
-  packAliasCount,
+  cardKey,
+  packCardCount,
   packCollectionStats,
   type PackCard,
   type PackId,
@@ -16,7 +17,11 @@ import {
   type PackRoll,
   type PackState,
 } from './packState'
-import { countryFlag, playerPhoto } from './playerVisuals'
+import { countryFlag } from './playerVisuals'
+import { CardDetails } from './CardDetails'
+import { PackArtwork } from './PackArtwork'
+import { PlayerPortrait } from './PlayerPortrait'
+import type { Player } from './game'
 
 const SPIN_MS = 5200
 
@@ -38,7 +43,6 @@ const FILTERS: Array<{ value: 'all' | PackRarity; label: string }> = [
 ]
 
 function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }) {
-  const photo = playerPhoto(card.alias)
   return (
     <div
       className={'pack-reel-card rarity-' + card.rarity + (winner ? ' is-winner' : '')}
@@ -47,15 +51,7 @@ function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }
       <div className="pack-reel-power">{card.power}</div>
       <div className="pack-reel-photo">
         <span>{card.alias.slice(0, 2).toUpperCase()}</span>
-        {photo && (
-          <img
-            src={photo}
-            alt={card.alias}
-            draggable={false}
-            referrerPolicy="no-referrer"
-            onError={(event) => { event.currentTarget.style.display = 'none' }}
-          />
-        )}
+        <PlayerPortrait alias={card.alias} alt={card.alias} draggable={false} />
       </div>
       <strong>{card.alias}</strong>
       <small>{card.team}</small>
@@ -64,10 +60,9 @@ function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }
   )
 }
 
-function CollectionCard({ card, count }: { card: PackCard; count: number }) {
-  const photo = playerPhoto(card.alias)
+function CollectionCard({ card, count, onOpen }: { card: PackCard; count: number; onOpen: () => void }) {
   return (
-    <article className={'collection-card rarity-' + card.rarity} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
+    <button type="button" aria-label={'Открыть карточку ' + card.alias} onClick={onOpen} className={'collection-card rarity-' + card.rarity} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
       <div className="collection-card-top">
         <b>{card.power}</b>
         <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
@@ -76,15 +71,7 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
       {count > 1 && <div className="collection-count">×{count}</div>}
       <div className="collection-photo">
         <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-        {photo && (
-          <img
-            src={photo}
-            alt={card.alias}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            onError={(event) => { event.currentTarget.style.display = 'none' }}
-          />
-        )}
+        <PlayerPortrait alias={card.alias} alt={card.alias} loading="lazy" />
       </div>
       <div className="collection-identity">
         <strong>{card.alias}</strong>
@@ -99,25 +86,17 @@ function CollectionCard({ card, count }: { card: PackCard; count: number }) {
         </div>
       )}
       <div className="collection-rarity">{RARITY_LABEL[card.rarity]}</div>
-    </article>
+    </button>
   )
 }
 
-function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean }) {
-  const photo = playerPhoto(card.alias)
+function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: boolean; onOpen: () => void }) {
   const source = card.cardStats
-    ? (card.cardStats.scoreSource === 'hltv-player-screen' ? 'HLTV current' : 'HLTV matches') +
-      ' · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd +
-      (card.cardStats.maps != null ? ' · ' + card.cardStats.maps + ' карт' : '') +
-      (card.cardStats.rating != null ? ' · rating ' + card.cardStats.rating.toFixed(3) : '')
-    : card.sourceRating != null
-      ? 'индивидуальный рейтинг ' + card.sourceRating.toFixed(2)
-      : card.sourceRank
-        ? 'место команды VRS #' + card.sourceRank
-        : 'пул VRS'
+    ? 'Форма игрока · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd
+    : 'Игровой профиль'
 
   return (
-    <div
+    <button type="button" onClick={onOpen} aria-label={'Открыть подробности ' + card.alias}
       className={'pack-reveal rarity-' + card.rarity}
       style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}
     >
@@ -133,14 +112,7 @@ function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean 
         <div className="pack-reveal-country">{countryFlag(card.country ?? 'Неизвестно')}</div>
         <div className="pack-reveal-photo">
           <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-          {photo && (
-            <img
-              src={photo}
-              alt={card.alias}
-              referrerPolicy="no-referrer"
-              onError={(event) => { event.currentTarget.style.display = 'none' }}
-            />
-          )}
+          <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="eager" />
         </div>
         <div className="pack-reveal-name">
           <strong>{card.alias}</strong>
@@ -164,10 +136,10 @@ function WinnerReveal({ card, duplicate }: { card: PackCard; duplicate: boolean 
           <span><b>{card.power}</b> сила / 100</span>
           <span><b>{countryFlag(card.country ?? 'Неизвестно')}</b> {card.country ?? 'Страна неизвестна'}</span>
           <span><b>{duplicate ? 'ДУБЛЬ' : 'НОВАЯ'}</b> {duplicate ? 'уже есть в коллекции' : 'новая для коллекции'}</span>
-          <span><b>ИСТОЧНИК</b> {source}</span>
+          <span><b>ПЕРИОД</b> {source}</span>
         </div>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -175,12 +147,14 @@ export function PacksView({
   credits,
   saveId,
   packState,
+  roster,
   onOpen,
   onClear,
 }: {
   credits: number
   saveId: string
   packState: PackState
+  roster: Player[]
   onOpen: (roll: PackRoll) => boolean
   onClear: () => void
 }) {
@@ -190,8 +164,12 @@ export function PacksView({
   const [duplicate, setDuplicate] = useState(false)
   const [query, setQuery] = useState('')
   const [rarityFilter, setRarityFilter] = useState<'all' | PackRarity>('all')
+  const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const viewState = useMemo(() => hydratePackState(packState), [packState])
   const stats = useMemo(() => packCollectionStats(viewState), [viewState])
+  const selectedPlayer = selectedCard
+    ? roster.find((player) => player.acquiredCardId === selectedCard.id || player.playerKey === selectedCard.playerKey || player.alias.toLowerCase() === selectedCard.alias.toLowerCase())
+    : undefined
 
   useEffect(() => {
     if (!spinning) return
@@ -202,13 +180,13 @@ export function PacksView({
     return () => window.clearTimeout(timer)
   }, [spinning, roll])
 
-  const openPack = (packId: PackId) => {
+  const openPack = (packId: Exclude<PackId, 'welcome'>) => {
     if (spinning) return
     const pack = PACKS.find((item) => item.id === packId)
     if (!pack || credits < pack.price) return
 
     const nextRoll = rollPack(packId, packState.serial, saveId)
-    const isDuplicate = packAliasCount(viewState, nextRoll.winner.alias) > 0
+    const isDuplicate = packCardCount(viewState, nextRoll.winner) > 0
     if (!onOpen(nextRoll)) return
 
     setRoll(nextRoll)
@@ -234,7 +212,7 @@ export function PacksView({
   const aliasCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const card of viewState.inventory) {
-      const key = card.alias.toLocaleLowerCase('en-US')
+      const key = cardKey(card)
       counts.set(key, (counts.get(key) ?? 0) + 1)
     }
     return counts
@@ -259,9 +237,9 @@ export function PacksView({
       <div className="section-title">
         <div>
           <div className="eyebrow">ЛАБОРАТОРИЯ НАБОРОВ · {PACK_POOL_STATS.totalPlayers.toLocaleString('ru-RU')} ИГРОКОВ В ПУЛЕ</div>
-          <h1>Открытие теперь часть сейва, а не отдельная мини-игра.</h1>
+          <h1>Открой следующий дроп.</h1>
         </div>
-        <p>Покупка, результат и коллекция фиксируются вместе. Новый сейв получает собственную последовательность дропов.</p>
+        <p>Дропы, кредиты и коллекция живут внутри этого сейва.</p>
       </div>
 
       <div className="pack-stats pack-stats-v2">
@@ -276,6 +254,7 @@ export function PacksView({
       <div className="pack-shelf">
         {PACKS.map((pack) => (
           <article className={'pack-box pack-' + pack.id} key={pack.id} style={{ '--pack-accent': pack.accent } as React.CSSProperties}>
+            <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
             <div className="pack-box-glow" />
             <span>{pack.eyebrow}</span>
             <h2>{pack.name}</h2>
@@ -285,7 +264,7 @@ export function PacksView({
               <span><i style={{ background: RARITY_COLOR.epic }} /> Эпическая {pack.weights.epic}%</span>
               <span><i style={{ background: RARITY_COLOR.legendary }} /> Легендарная {pack.weights.legendary}%</span>
             </div>
-            <button className="primary" disabled={spinning || credits < pack.price} onClick={() => openPack(pack.id)}>
+            <button className="primary" disabled={spinning || credits < pack.price} onClick={() => openPack(pack.id as Exclude<PackId, 'welcome'>)}>
               {spinning ? 'Открывается…' : 'Открыть · ' + pack.price + ' кр.'}
             </button>
           </article>
@@ -323,9 +302,9 @@ export function PacksView({
 
         {roll && revealed && (
           <>
-            <WinnerReveal card={roll.winner} duplicate={duplicate} />
+            <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
             <div className="pack-winner-actions pack-reopen">
-              <button className="secondary" onClick={() => openPack(roll.pack.id)} disabled={credits < roll.pack.price}>
+              <button className="secondary" onClick={() => openPack(roll.pack.id as Exclude<PackId, 'welcome'>)} disabled={credits < roll.pack.price}>
                 Открыть ещё · {roll.pack.price} кр.
               </button>
             </div>
@@ -335,13 +314,11 @@ export function PacksView({
 
       <div className="pack-rating-note">
         <div>
-          <span>КАРТОЧКИ · HLTV CURRENT + HISTORY</span>
-          <strong>Прямые skill scores HLTV имеют приоритет; история используется как fallback.</strong>
+          <span>КАРТОЧКИ · ФОРМА ИГРОКА</span>
+          <strong>Базовая сила карты и текущая форма — разные вещи.</strong>
         </div>
         <p>
-          Для текущих профилей АИМ = Firepower, УТЛ = Utility, КЛА = Clutching, а ПОЗ собирается из Trading, Opening и Entrying.
-          Если прямых skill scores нет, карточка строится из HLTV-derived матчей за последние 12 месяцев или последний доступный
-          календарный год. Только когда подтверждённых матчевых данных нет вообще, игрок остаётся на <code>VRS</code>-fallback.
+          Карточка определяет базовые характеристики игрока. Результаты матчей и решения менеджера меняют состояние состава отдельно.
         </p>
       </div>
 
@@ -394,8 +371,9 @@ export function PacksView({
             {collection.map((card) => (
               <CollectionCard
                 card={card}
-                count={aliasCounts.get(card.alias.toLocaleLowerCase('en-US')) ?? 1}
-                key={card.alias.toLocaleLowerCase('en-US')}
+                count={aliasCounts.get(cardKey(card)) ?? 1}
+                onOpen={() => setSelectedCard(card)}
+                key={cardKey(card)}
               />
             ))}
           </div>
@@ -412,6 +390,7 @@ export function PacksView({
           <p>Карты принадлежат текущему сейву клуба и сохраняются вместе с его экономикой.</p>
         </div>
       )}
+      {selectedCard && <CardDetails card={selectedCard} playerState={selectedPlayer} onClose={() => setSelectedCard(null)} />}
     </section>
   )
 }

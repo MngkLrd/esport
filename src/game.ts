@@ -2,6 +2,9 @@ import { REAL_PLAYERS } from './players'
 import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
+export type LineupSlot = Role
+export type LineupSlots = Record<LineupSlot, string | null>
+export const LINEUP_SLOTS: readonly LineupSlot[] = ['Entry', 'AWP', 'Rifler', 'Support', 'IGL']
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
 export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
 
@@ -107,6 +110,7 @@ export interface GameState {
   welcomeComplete: boolean
   roster: Player[]
   startingFive: string[]
+  lineupSlots: LineupSlots
   lineupContinuity: number
   prospects: Player[]
   scoutCycle: number
@@ -159,6 +163,39 @@ export const getStartingFive = (roster: Player[], startingFive: string[]) =>
     .filter((player): player is Player => Boolean(player))
     .slice(0, 5)
 
+export const createEmptyLineupSlots = (): LineupSlots => ({
+  Entry: null,
+  AWP: null,
+  Rifler: null,
+  Support: null,
+  IGL: null,
+})
+
+export const lineupSlotIds = (slots: LineupSlots) =>
+  LINEUP_SLOTS.map((slot) => slots[slot]).filter((id): id is string => Boolean(id))
+
+export const inferLineupSlots = (roster: Player[], startingFive: string[]): LineupSlots => {
+  const slots = createEmptyLineupSlots()
+  const active = getStartingFive(roster, startingFive)
+  const remaining = [...active]
+
+  for (const slot of LINEUP_SLOTS) {
+    const exact = remaining.findIndex((player) => player.role === slot)
+    if (exact >= 0) {
+      slots[slot] = remaining[exact].id
+      remaining.splice(exact, 1)
+    }
+  }
+
+  for (const slot of LINEUP_SLOTS) {
+    if (!slots[slot] && remaining.length > 0) {
+      slots[slot] = remaining.shift()?.id ?? null
+    }
+  }
+
+  return slots
+}
+
 const roleCoverage = (active: Player[]) => {
   const roles = new Set(active.map((p) => p.role))
   let score = 0
@@ -206,6 +243,29 @@ export const teamRating = (roster: Player[], startingFive?: string[], continuity
       return sum + overall(p) + condition
     }, 0) / active.length
   return Math.round(clamp(raw * 0.87 + chemistry(roster, active.map((p) => p.id), continuity) * 0.13))
+}
+
+const roleFitBonus: Record<LineupSlot, Record<Role, number>> = {
+  Entry: { Entry: 16, Rifler: 8, AWP: 4, Support: 3, IGL: 2 },
+  AWP: { AWP: 16, Rifler: 6, Entry: 4, Support: 2, IGL: 2 },
+  Rifler: { Rifler: 16, Entry: 9, Support: 7, IGL: 5, AWP: 4 },
+  Support: { Support: 16, IGL: 9, Rifler: 7, Entry: 3, AWP: 2 },
+  IGL: { IGL: 16, Support: 8, Rifler: 5, Entry: 2, AWP: 1 },
+}
+
+export const lineupFitScore = (player: Player, slot: LineupSlot) => {
+  const skill =
+    slot === 'Entry'
+      ? player.aim * 0.42 + player.gameSense * 0.22 + player.clutch * 0.2 + player.utility * 0.08 + player.leadership * 0.08
+      : slot === 'AWP'
+        ? player.aim * 0.43 + player.gameSense * 0.3 + player.clutch * 0.2 + player.utility * 0.04 + player.leadership * 0.03
+        : slot === 'Support'
+          ? player.utility * 0.38 + player.gameSense * 0.28 + player.leadership * 0.16 + player.aim * 0.1 + player.clutch * 0.08
+          : slot === 'IGL'
+            ? player.leadership * 0.38 + player.gameSense * 0.3 + player.utility * 0.15 + player.clutch * 0.1 + player.aim * 0.07
+            : player.aim * 0.34 + player.gameSense * 0.27 + player.utility * 0.15 + player.clutch * 0.18 + player.leadership * 0.06
+  const condition = player.form * 0.45 + player.morale * 0.35 + (100 - player.fatigue) * 0.2
+  return Math.round(clamp(skill * 0.82 + condition * 0.08 + roleFitBonus[slot][player.role]))
 }
 
 export const playerFromPackCard = (card: PackCard, index: number): Player => {
@@ -268,6 +328,7 @@ export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState
     welcomeComplete: true,
     roster,
     startingFive: roster.map((player) => player.id),
+    lineupSlots: inferLineupSlots(roster, roster.map((player) => player.id)),
     lineupContinuity: 50,
     packs: collectPackCards(state.packs, cards),
     news: [{
@@ -345,6 +406,7 @@ export const createInitialState = (): GameState => ({
   welcomeComplete: false,
   roster: [],
   startingFive: [],
+  lineupSlots: createEmptyLineupSlots(),
   lineupContinuity: 50,
   prospects: [],
   scoutCycle: 0,
@@ -372,11 +434,43 @@ const normalizePlayers = (players: Player[], packs: PackState): Player[] => play
   }
 })
 
+const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unknown): LineupSlots => {
+  const slots = createEmptyLineupSlots()
+  const validIds = new Set(roster.map((player) => player.id))
+  const used = new Set<string>()
+
+  if (raw && typeof raw === 'object') {
+    const source = raw as Partial<Record<LineupSlot, unknown>>
+    for (const slot of LINEUP_SLOTS) {
+      const id = source[slot]
+      if (typeof id === 'string' && validIds.has(id) && !used.has(id)) {
+        slots[slot] = id
+        used.add(id)
+      }
+    }
+  }
+
+  const remaining = startingFive.filter((id) => validIds.has(id) && !used.has(id))
+  for (const slot of LINEUP_SLOTS) {
+    if (slots[slot]) continue
+    const exact = remaining.findIndex((id) => roster.find((player) => player.id === id)?.role === slot)
+    const id = exact >= 0 ? remaining.splice(exact, 1)[0] : remaining.shift()
+    if (id) {
+      slots[slot] = id
+      used.add(id)
+    }
+  }
+
+  return slots
+}
+
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
   if (parsed.version === 7 && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
+    const roster = normalizePlayers(parsed.roster, packs)
+    const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as GameState),
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
@@ -384,22 +478,28 @@ export const migrateState = (raw: unknown): GameState => {
       season: typeof parsed.season === 'number' ? parsed.season : 1,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
-      roster: normalizePlayers(parsed.roster, packs),
+      roster,
+      startingFive,
+      lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       packs,
     }
   }
 
   if ((parsed.version === 6 || parsed.version === 5) && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
+    const roster = normalizePlayers(parsed.roster, packs)
+    const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
-      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete'>),
+      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots'>),
       version: 7,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
-      roster: normalizePlayers(parsed.roster, packs),
+      roster,
+      startingFive,
+      lineupSlots: normalizeLineupSlots(roster, startingFive, null),
       packs,
     } as GameState
   }
@@ -415,6 +515,7 @@ export const migrateState = (raw: unknown): GameState => {
       return {
         ...player,
         alias: identity.alias,
+        profileId: player.profileId ?? profileIdFromUrl(identity.profileUrl),
         firstName: identity.realName ?? identity.alias,
         realName: identity.realName ?? identity.alias,
         country: identity.country ?? 'Неизвестно',
@@ -431,6 +532,7 @@ export const migrateState = (raw: unknown): GameState => {
     const roster = parsed.roster.map(enrichIdentity)
     if (roster.length === 5) roster.push({ ...initialRoster[5], traits: [...initialRoster[5].traits] })
     const prospects = Array.isArray(parsed.prospects) ? parsed.prospects.map(enrichIdentity) : []
+    const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id)
 
     return {
       ...base,
@@ -443,7 +545,8 @@ export const migrateState = (raw: unknown): GameState => {
       seasonSummary: null,
       seasonLength: 12,
       roster,
-      startingFive: Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : roster.slice(0, 5).map((p) => p.id),
+      startingFive,
+      lineupSlots: inferLineupSlots(roster, startingFive),
       lineupContinuity: typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 55,
       prospects,
       history: Array.isArray(parsed.history) ? parsed.history as MatchResult[] : [],
@@ -790,29 +893,78 @@ export const restPlayer = (state: GameState, playerId: string): GameState => {
   }
 }
 
-export const toggleStarter = (state: GameState, playerId: string): GameState => {
-  const player = state.roster.find((p) => p.id === playerId)
-  if (!player) return state
-  const isStarter = state.startingFive.includes(playerId)
-  if (!isStarter && (state.startingFive.length >= 5 || player.contractWeeks <= 0)) return state
-  const startingFive = isStarter
-    ? state.startingFive.filter((id) => id !== playerId)
-    : [...state.startingFive, playerId]
+const currentLineupSlots = (state: GameState) =>
+  state.lineupSlots ?? inferLineupSlots(state.roster, state.startingFive)
+
+export const assignLineupSlot = (state: GameState, slot: LineupSlot, playerId: string): GameState => {
+  const player = state.roster.find((candidate) => candidate.id === playerId)
+  if (!player || player.contractWeeks <= 0) return state
+
+  const slots = { ...currentLineupSlots(state) }
+  const fromSlot = LINEUP_SLOTS.find((candidate) => slots[candidate] === playerId)
+  const displacedId = slots[slot]
+
+  if (fromSlot === slot) return state
+  if (fromSlot) slots[fromSlot] = displacedId ?? null
+  slots[slot] = playerId
+
+  const startingFive = lineupSlotIds(slots)
   return {
     ...state,
+    lineupSlots: slots,
     startingFive,
-    lineupContinuity: clamp(state.lineupContinuity - 8),
+    lineupContinuity: clamp(state.lineupContinuity - 6),
     news: [{
-      id: 'lineup-' + state.week + '-' + playerId + '-' + startingFive.length,
+      id: 'lineup-slot-' + state.week + '-' + slot + '-' + playerId,
       week: state.week,
       kind: 'lineup' as const,
-      title: isStarter ? player.alias + ' отправляется в запас' : player.alias + ' выходит в стартовую пятёрку',
-      body: 'Изменение активной пятёрки временно снижает стабильность. Постоянный состав восстанавливает химию через матчи.',
+      title: player.alias + ' занимает слот ' + slot,
+      body: displacedId
+        ? 'Игроки поменялись местами в активной пятёрке. Стабильность временно снижается после перестановки.'
+        : 'Изменение активной пятёрки временно снижает стабильность. Постоянный состав восстанавливает химию через матчи.',
     }, ...state.news].slice(0, 50),
   }
 }
 
+export const clearLineupSlot = (state: GameState, slot: LineupSlot): GameState => {
+  const slots = { ...currentLineupSlots(state) }
+  const playerId = slots[slot]
+  if (!playerId) return state
+  const player = state.roster.find((candidate) => candidate.id === playerId)
+  slots[slot] = null
+  return {
+    ...state,
+    lineupSlots: slots,
+    startingFive: lineupSlotIds(slots),
+    lineupContinuity: clamp(state.lineupContinuity - 8),
+    news: [{
+      id: 'lineup-clear-' + state.week + '-' + slot + '-' + playerId,
+      week: state.week,
+      kind: 'lineup' as const,
+      title: (player?.alias ?? 'Игрок') + ' отправляется в запас',
+      body: 'Слот ' + slot + ' освобождён. Матч потребует полностью собранную пятёрку.',
+    }, ...state.news].slice(0, 50),
+  }
+}
+
+export const toggleStarter = (state: GameState, playerId: string): GameState => {
+  const player = state.roster.find((candidate) => candidate.id === playerId)
+  if (!player) return state
+  const slots = currentLineupSlots(state)
+  const occupiedSlot = LINEUP_SLOTS.find((slot) => slots[slot] === playerId)
+  if (occupiedSlot) return clearLineupSlot(state, occupiedSlot)
+  if (state.startingFive.length >= 5 || player.contractWeeks <= 0) return state
+
+  const emptySlots = LINEUP_SLOTS.filter((slot) => !slots[slot])
+  const bestSlot = [...emptySlots].sort((a, b) => lineupFitScore(player, b) - lineupFitScore(player, a))[0]
+  return bestSlot ? assignLineupSlot(state, bestSlot, playerId) : state
+}
+
 const proPlayerIdentities = REAL_PLAYERS
+const profileIdFromUrl = (profileUrl: string | null | undefined) => {
+  const match = profileUrl?.match(/\/player\/(\d+)/)
+  return match ? Number(match[1]) : null
+}
 const simulationRoles: readonly Role[] = ['IGL', 'Entry', 'Rifler', 'AWP', 'Support']
 
 const traits = ['Чистый аим', 'Ученик игры', 'Не боится большой сцены', 'Рабочая лошадка', 'Креативный коллер', 'Чутьё в позднем раунде'] as const
@@ -828,6 +980,7 @@ const makeProspect = (
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
     playerKey: 'alias:' + identity.alias.toLocaleLowerCase('en-US'),
     acquiredCardId: null,
+    profileId: profileIdFromUrl(identity.profileUrl),
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,
@@ -932,6 +1085,9 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
     credits: state.credits - severance,
     roster: state.roster.filter((p) => p.id !== playerId),
     startingFive: state.startingFive.filter((id) => id !== playerId),
+    lineupSlots: Object.fromEntries(
+      LINEUP_SLOTS.map((slot) => [slot, currentLineupSlots(state)[slot] === playerId ? null : currentLineupSlots(state)[slot]]),
+    ) as LineupSlots,
     lineupContinuity: clamp(state.lineupContinuity - (state.startingFive.includes(playerId) ? 12 : 4)),
     news: [{
       id: 'release-' + playerId + '-' + state.week,

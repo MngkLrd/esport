@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyWelcomePack,
+  assignLineupSlot,
   canPlayMatch,
+  clearLineupSlot,
   createInitialState,
+  lineupFitScore,
   migrateState,
   playMatch,
   startNextSeason,
@@ -28,6 +31,7 @@ describe('P0 career flow', () => {
     expect(ready.welcomeComplete).toBe(true)
     expect(ready.roster).toHaveLength(5)
     expect(ready.startingFive).toHaveLength(5)
+    expect(Object.values(ready.lineupSlots).filter(Boolean)).toHaveLength(5)
     expect(ready.roster.every((player) => player.playerKey && player.acquiredCardId)).toBe(true)
     expect(ready.packs.inventory).toHaveLength(5)
     expect(canPlayMatch(ready, 'scrim').ok).toBe(true)
@@ -61,6 +65,36 @@ describe('P0 career flow', () => {
     expect(next.week).toBe(1)
     expect(next.seasonEnded).toBe(false)
     expect(next.roster).toHaveLength(5)
+  })
+
+
+  it('persists role slots and swaps cards without duplicating the active five', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const entryId = ready.lineupSlots.Entry
+    const awpId = ready.lineupSlots.AWP
+    expect(entryId).toBeTruthy()
+    expect(awpId).toBeTruthy()
+
+    const swapped = assignLineupSlot(ready, 'AWP', entryId!)
+    expect(swapped.lineupSlots.AWP).toBe(entryId)
+    expect(swapped.lineupSlots.Entry).toBe(awpId)
+    expect(new Set(swapped.startingFive).size).toBe(5)
+
+    const cleared = clearLineupSlot(swapped, 'Support')
+    expect(cleared.lineupSlots.Support).toBeNull()
+    expect(cleared.startingFive).toHaveLength(4)
+
+    const migrated = migrateState(JSON.parse(JSON.stringify(swapped)))
+    expect(migrated.lineupSlots).toEqual(swapped.lineupSlots)
+  })
+
+  it('ranks exact-role players above obvious off-role alternatives for slot picking', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const awp = ready.roster.find((player) => player.role === 'AWP')!
+    const support = ready.roster.find((player) => player.role === 'Support')!
+    expect(lineupFitScore(awp, 'AWP')).toBeGreaterThan(lineupFitScore(support, 'AWP'))
   })
 
   it('migrates v5 careers without forcing the welcome flow', () => {

@@ -51,7 +51,7 @@ function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }
       <div className="pack-reel-power">{card.power}</div>
       <div className="pack-reel-photo">
         <span>{card.alias.slice(0, 2).toUpperCase()}</span>
-        <PlayerPortrait alias={card.alias} alt={card.alias} draggable={false} />
+        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} draggable={false} />
       </div>
       <strong>{card.alias}</strong>
       <small>{card.team}</small>
@@ -71,7 +71,7 @@ function CollectionCard({ card, count, onOpen }: { card: PackCard; count: number
       {count > 1 && <div className="collection-count">×{count}</div>}
       <div className="collection-photo">
         <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-        <PlayerPortrait alias={card.alias} alt={card.alias} loading="lazy" />
+        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="lazy" />
       </div>
       <div className="collection-identity">
         <strong>{card.alias}</strong>

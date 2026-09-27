@@ -26,10 +26,6 @@ export function CardDetails({
 }) {
   const snapshot = hltvSnapshotForAlias(card.alias)
   const raw = snapshot?.raw
-  const period = card.cardStats
-    ? card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd
-    : card.edition
-
   return (
     <div className="card-detail-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -64,11 +60,10 @@ export function CardDetails({
 
         <div className="card-detail-content">
           <div className="card-detail-kicker">ПРОФИЛЬ ИГРОКА</div>
-          <h3>{countryFlag(card.country ?? '')} {card.team}</h3>
+          <h3>{countryFlag(card.country ?? '')} {card.country} · {card.team}</h3>
           <div className="card-detail-facts">
             <span><b>Роль</b>{card.role ? ROLE_LABELS[card.role] : '—'}</span>
             <span><b>Возраст</b>{card.age ?? '—'}</span>
-            <span><b>Период карты</b>{period}</span>
             <span><b>Редкость</b>{card.rarity.toUpperCase()}</span>
           </div>
 
@@ -108,11 +103,7 @@ export function CardDetails({
                 <span><b>{card.power}</b>OVR карты</span>
               </div>
             </>
-          ) : (
-            <div className="card-detail-empty">
-              Для этой карты нет полного набора матчевых показателей. Игровой OVR сохранён, но подробные поля не дорисовываются вымышленными числами.
-            </div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>

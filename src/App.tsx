@@ -9,8 +9,6 @@ import {
   releasePlayer,
   renewContract,
   restPlayer,
-  scout,
-  signProspect,
   tacticInfo,
   teamRating,
   toggleStarter,
@@ -21,7 +19,6 @@ import {
   type Player,
   type TacticalPlan,
 } from './game'
-import { VRS_STATS, VRS_SNAPSHOT_DATE } from './vrs'
 import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag } from './playerVisuals'
 import {
   clearPackCollection,
@@ -32,6 +29,7 @@ import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { RosterBoard } from './RosterBoard'
+import { ScoutMarket } from './ScoutMarket'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 
@@ -550,10 +548,10 @@ function App() {
         )}
 
         {tab === 'Scout' && (
-          <section className="screen scout-screen">
-            <div className="scout-heading"><div><span className="eyebrow">PRO SCOUTING DATABASE · {state.roster.length}/8</span><h1>Найди следующего игрока.</h1><p>Скаутский отчёт появляется только после заказа. Смотри на роль и состояние состава, а не на случайную витрину.</p></div><button className="hq-primary-action" disabled={state.credits < 300} onClick={() => setState((current) => scout(current))}>Заказать отчёт · 300 <span>→</span></button></div>
-            <div className="scout-desk"><aside className="scout-brief"><span className="control-label">ЗАПРОС ШТАБА</span><h2>{starters.length < 5 ? 'Закрыть недостающую роль' : 'Добавить глубину составу'}</h2><p>{starters.length < 5 ? 'Найди игрока, который вернёт пятёрку к игровому состоянию.' : 'Следующий кандидат отправится в запас. Подписание добавит трансферный платёж и зарплату.'}</p><div className="scout-brief-stats"><span><b>{state.roster.length}</b> / 8 ростер</span><span><b>{state.credits.toLocaleString('ru-RU')}</b> кр. бюджет</span><span><b>{format.format(VRS_STATS.players)}</b> игроков в базе</span></div><div className="scout-watchlist">{starters.slice(0, 3).map((player) => <div key={player.id}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><span><b>{player.alias}</b><small>{ROLE_LABELS[player.role]} · форма {player.form}</small></span></div>)}</div></aside><section className="scout-report"><div className="scout-report-head"><span>ПОСЛЕДНИЙ ОТЧЁТ</span><small>VRS · {VRS_SNAPSHOT_DATE}</small></div>{state.prospects.length === 0 ? <div className="scout-empty"><b>—</b><h2>Отчёт ещё не заказан.</h2><p>300 кредитов откроют три реальные кандидатуры из {format.format(VRS_STATS.players)} игроков и {format.format(VRS_STATS.teams)} команд. Портреты появятся там, где есть проверенная связка.</p></div> : <div className="scout-table">{state.prospects.map((player) => { const fee = player.salary * 3; return <article key={player.id} className="scout-candidate"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><div><span>{ROLE_LABELS[player.role]} · {player.country} · {player.team}</span><h2>{player.alias}</h2><p>{player.bio}</p></div><div className="scout-candidate-meta"><b>{overall(player)}</b><span>POT {player.potential}</span><span>{player.salary} кр./нед.</span></div><button className="primary" disabled={state.credits < fee || state.roster.length >= 8} onClick={() => setState((current) => signProspect(current, player.id))}>Подписать · {fee}</button></article> })}</div>}</section></div>
-          </section>
+          <ScoutMarket
+            state={state}
+            setState={setState}
+          />
         )}
 
         {tab === 'Inbox' && (

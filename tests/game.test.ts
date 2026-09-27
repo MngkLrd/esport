@@ -5,9 +5,13 @@ import {
   canPlayMatch,
   clearLineupSlot,
   createInitialState,
+  defaultNegotiationTerms,
+  evaluateNegotiation,
   lineupFitScore,
   migrateState,
+  negotiateProspect,
   playMatch,
+  scout,
   startNextSeason,
 } from '../src/game'
 import { rollWelcomePack } from '../src/welcomePack'
@@ -97,9 +101,48 @@ describe('P0 career flow', () => {
     expect(lineupFitScore(awp, 'AWP')).toBeGreaterThan(lineupFitScore(support, 'AWP'))
   })
 
+  it('targets scouting to a requested role and persists the brief', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const brief = { role: 'AWP' as const, maxSalary: 170, ageProfile: 'any' as const }
+    const report = scout(ready, brief)
+
+    expect(report.credits).toBe(ready.credits - 300)
+    expect(report.scoutBrief).toEqual(brief)
+    expect(report.prospects).toHaveLength(5)
+    expect(report.prospects.every((player) => player.role === 'AWP')).toBe(true)
+  })
+
+  it('requires a credible offer and applies negotiated terms when a prospect signs', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const report = scout(ready, { role: 'Rifler', maxSalary: 180, ageProfile: 'any' })
+    const prospect = report.prospects[0]
+    expect(prospect).toBeTruthy()
+
+    const weak = { ...defaultNegotiationTerms(prospect), fee: 50, salary: 40, contractWeeks: 6 as const, squadRole: 'rotation' as const }
+    const weakEvaluation = evaluateNegotiation(report, prospect, weak)
+    expect(weakEvaluation.accepted).toBe(false)
+    expect(negotiateProspect(report, prospect.id, weak).state).toEqual(report)
+
+    const base = defaultNegotiationTerms(prospect)
+    const strong = { ...base, fee: Math.round(base.fee * 1.2), salary: Math.round(base.salary * 1.15), contractWeeks: 16, squadRole: 'starter' as const }
+    const strongEvaluation = evaluateNegotiation(report, prospect, strong)
+    expect(strongEvaluation.accepted).toBe(true)
+
+    const signed = negotiateProspect(report, prospect.id, strong).state
+    const rosterPlayer = signed.roster.find((player) => player.id === prospect.id)
+    expect(rosterPlayer?.salary).toBe(strong.salary)
+    expect(rosterPlayer?.contractWeeks).toBe(strong.contractWeeks)
+    expect(signed.prospects.some((player) => player.id === prospect.id)).toBe(false)
+    expect(signed.startingFive).toContain(prospect.id)
+    expect(signed.startingFive).toHaveLength(5)
+    expect(signed.credits).toBe(report.credits - strong.fee)
+  })
+
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(7)
+    expect(migrated.version).toBe(8)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

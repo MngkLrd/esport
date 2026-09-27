@@ -233,7 +233,6 @@ function PlayerProfileModal({ player, onClose }: { player: Player; onClose: () =
           <div className="card-detail-facts"><span><b>Форма</b>{player.form}</span><span><b>Мораль</b>{player.morale}</span><span><b>Усталость</b>{player.fatigue}</span><span><b>Контракт</b>{player.contractWeeks} нед.</span><span><b>Зарплата</b>{player.salary} кр./нед.</span><span><b>Потенциал</b>{player.potential}</span></div>
           <div className="card-detail-section-title">Базовые характеристики</div>
           <div className="card-detail-scores"><span><b>{player.aim}</b>АИМ</span><span><b>{player.utility}</b>УТИЛИТИ</span><span><b>{player.gameSense}</b>ПОЗИЦИЯ</span><span><b>{player.clutch}</b>КЛАТЧ</span></div>
-          <p className="card-detail-empty">База игрока приходит из карточки, а форма, мораль и усталость меняются решениями менеджера.</p>
         </div>
       </section>
     </div>
@@ -415,11 +414,10 @@ function App() {
             {welcomeStep === 'intro' && <>
               <div className="eyebrow">ПЕРВЫЙ СЕЙВ · СТАРТОВЫЙ НАБОР</div>
               <h1 id="welcome-title">Собери свою первую пятёрку.</h1>
-              <p>Один набор, пять ролей, один клуб. Карты станут игроками состава и останутся в коллекции.</p>
               <div className="welcome-grid">
                 <article><b>01</b><strong>Пять игроков</strong><span>IGL, AWP, Entry, Support и Rifler — роли закрыты заранее.</span></article>
-                <article><b>02</b><strong>Один результат</strong><span>Открытие привязано к этому сейву и не меняется после перезагрузки.</span></article>
-                <article><b>03</b><strong>Дальше — сезон</strong><span>Состав, матч, деньги и последствия начинаются сразу после открытия.</span></article>
+                <article><b>02</b><strong>Один результат</strong></article>
+                <article><b>03</b><strong>Дальше — сезон</strong></article>
               </div>
               <div className="welcome-actions"><button className="primary" onClick={() => { setWelcomeStep('reveal'); setWelcomeRevealed(0) }}>Открыть стартовый набор</button></div>
             </>}
@@ -460,7 +458,6 @@ function App() {
                 {welcomeRevealed >= 5 && <button className="primary" onClick={finishWelcome}>Перейти в штаб</button>}
               </div>
             </>}
-            <small>Карты раскрываются один раз и сохраняются вместе с сейвом.</small>
           </section>
         </div>
       )}
@@ -523,10 +520,10 @@ function App() {
 
         {tab === 'Play' && (
           <section className="screen tactical-screen">
-            <div className="tactical-heading"><div><span className="eyebrow">TACTICAL DESK · WEEK {state.week}</span><h1>Решение до серии.</h1><p>Собери пятёрку, выбери план и запусти BO3. Соперник появится внутри симуляции.</p></div><div className="tactical-budget"><span>ЗАРПЛАТА</span><b>{payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
+            <div className="tactical-heading"><div><span className="eyebrow">TACTICAL DESK · WEEK {state.week}</span><h1>Решение до серии.</h1></div><div className="tactical-budget"><span>ЗАРПЛАТА</span><b>{payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
             <div className="tactical-board">
               <section className="tactical-team tactical-team-home"><div className="tactical-team-label">НАШ КЛУБ · {rating} OVR</div><div className="tactical-team-name">{starters.map((player) => player.alias).join(' · ')}</div><div className="tactical-team-meta"><span>{chem} химия</span><span>{state.lineupContinuity} стабильность</span></div><div className="tactical-mini-roster">{starters.map((player) => <button key={player.id} onClick={() => setSelectedPlayer(player)}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><b>{player.alias}</b><small>{ROLE_LABELS[player.role]}</small></button>)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>Изменить пятёрку</button></section>
-              <div className="tactical-vs"><span>BO3</span><strong>VS</strong><small>сила соперника рассчитывается перед стартом</small></div>
+              <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
               <section className="tactical-opponent"><span className="eyebrow">СЕРИЯ</span><h2>{modeInfo.scrim.name}</h2><p>{modeInfo.scrim.description}</p><div className="opponent-line"><b>?</b><span>СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН</span></div></section>
             </div>
             <div className="tactical-control">
@@ -584,7 +581,6 @@ function App() {
                 <div className="eyebrow">CLUB NEWSROOM · {state.news.length} СОБЫТИЙ</div>
                 <h1>Новости, которые меняют сезон.</h1>
               </div>
-              <p>Матчи, деньги и состав собраны в одну хронику. Здесь видно, почему клуб оказался в текущей точке.</p>
             </div>
             <div className="newsroom-layout"><div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div><div className="timeline">
               {state.news.map((item) => (
@@ -606,7 +602,6 @@ function App() {
             <div className="section-title">
               <div>
                 <div className="eyebrow">ЛОКАЛЬНЫЙ ДИРЕКТОР · АНАЛИЗ ТЕКУЩЕГО СОСТОЯНИЯ</div>
-                <h1>Полезен уже сейчас, к LLM готов позже.</h1>
               </div>
             </div>
 
@@ -624,19 +619,16 @@ function App() {
               <article>
                 <span>01 · КАНОНИЧЕСКОЕ СОСТОЯНИЕ</span>
                 <h2>Источник истины — симуляция</h2>
-                <p>Стартовая пятёрка, контракты, зарплаты, усталость, вероятность на карте, оценки игроков и награды считаются детерминированными переходами состояния.</p>
                 <code>состояние + состав + тактика + режим + сид → новое состояние</code>
               </article>
               <article>
                 <span>02 · ДИРЕКТОР СЕЙЧАС</span>
                 <h2>Подсказки по правилам</h2>
-                <p>Экран читает реальное сохранение и отмечает риски по контрактам, усталости, ролям и деньгам. Он работает без имитации подключённой LLM.</p>
                 <code>факты → конкретные предупреждения</code>
               </article>
               <article>
                 <span>03 · ГРАНИЦА LLM</span>
                 <h2>Генерация отвечает только за подачу</h2>
-                <p>В будущем шлюз сможет превращать эти факты в переговоры, медиа и конфликты, но не должен решать исходы матчей или транзакций.</p>
                 <code>факты → проверенная схема → нарратив</code>
               </article>
             </div>

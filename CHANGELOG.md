@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-28 · Card identity and welcome reveal fix
+
+- Added a verified HLTV identity/bodyshot fallback layer for players missing from the legacy metadata and portrait manifests.
+- Rehydrates saved pack cards and roster players from the current identity layer without requiring a save reset.
+- Fixed the vicu control case with verified HLTV profile data: Wiktoria Janicka, Poland, age 23, profile id 22062 and current bodyshot.
+- Rebuilt welcome-pack cards as full 5:7 player cards with portrait, flag, OVR, role and AIM/UTL/POS/CLU.
+- Added regression tests for identity enrichment, portrait resolution and stale-card hydration.
+
 ## 2026-09-27 · Scouting / Market 2.0
 
 - Replaced the random three-row scouting result with a five-card shortlist built from a role, age-profile and salary brief.

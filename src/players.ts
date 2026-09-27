@@ -1,4 +1,6 @@
 import { VRS_PLAYERS } from './vrs'
+import { HLTV_CARD_SNAPSHOTS } from './hltvCardStats.generated'
+import { hltvIdentityFallbackForAlias } from './hltvIdentityFallbacks'
 import { metadataForAlias } from './playerMetadata'
 
 export type RealPlayerRole = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
@@ -69,18 +71,21 @@ const curatedAliases = new Set(CURATED_REAL_PLAYERS.map((player) => player.alias
 const VRS_ONLY_PLAYERS: readonly RealPlayerSeed[] = VRS_PLAYERS
   .filter((player) => !curatedAliases.has(player.alias.toLocaleLowerCase('en-US')))
   .map((player) => {
+    const key = player.alias.toLocaleLowerCase('en-US')
     const metadata = metadataForAlias(player.alias)
+    const fallback = hltvIdentityFallbackForAlias(player.alias)
+    const snapshot = HLTV_CARD_SNAPSHOTS[key]
     return {
       alias: player.alias,
-      realName: metadata?.realName ?? null,
-      country: metadata?.country ?? null,
+      realName: metadata?.realName ?? fallback?.realName ?? null,
+      country: metadata?.country ?? fallback?.country ?? null,
       team: player.team,
-      age: metadata?.age ?? null,
+      age: metadata?.age ?? fallback?.age ?? null,
       role: metadata?.role ?? null,
       rating: null,
       vrsRank: player.teamRank,
       source: 'valve-vrs' as const,
-      profileUrl: metadata?.profileUrl ?? null,
+      profileUrl: metadata?.profileUrl ?? fallback?.profileUrl ?? snapshot?.profileUrl ?? null,
     }
   })
 

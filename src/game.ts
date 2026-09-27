@@ -462,11 +462,19 @@ export const createInitialState = (): GameState => ({
 })
 
 const normalizePlayers = (players: Player[], packs: PackState): Player[] => players.map((player) => {
-  const card = packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === player.alias.toLocaleLowerCase('en-US'))
+  const aliasKey = player.alias.toLocaleLowerCase('en-US')
+  const card = packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
+  const identity = REAL_PLAYERS.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
+  const profileMatch = identity?.profileUrl?.match(/\/player\/(\d+)/)
   return {
     ...player,
-    playerKey: player.playerKey ?? 'alias:' + player.alias.toLocaleLowerCase('en-US'),
+    playerKey: player.playerKey ?? (profileMatch ? 'hltv:' + profileMatch[1] : 'alias:' + aliasKey),
     acquiredCardId: player.acquiredCardId ?? card?.id ?? null,
+    profileId: player.profileId ?? card?.profileId ?? (profileMatch ? Number(profileMatch[1]) : null),
+    realName: player.realName && player.realName !== player.alias ? player.realName : identity?.realName ?? player.realName,
+    firstName: player.firstName && player.firstName !== player.alias ? player.firstName : identity?.realName ?? player.firstName,
+    country: player.country && player.country !== 'Неизвестно' ? player.country : identity?.country ?? player.country,
+    age: player.age ?? identity?.age ?? null,
   }
 })
 

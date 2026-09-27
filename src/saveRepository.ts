@@ -1,4 +1,5 @@
 import { LEGACY_PACK_SAVE_KEY, migratePackState, type PackState } from './packState'
+import { hydratePackState } from './packs'
 import { createInitialState, migrateState, type GameState } from './game'
 
 export const SAVE_KEY = 'esport-ai-manager-v2'
@@ -23,9 +24,10 @@ export const createBrowserSaveRepository = (): SaveRepository => ({
   load() {
     const raw = readJson(SAVE_KEY) ?? readJson(LEGACY_SAVE_KEY)
     let state = migrateState(raw)
+    state = { ...state, packs: hydratePackState(state.packs) }
     const legacyPacks = readJson(LEGACY_PACK_SAVE_KEY)
     if (legacyPacks) {
-      const packs = migratePackState(legacyPacks)
+      const packs = hydratePackState(migratePackState(legacyPacks))
       if (state.packs.inventory.length === 0 && packs.inventory.length > 0) {
         state = { ...state, packs }
       }

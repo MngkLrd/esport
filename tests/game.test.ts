@@ -142,7 +142,7 @@ describe('P0 career flow', () => {
 
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(8)
+    expect(migrated.version).toBe(9)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

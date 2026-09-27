@@ -615,30 +615,6 @@ function App() {
               ))}
             </div>
 
-            <div className="architecture">
-              <article>
-                <span>01 · КАНОНИЧЕСКОЕ СОСТОЯНИЕ</span>
-                <h2>Источник истины — симуляция</h2>
-                <code>состояние + состав + тактика + режим + сид → новое состояние</code>
-              </article>
-              <article>
-                <span>02 · ДИРЕКТОР СЕЙЧАС</span>
-                <h2>Подсказки по правилам</h2>
-                <code>факты → конкретные предупреждения</code>
-              </article>
-              <article>
-                <span>03 · ГРАНИЦА LLM</span>
-                <h2>Генерация отвечает только за подачу</h2>
-                <code>факты → проверенная схема → нарратив</code>
-              </article>
-            </div>
-
-            <div className="debug-panel">
-              <div><span>Сид</span><b>{state.seed}</b></div>
-              <div><span>Рейтинг команды</span><b>{rating}</b></div>
-              <div><span>Химия</span><b>{chem}</b></div>
-              <div><span>Зарплаты</span><b>{payroll}</b></div>
-            </div>
             <button className="danger-button" onClick={reset}>Сбросить сохранение</button>
           </section>
         )}

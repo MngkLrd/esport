@@ -54,6 +54,12 @@ const COUNTRY_CODES: Record<string, string> = {
   Mongolia: 'MN',
   Japan: 'JP',
   'South Korea': 'KR',
+  Guatemala: 'GT',
+  Indonesia: 'ID',
+  Montenegro: 'ME',
+  'North Macedonia': 'MK',
+  'South Africa': 'ZA',
+  Switzerland: 'CH',
 }
 
 const flagFromCode = (code: string) =>

@@ -161,7 +161,6 @@ export function ScoutMarket({
         <div>
           <span className="eyebrow">TRANSFER DESK · {state.roster.length}/8 PLAYERS</span>
           <h1>Ищи игрока под конкретную задачу.</h1>
-          <p>Задай роль, возрастной профиль и потолок зарплаты. Скаут вернёт пять карточек, а переход решается через переговоры.</p>
         </div>
         <div className="market-budget">
           <span>БЮДЖЕТ КЛУБА</span>
@@ -258,7 +257,6 @@ export function ScoutMarket({
             <div className="market-empty">
               <div className="market-empty-mark">+</div>
               <h2>Сформируй запрос скауту.</h2>
-              <p>Вместо трёх случайных строк здесь появятся пять игровых карточек, ранжированных под выбранную роль и бюджет.</p>
             </div>
           ) : (
             <div className="market-card-grid">

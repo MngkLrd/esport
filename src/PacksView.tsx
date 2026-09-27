@@ -19,7 +19,7 @@ import {
 import { countryFlag } from './playerVisuals'
 import { CardDetails } from './CardDetails'
 import { PackArtwork } from './PackArtwork'
-import { PlayerPortrait } from './PlayerPortrait'
+import { PlayerPortrait, preloadPlayerPortraits } from './PlayerPortrait'
 import type { Player } from './game'
 
 const SPIN_MS = 4300
@@ -51,7 +51,7 @@ function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }
       <div className="pack-reel-power">{card.power}</div>
       <div className="pack-reel-photo">
         <span>{card.alias.slice(0, 2).toUpperCase()}</span>
-        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} draggable={false} />
+        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="eager" draggable={false} />
       </div>
       <strong>{card.alias}</strong>
       <small>{card.team}</small>
@@ -161,6 +161,7 @@ export function PacksView({
   const [queue, setQueue] = useState<PackRoll[]>([])
   const [queueIndex, setQueueIndex] = useState(0)
   const [spinning, setSpinning] = useState(false)
+  const [preparing, setPreparing] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const [query, setQuery] = useState('')
   const [rarityFilter, setRarityFilter] = useState<'all' | PackRarity>('all')
@@ -192,7 +193,7 @@ export function PacksView({
   useEffect(() => {
     if (!selectedPackId) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !spinning) {
+      if (event.key === 'Escape' && !spinning && !preparing) {
         setSelectedPackId(null)
         setQueue([])
         setQueueIndex(0)
@@ -201,7 +202,7 @@ export function PacksView({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedPackId, spinning])
+  }, [selectedPackId, spinning, preparing])
 
   const openPurchase = (packId: Exclude<PackId, 'welcome'>) => {
     setSelectedPackId(packId)
@@ -210,25 +211,56 @@ export function PacksView({
     setQueueIndex(0)
     setRevealed(false)
     setSpinning(false)
+    setPreparing(false)
   }
 
-  const spin = () => {
-    if (!selectedPack || spinning) return
+  const warmRoll = (target: PackRoll | null | undefined) =>
+    target
+      ? preloadPlayerPortraits(target.reel.map((card) => ({ alias: card.alias, playerId: card.profileId })))
+      : Promise.resolve({ loaded: 0, failed: 0 })
+
+  const startSpinAnimation = () => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setSpinning(true))
+    })
+  }
+
+  const spin = async () => {
+    if (!selectedPack || spinning || preparing) return
     const total = selectedPack.price * quantity
     if (packTokens < total) return
+
+    setPreparing(true)
     const rolls = onOpenBatch(selectedPack.id as Exclude<PackId, 'welcome'>, quantity)
-    if (!rolls?.length) return
+    if (!rolls?.length) {
+      setPreparing(false)
+      return
+    }
+
+    await warmRoll(rolls[0])
     setQueue(rolls)
     setQueueIndex(0)
     setRevealed(false)
-    setSpinning(true)
+    setSpinning(false)
+    setPreparing(false)
+    startSpinAnimation()
+
+    if (rolls[1]) void warmRoll(rolls[1])
   }
 
-  const nextRoll = () => {
-    if (queueIndex >= queue.length - 1) return
-    setQueueIndex((index) => index + 1)
+  const nextRoll = async () => {
+    if (queueIndex >= queue.length - 1 || spinning || preparing) return
+    const nextIndex = queueIndex + 1
+
+    setPreparing(true)
+    await warmRoll(queue[nextIndex])
+    setQueueIndex(nextIndex)
     setRevealed(false)
-    setSpinning(true)
+    setSpinning(false)
+    setPreparing(false)
+    startSpinAnimation()
+
+    if (queue[nextIndex + 1]) void warmRoll(queue[nextIndex + 1])
   }
 
   const skip = () => {
@@ -238,7 +270,7 @@ export function PacksView({
   }
 
   const closeSpin = () => {
-    if (spinning) return
+    if (spinning || preparing) return
     setSelectedPackId(null)
     setQueue([])
     setQueueIndex(0)
@@ -367,7 +399,7 @@ export function PacksView({
       {selectedPack && (
         <div className="pack-purchase-backdrop" role="presentation" onMouseDown={closeSpin}>
           <section className={'pack-purchase-modal ' + (spinning ? 'is-spinning' : '') + (revealed ? 'is-revealed' : '')} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="pack-purchase-close" onClick={closeSpin} disabled={spinning} aria-label="Закрыть">×</button>
+            <button className="pack-purchase-close" onClick={closeSpin} disabled={spinning || preparing} aria-label="Закрыть">×</button>
 
             {!queue.length ? (
               <>
@@ -385,8 +417,8 @@ export function PacksView({
                   ))}
                 </div>
 
-                <button className="pack-spin-button" disabled={packTokens < selectedPack.price * quantity} onClick={spin}>
-                  КРУТИТЬ
+                <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
+                  {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
                 </button>
                 <div className="pack-spin-price">{(selectedPack.price * quantity).toLocaleString('ru-RU')} PACK TOKENS</div>
                 {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
@@ -422,7 +454,7 @@ export function PacksView({
                     <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
                     <div className="pack-reveal-actions">
                       {queueIndex < queue.length - 1
-                        ? <button className="fifa-primary-cta" onClick={nextRoll}>СЛЕДУЮЩИЙ ДРОП <span>→</span></button>
+                        ? <button className="fifa-primary-cta" onClick={nextRoll} disabled={preparing}>{preparing ? 'ПОДГОТОВКА' : 'СЛЕДУЮЩИЙ ДРОП'} <span>→</span></button>
                         : <button className="fifa-primary-cta" onClick={closeSpin}>ГОТОВО <span>→</span></button>}
                     </div>
                   </>

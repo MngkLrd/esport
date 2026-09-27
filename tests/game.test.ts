@@ -15,6 +15,7 @@ import {
   startNextSeason,
 } from '../src/game'
 import { rollWelcomePack } from '../src/welcomePack'
+import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
 
 describe('P0 career flow', () => {
@@ -138,6 +139,27 @@ describe('P0 career flow', () => {
     expect(signed.startingFive).toContain(prospect.id)
     expect(signed.startingFive).toHaveLength(5)
     expect(signed.credits).toBe(report.credits - strong.fee)
+  })
+
+  it('migrates v8 saves into split club cash and pack-token economy', () => {
+    const legacy = createInitialState()
+    const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }
+    const migrated = migrateState(raw)
+    expect(migrated.version).toBe(9)
+    expect(migrated.credits).toBe(legacy.credits)
+    expect(migrated.packTokens).toBe(2600)
+    expect(migrated.managerXp).toBe(0)
+  })
+
+  it('charges only pack tokens when a pack is opened', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const roll = rollPack('academy', ready.packs.serial, ready.saveId)
+    const result = executeGameCommand(ready, { type: 'OPEN_PACK', roll }).state
+    expect(result.credits).toBe(ready.credits)
+    expect(result.packTokens).toBe(ready.packTokens - roll.pack.price)
+    expect(result.packs.inventory).toHaveLength(ready.packs.inventory.length + 1)
+    expect(result.managerXp).toBe(ready.managerXp + 12)
   })
 
   it('migrates v5 careers without forcing the welcome flow', () => {

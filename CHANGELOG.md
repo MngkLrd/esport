@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-27 · Scouting / Market 2.0
+
+- Replaced the random three-row scouting result with a five-card shortlist built from a role, age-profile and salary brief.
+- Added persistent scouting briefs and upgraded save state to v8 with migration from v7 and older careers.
+- Added player fit ranking so shortlist order reflects the requested squad role and budget.
+- Added transfer negotiations with fee, weekly salary, contract length and starter/rotation role promise.
+- Added a deterministic interest model with visible feedback before a deal is accepted.
+- Starter promises now move the signed player directly into the best-fit lineup slot while preserving a five-player starting lineup.
+- CI now runs the management regression suite together with card pipeline tests.
+
 ## 2026-09-27 · P0 end-to-end
 
 - Added a deterministic five-card welcome pack for new saves with role coverage for IGL, AWP, Entry, Support and Rifler.

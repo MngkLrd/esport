@@ -139,12 +139,33 @@ describe('HLTV collectible card pipeline', () => {
       PACK_POOL_STATS.epic +
       PACK_POOL_STATS.legendary
 
-    expect(total).toBe(REAL_PLAYERS.length)
+    expect(total).toBe(PACK_POOL_STATS.totalPlayers)
+    expect(PACK_POOL_STATS.totalPlayers).toBeGreaterThan(200)
+    expect(PACK_POOL_STATS.totalPlayers).toBeLessThanOrEqual(REAL_PLAYERS.length)
     expect(PACK_POOL_STATS.common).toBeGreaterThan(0)
     expect(PACK_POOL_STATS.uncommon).toBeGreaterThan(0)
     expect(PACK_POOL_STATS.rare).toBeGreaterThan(0)
     expect(PACK_POOL_STATS.epic).toBeGreaterThan(0)
     expect(PACK_POOL_STATS.legendary).toBeGreaterThan(0)
+  })
+
+  it('never puts visually incomplete players into a pack reel', () => {
+    for (const packId of ['academy', 'challenger', 'major', 'afterdark'] as const) {
+      for (let serial = 0; serial < 12; serial += 1) {
+        const roll = rollPack(packId, serial, 'p0-visual-contract')
+
+        for (const card of roll.reel) {
+          expect(card.country).toBeTruthy()
+          expect(card.cardStats).not.toBeNull()
+          expect(card.role).toBeTruthy()
+          expect(playerPhoto(card.alias)).toContain('hltv')
+        }
+
+        expect(roll.winner.country).toBeTruthy()
+        expect(roll.winner.cardStats).not.toBeNull()
+        expect(playerPhoto(roll.winner.alias)).toContain('hltv')
+      }
+    }
   })
 
   it('rolls packs deterministically per save and serial', () => {

@@ -5,7 +5,6 @@ import {
   RARITY_COLOR,
   RARITY_LABEL,
   hydratePackState,
-  rollPack,
 } from './packs'
 import {
   cardKey,
@@ -23,7 +22,8 @@ import { PackArtwork } from './PackArtwork'
 import { PlayerPortrait } from './PlayerPortrait'
 import type { Player } from './game'
 
-const SPIN_MS = 5200
+const SPIN_MS = 4300
+const QUANTITIES = [1, 3, 5, 10] as const
 
 const ROLE_LABELS: Record<NonNullable<PackCard['role']>, string> = {
   IGL: 'IGL',
@@ -144,32 +144,41 @@ function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: 
 }
 
 export function PacksView({
-  credits,
-  saveId,
+  packTokens,
   packState,
   roster,
-  onOpen,
+  onOpenBatch,
   onClear,
 }: {
-  credits: number
-  saveId: string
+  packTokens: number
   packState: PackState
   roster: Player[]
-  onOpen: (roll: PackRoll) => boolean
+  onOpenBatch: (packId: Exclude<PackId, 'welcome'>, quantity: number) => PackRoll[] | null
   onClear: () => void
 }) {
-  const [roll, setRoll] = useState<PackRoll | null>(null)
+  const [selectedPackId, setSelectedPackId] = useState<Exclude<PackId, 'welcome'> | null>(null)
+  const [quantity, setQuantity] = useState<(typeof QUANTITIES)[number]>(1)
+  const [queue, setQueue] = useState<PackRoll[]>([])
+  const [queueIndex, setQueueIndex] = useState(0)
   const [spinning, setSpinning] = useState(false)
   const [revealed, setRevealed] = useState(false)
-  const [duplicate, setDuplicate] = useState(false)
   const [query, setQuery] = useState('')
   const [rarityFilter, setRarityFilter] = useState<'all' | PackRarity>('all')
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
+
   const viewState = useMemo(() => hydratePackState(packState), [packState])
   const stats = useMemo(() => packCollectionStats(viewState), [viewState])
+  const selectedPack = PACKS.find((item) => item.id === selectedPackId) ?? null
+  const roll = queue[queueIndex] ?? null
   const selectedPlayer = selectedCard
     ? roster.find((player) => player.acquiredCardId === selectedCard.id || player.playerKey === selectedCard.playerKey || player.alias.toLowerCase() === selectedCard.alias.toLowerCase())
     : undefined
+
+  const duplicate = useMemo(() => {
+    if (!roll) return false
+    if (packCardCount(viewState, roll.winner) > 0) return true
+    return queue.slice(0, queueIndex).some((entry) => entry.winner.alias.toLowerCase() === roll.winner.alias.toLowerCase())
+  }, [roll, queue, queueIndex, viewState])
 
   useEffect(() => {
     if (!spinning) return
@@ -180,17 +189,44 @@ export function PacksView({
     return () => window.clearTimeout(timer)
   }, [spinning, roll])
 
-  const openPack = (packId: Exclude<PackId, 'welcome'>) => {
-    if (spinning) return
-    const pack = PACKS.find((item) => item.id === packId)
-    if (!pack || credits < pack.price) return
+  useEffect(() => {
+    if (!selectedPackId) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !spinning) {
+        setSelectedPackId(null)
+        setQueue([])
+        setQueueIndex(0)
+        setRevealed(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedPackId, spinning])
 
-    const nextRoll = rollPack(packId, packState.serial, saveId)
-    const isDuplicate = packCardCount(viewState, nextRoll.winner) > 0
-    if (!onOpen(nextRoll)) return
+  const openPurchase = (packId: Exclude<PackId, 'welcome'>) => {
+    setSelectedPackId(packId)
+    setQuantity(1)
+    setQueue([])
+    setQueueIndex(0)
+    setRevealed(false)
+    setSpinning(false)
+  }
 
-    setRoll(nextRoll)
-    setDuplicate(isDuplicate)
+  const spin = () => {
+    if (!selectedPack || spinning) return
+    const total = selectedPack.price * quantity
+    if (packTokens < total) return
+    const rolls = onOpenBatch(selectedPack.id as Exclude<PackId, 'welcome'>, quantity)
+    if (!rolls?.length) return
+    setQueue(rolls)
+    setQueueIndex(0)
+    setRevealed(false)
+    setSpinning(true)
+  }
+
+  const nextRoll = () => {
+    if (queueIndex >= queue.length - 1) return
+    setQueueIndex((index) => index + 1)
     setRevealed(false)
     setSpinning(true)
   }
@@ -201,12 +237,19 @@ export function PacksView({
     setRevealed(true)
   }
 
+  const closeSpin = () => {
+    if (spinning) return
+    setSelectedPackId(null)
+    setQueue([])
+    setQueueIndex(0)
+    setRevealed(false)
+  }
+
   const resetCollection = () => {
     if (!window.confirm('Очистить коллекцию и историю наборов этого сейва? Счётчик открытий не сбросится, поэтому старые дропы нельзя будет переиграть.')) return
     onClear()
-    setRoll(null)
-    setSpinning(false)
-    setRevealed(false)
+    setQueue([])
+    setSelectedPackId(null)
   }
 
   const aliasCounts = useMemo(() => {
@@ -233,13 +276,13 @@ export function PacksView({
   }, [viewState.inventory, query, rarityFilter])
 
   return (
-    <section className="screen packs-screen">
-      <div className="section-title">
+    <section className="screen packs-screen fifa-packs-screen">
+      <div className="fifa-screen-header">
         <div>
-          <div className="eyebrow">ЛАБОРАТОРИЯ НАБОРОВ · {PACK_POOL_STATS.totalPlayers.toLocaleString('ru-RU')} ИГРОКОВ В ПУЛЕ</div>
-          <h1>Открой следующий дроп.</h1>
+          <span>STORE &gt; PLAYER PACKS</span>
+          <h1>PACK STORE</h1>
         </div>
-        <p>Дропы, кредиты и коллекция живут внутри этого сейва.</p>
+        <div className="fifa-currency-large"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
       </div>
 
       <div className="pack-stats pack-stats-v2">
@@ -248,10 +291,10 @@ export function PacksView({
         <div><span>ДУБЛЕЙ</span><b>{stats.duplicates}</b></div>
         <div><span>ЛЕГЕНДАРНЫХ</span><b>{stats.legendary}</b></div>
         <div><span>ЛУЧШАЯ СИЛА</span><b>{stats.bestPower || '—'}</b></div>
-        <div><span>КРЕДИТЫ</span><b>{credits.toLocaleString('ru-RU')}</b></div>
+        <div><span>ПУЛ</span><b>{PACK_POOL_STATS.totalPlayers.toLocaleString('ru-RU')}</b></div>
       </div>
 
-      <div className="pack-shelf">
+      <div className="pack-shelf fifa-pack-shelf">
         {PACKS.map((pack) => (
           <article className={'pack-box pack-' + pack.id} key={pack.id} style={{ '--pack-accent': pack.accent } as React.CSSProperties}>
             <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
@@ -264,81 +307,18 @@ export function PacksView({
               <span><i style={{ background: RARITY_COLOR.epic }} /> Эпическая {pack.weights.epic}%</span>
               <span><i style={{ background: RARITY_COLOR.legendary }} /> Легендарная {pack.weights.legendary}%</span>
             </div>
-            <button className="primary" disabled={spinning || credits < pack.price} onClick={() => openPack(pack.id as Exclude<PackId, 'welcome'>)}>
-              {spinning ? 'Открывается…' : 'Открыть · ' + pack.price + ' кр.'}
+            <button className="fifa-primary-cta" onClick={() => openPurchase(pack.id as Exclude<PackId, 'welcome'>)}>
+              КУПИТЬ ПАК <span>→</span>
             </button>
+            <small className="pack-box-price">{pack.price} TOKENS</small>
           </article>
         ))}
       </div>
 
-      <div className={'pack-stage ' + (spinning ? 'is-spinning' : '') + (revealed ? 'is-revealed' : '')}>
-        <div className="pack-stage-head">
-          <div>
-            <span>ОТКРЫТИЕ НАБОРА</span>
-            <strong>{roll ? roll.pack.name : 'Выбери набор выше'}</strong>
-          </div>
-          <div className="pack-stage-actions">
-            {spinning && <button className="text-button" onClick={skip}>Пропустить</button>}
-            {roll && <b style={{ color: RARITY_COLOR[roll.winner.rarity] }}>{revealed ? RARITY_LABEL[roll.winner.rarity] : 'КРУТИТСЯ'}</b>}
-          </div>
-        </div>
-
-        <div className="pack-reel-window">
-          <div className="pack-center-line"><i /></div>
-          {roll ? (
-            <div
-              className="pack-reel-track"
-              style={{
-                '--winner-index': roll.winnerIndex,
-                '--spin-ms': SPIN_MS + 'ms',
-              } as React.CSSProperties}
-            >
-              {roll.reel.map((card, index) => <ReelCard key={card.id} card={card} winner={revealed && index === roll.winnerIndex} />)}
-            </div>
-          ) : (
-            <div className="pack-reel-placeholder">ВЫБЕРИ НАБОР, ЧТОБЫ ЗАПУСТИТЬ ЛЕНТУ</div>
-          )}
-        </div>
-
-        {roll && revealed && (
-          <>
-            <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
-            <div className="pack-winner-actions pack-reopen">
-              <button className="secondary" onClick={() => openPack(roll.pack.id as Exclude<PackId, 'welcome'>)} disabled={credits < roll.pack.price}>
-                Открыть ещё · {roll.pack.price} кр.
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="pack-rating-note">
+      <div className="collection-head fifa-collection-head">
         <div>
-          <span>КАРТОЧКИ · ФОРМА ИГРОКА</span>
-          <strong>Базовая сила карты и текущая форма — разные вещи.</strong>
-        </div>
-        <p>
-          Карточка определяет базовые характеристики игрока. Результаты матчей и решения менеджера меняют состояние состава отдельно.
-        </p>
-      </div>
-
-      {viewState.history.length > 0 && (
-        <div className="pack-history">
-          <span>ПОСЛЕДНИЕ ДРОПЫ</span>
-          <div>
-            {viewState.history.slice(0, 8).map((card) => (
-              <b key={card.id} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
-                {card.power} · {card.alias}
-              </b>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="collection-head">
-        <div>
-          <div className="eyebrow">МОИ КАРТЫ · {stats.total}</div>
-          <h2>Коллекция</h2>
+          <div className="eyebrow">MY CLUB · {stats.total}</div>
+          <h2>PLAYER COLLECTION</h2>
         </div>
         {stats.total > 0 && <button className="text-button release" onClick={resetCollection}>Очистить коллекцию</button>}
       </div>
@@ -378,18 +358,81 @@ export function PacksView({
             ))}
           </div>
         ) : (
-          <div className="empty-state pack-empty">
-            <span>НИЧЕГО НЕ НАЙДЕНО</span>
-            <h2>Попробуй другой фильтр.</h2>
-          </div>
+          <div className="empty-state pack-empty"><span>НИЧЕГО НЕ НАЙДЕНО</span><h2>Попробуй другой фильтр.</h2></div>
         )
       ) : (
-        <div className="empty-state pack-empty">
-          <span>ПОКА НЕТ КАРТ</span>
-          <h2>Твой первый набор уже ждёт.</h2>
-          <p>Карты принадлежат текущему сейву клуба и сохраняются вместе с его экономикой.</p>
+        <div className="empty-state pack-empty"><span>ПОКА НЕТ КАРТ</span><h2>Твой первый набор уже ждёт.</h2></div>
+      )}
+
+      {selectedPack && (
+        <div className="pack-purchase-backdrop" role="presentation" onMouseDown={closeSpin}>
+          <section className={'pack-purchase-modal ' + (spinning ? 'is-spinning' : '') + (revealed ? 'is-revealed' : '')} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="pack-purchase-close" onClick={closeSpin} disabled={spinning} aria-label="Закрыть">×</button>
+
+            {!queue.length ? (
+              <>
+                <div className="pack-purchase-head">
+                  <span>PLAYER PACK</span>
+                  <h2>{selectedPack.name}</h2>
+                  <p>{selectedPack.description}</p>
+                </div>
+
+                <div className="pack-purchase-art"><PackArtwork variant={selectedPack.id} title={selectedPack.name} kicker={selectedPack.eyebrow} /></div>
+
+                <div className="pack-fast-row">
+                  {QUANTITIES.map((count) => (
+                    <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
+                  ))}
+                </div>
+
+                <button className="pack-spin-button" disabled={packTokens < selectedPack.price * quantity} onClick={spin}>
+                  КРУТИТЬ
+                </button>
+                <div className="pack-spin-price">{(selectedPack.price * quantity).toLocaleString('ru-RU')} PACK TOKENS</div>
+                {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
+              </>
+            ) : (
+              <>
+                <div className="pack-spin-topline">
+                  <span>{selectedPack.name}</span>
+                  <b>{queueIndex + 1}/{queue.length}</b>
+                </div>
+
+                <div className="pack-reel-window pack-reel-modal">
+                  <div className="pack-center-line"><i /></div>
+                  {roll && (
+                    <div
+                      className="pack-reel-track"
+                      style={{
+                        '--winner-index': roll.winnerIndex,
+                        '--spin-ms': SPIN_MS + 'ms',
+                      } as React.CSSProperties}
+                    >
+                      {roll.reel.map((card, index) => <ReelCard key={card.id} card={card} winner={revealed && index === roll.winnerIndex} />)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pack-spin-controls">
+                  {spinning && <button className="text-button" onClick={skip}>ПРОПУСТИТЬ</button>}
+                </div>
+
+                {roll && revealed && (
+                  <>
+                    <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
+                    <div className="pack-reveal-actions">
+                      {queueIndex < queue.length - 1
+                        ? <button className="fifa-primary-cta" onClick={nextRoll}>СЛЕДУЮЩИЙ ДРОП <span>→</span></button>
+                        : <button className="fifa-primary-cta" onClick={closeSpin}>ГОТОВО <span>→</span></button>}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </section>
         </div>
       )}
+
       {selectedCard && <CardDetails card={selectedCard} playerState={selectedPlayer} onClose={() => setSelectedCard(null)} />}
     </section>
   )

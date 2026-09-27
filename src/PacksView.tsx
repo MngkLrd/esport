@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   PACKS,
-  PACK_POOL_STATS,
   RARITY_COLOR,
   RARITY_LABEL,
   hydratePackState,
@@ -22,7 +21,7 @@ import { PackArtwork } from './PackArtwork'
 import { PlayerPortrait, preloadPlayerPortraits } from './PlayerPortrait'
 import type { Player } from './game'
 
-const SPIN_MS = 4300
+const SPIN_MS = 6000
 const QUANTITIES = [1, 3, 5, 10] as const
 
 const ROLE_LABELS: Record<NonNullable<PackCard['role']>, string> = {
@@ -91,10 +90,6 @@ function CollectionCard({ card, count, onOpen }: { card: PackCard; count: number
 }
 
 function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: boolean; onOpen: () => void }) {
-  const source = card.cardStats
-    ? 'Форма игрока · ' + card.cardStats.periodStart + ' — ' + card.cardStats.periodEnd
-    : 'Игровой профиль'
-
   return (
     <button type="button" onClick={onOpen} aria-label={'Открыть подробности ' + card.alias}
       className={'pack-reveal rarity-' + card.rarity}
@@ -129,14 +124,12 @@ function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: 
       </div>
 
       <div className="pack-reveal-copy">
-        <div className="eyebrow">{RARITY_LABEL[card.rarity]} · КАРТА #{card.serial + 1}</div>
+        <div className="eyebrow">{RARITY_LABEL[card.rarity]}</div>
         <h2>{card.alias}</h2>
-        <p>{card.realName ?? 'Данные профиля пока не найдены'} · {card.team}</p>
+        <p>{card.realName ? card.realName + ' · ' : ''}{card.team}</p>
         <div className="pack-reveal-meta">
-          <span><b>{card.power}</b> сила / 100</span>
-          <span><b>{countryFlag(card.country ?? 'Неизвестно')}</b> {card.country ?? 'Страна неизвестна'}</span>
+          <span><b>{countryFlag(card.country ?? 'Неизвестно')}</b> {card.country}</span>
           <span><b>{duplicate ? 'ДУБЛЬ' : 'НОВАЯ'}</b> {duplicate ? 'уже есть в коллекции' : 'новая для коллекции'}</span>
-          <span><b>ПЕРИОД</b> {source}</span>
         </div>
       </div>
     </button>
@@ -323,7 +316,6 @@ export function PacksView({
         <div><span>ДУБЛЕЙ</span><b>{stats.duplicates}</b></div>
         <div><span>ЛЕГЕНДАРНЫХ</span><b>{stats.legendary}</b></div>
         <div><span>ЛУЧШАЯ СИЛА</span><b>{stats.bestPower || '—'}</b></div>
-        <div><span>ПУЛ</span><b>{PACK_POOL_STATS.totalPlayers.toLocaleString('ru-RU')}</b></div>
       </div>
 
       <div className="pack-shelf fifa-pack-shelf">

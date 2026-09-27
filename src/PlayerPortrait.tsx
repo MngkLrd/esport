@@ -33,7 +33,19 @@ export function PlayerPortrait({
   useEffect(() => setIndex(0), [alias, playerId])
 
   const src = candidates[index]
-  if (!src) return null
+  if (!src) {
+    const initials = alias.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'PRO'
+    return (
+      <span
+        className={'player-portrait-fallback' + (className ? ' ' + className : '')}
+        role="img"
+        aria-label={alt ?? alias}
+        data-player-alias={alias}
+      >
+        <span aria-hidden="true">{initials}</span>
+      </span>
+    )
+  }
 
   return (
     <img

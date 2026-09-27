@@ -101,19 +101,19 @@ describe('HLTV collectible card pipeline', () => {
 
   it('rehydrates saved cards with current identity and profile data', () => {
     const stale: PackCard = {
-      id: 'legacy-vicu',
-      playerKey: 'alias:vicu',
-      alias: 'vicu',
+      id: 'legacy-b1t',
+      playerKey: 'alias:b1t',
+      alias: 'b1t',
       realName: null,
       country: null,
-      team: 'Clutchain fe',
+      team: 'Natus Vincere',
       age: null,
       profileId: null,
       role: null,
       power: 69,
       rarity: 'epic',
       sourceRating: null,
-      sourceRank: 254,
+      sourceRank: 10,
       cardStats: null,
       edition: 'VRS',
       packId: 'major',
@@ -125,10 +125,12 @@ describe('HLTV collectible card pipeline', () => {
       inventory: [stale],
       history: [stale],
     })
-    expect(hydrated.inventory[0].realName).toBe('Wiktoria Janicka')
-    expect(hydrated.inventory[0].country).toBe('Poland')
+    expect(hydrated.inventory[0].realName).toBe('Valeriy Vakhovskiy')
+    expect(hydrated.inventory[0].country).toBe('Ukraine')
     expect(hydrated.inventory[0].age).toBe(23)
-    expect(hydrated.inventory[0].profileId).toBe(22062)
+    expect(hydrated.inventory[0].profileId).toBe(18987)
+    expect(hydrated.inventory[0].cardStats).not.toBeNull()
+    expect(playerPhoto(hydrated.inventory[0].alias)).toBeTruthy()
   })
 
   it('keeps all rarity pools populated and totals aligned', () => {

@@ -1,5 +1,6 @@
 import { REAL_PLAYERS, type RealPlayerSeed } from './players'
 import { cardStatsForAlias, hltvSnapshotForAlias, type PlayerCardStats } from './cardStats'
+import { playerPhoto } from './playerVisuals'
 import type {
   PackCard,
   PackDefinition,
@@ -122,7 +123,17 @@ const rarityForPercentile = (index: number, total: number): PackRarity => {
   return 'common'
 }
 
-const rankedPool = REAL_PLAYERS
+const isPackReadyPlayer = (player: RealPlayerSeed) =>
+  Boolean(
+    player.country &&
+    player.role &&
+    playerPhoto(player.alias) &&
+    cardStatsForAlias(player.alias, player.role),
+  )
+
+const PACK_READY_PLAYERS = REAL_PLAYERS.filter(isPackReadyPlayer)
+
+const rankedPool = PACK_READY_PLAYERS
   .map((player) => ({ player, power: playerPower(player) }))
   .sort((a, b) => b.power - a.power || a.player.alias.localeCompare(b.player.alias, 'en-US'))
 
@@ -160,7 +171,7 @@ const pickRarity = (weights: Record<PackRarity, number>, rng: () => number) => {
 }
 
 const pickPlayer = (rarity: PackRarity, rng: () => number) => {
-  const pool = pools[rarity].length ? pools[rarity] : REAL_PLAYERS
+  const pool = pools[rarity].length ? pools[rarity] : PACK_READY_PLAYERS
   return pool[Math.floor(rng() * pool.length)]
 }
 
@@ -195,7 +206,7 @@ const hydrateCard = (card: PackCard): PackCard => {
   const stats = card.cardStats ?? cardStatsForAlias(card.alias, card.role)
   const snapshot = hltvSnapshotForAlias(card.alias)
 
-  return {
+  const hydrated: PackCard = {
     ...card,
     playerKey: card.playerKey || (snapshot?.playerId ? 'hltv:' + snapshot.playerId : 'alias:' + card.alias.toLocaleLowerCase('en-US')),
     realName: card.realName ?? player?.realName ?? null,
@@ -208,6 +219,21 @@ const hydrateCard = (card: PackCard): PackCard => {
     rarity: player ? rarityForPlayer(player) : card.rarity,
     cardStats: stats,
     edition: stats ? editionForStats(stats) : card.edition,
+  }
+
+  if (hydrated.country && hydrated.cardStats && playerPhoto(hydrated.alias)) return hydrated
+
+  const repairPool = pools[hydrated.rarity].length ? pools[hydrated.rarity] : PACK_READY_PLAYERS
+  const replacement = repairPool[
+    hashSeed(['repair-v1', hydrated.id, hydrated.alias, hydrated.serial].join(':')) % repairPool.length
+  ]
+  const repaired = toCard(replacement, hydrated.packId, hydrated.serial, 0)
+
+  return {
+    ...repaired,
+    id: hydrated.id,
+    packId: hydrated.packId,
+    serial: hydrated.serial,
   }
 }
 
@@ -236,10 +262,10 @@ const pickPlayerForRole = (
   const rolePool = pools[rarity].filter(
     (player) => player.role === role && !usedAliases.has(player.alias.toLocaleLowerCase('en-US')),
   )
-  const fallback = REAL_PLAYERS.filter(
+  const fallback = PACK_READY_PLAYERS.filter(
     (player) => player.role === role && !usedAliases.has(player.alias.toLocaleLowerCase('en-US')),
   )
-  const pool = rolePool.length ? rolePool : fallback.length ? fallback : REAL_PLAYERS
+  const pool = rolePool.length ? rolePool : fallback.length ? fallback : PACK_READY_PLAYERS
   return pool[Math.floor(rng() * pool.length)]
 }
 
@@ -273,7 +299,7 @@ export const rollPack = (packId: Exclude<PackId, 'welcome'>, serial: number, sav
 }
 
 export const PACK_POOL_STATS = {
-  totalPlayers: REAL_PLAYERS.length,
+  totalPlayers: PACK_READY_PLAYERS.length,
   common: pools.common.length,
   uncommon: pools.uncommon.length,
   rare: pools.rare.length,

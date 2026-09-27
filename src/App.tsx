@@ -30,6 +30,10 @@ import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { RosterBoard } from './RosterBoard'
 import { ScoutMarket } from './ScoutMarket'
+import { FifaHome } from './FifaHome'
+import { WorldMap } from './WorldMap'
+import { ManagerProfile } from './ManagerProfile'
+import { rollPack } from './packs'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 
@@ -40,17 +44,19 @@ const PacksView = lazy(() =>
 )
 
 const saveRepository = createBrowserSaveRepository()
-type Tab = 'HQ' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'AI Director' | 'Credits'
+type Tab = 'HQ' | 'World' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile' | 'AI Director' | 'Credits'
 
 const TAB_LABELS: Record<Tab, string> = {
-  HQ: 'Штаб',
-  Play: 'Матч',
-  Roster: 'Состав',
-  Packs: 'Наборы',
-  Scout: 'Скаутинг',
-  Inbox: 'Лента',
-  'AI Director': 'ИИ-директор',
-  Credits: 'Источники',
+  HQ: 'HOME',
+  World: 'WORLD MAP',
+  Play: 'MATCHDAY',
+  Roster: 'SQUAD',
+  Packs: 'PACKS',
+  Scout: 'TRANSFERS',
+  Inbox: 'NEWS',
+  Profile: 'PROFILE',
+  'AI Director': 'DIRECTOR',
+  Credits: 'CREDITS',
 }
 
 const ROLE_LABELS: Record<Player['role'], string> = {
@@ -285,6 +291,7 @@ function App() {
   const [welcomeRevealed, setWelcomeRevealed] = useState(0)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
+  const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
   const rating = useMemo(
@@ -304,9 +311,22 @@ function App() {
     saveRepository.save(state)
   }, [state])
 
+  useEffect(() => {
+    if (!transition) return
+    const switchTimer = window.setTimeout(() => {
+      setTab(transition.target)
+      if (transition.target === 'Inbox') setSeenNewsId(state.news[0]?.id ?? null)
+    }, 180)
+    const clearTimer = window.setTimeout(() => setTransition(null), 620)
+    return () => {
+      window.clearTimeout(switchTimer)
+      window.clearTimeout(clearTimer)
+    }
+  }, [transition, state.news])
+
   const openTab = (next: Tab) => {
-    setTab(next)
-    if (next === 'Inbox') setSeenNewsId(state.news[0]?.id ?? null)
+    if (next === tab && !transition) return
+    setTransition({ target: next, title: TAB_LABELS[next] })
   }
 
   const play = (mode: MatchMode) => {
@@ -326,13 +346,18 @@ function App() {
     }
   }
 
-  const commitPackRoll = (roll: PackRoll) => {
-    if (state.credits < roll.pack.price || state.packs.serial !== roll.winner.serial) return false
-    setState((current) => {
-      if (current.credits < roll.pack.price || current.packs.serial !== roll.winner.serial) return current
-      return executeGameCommand(current, { type: 'OPEN_PACK', roll }).state
-    })
-    return true
+  const commitPackBatch = (packId: Exclude<PackRoll['pack']['id'], 'welcome'>, quantity: number) => {
+    let next = state
+    const rolls: PackRoll[] = []
+    for (let index = 0; index < quantity; index += 1) {
+      const roll = rollPack(packId, next.packs.serial, next.saveId)
+      const result = executeGameCommand(next, { type: 'OPEN_PACK', roll })
+      if (result.state === next) return null
+      rolls.push(roll)
+      next = result.state
+    }
+    setState(next)
+    return rolls
   }
 
   const clearPacks = () => {

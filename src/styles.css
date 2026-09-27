@@ -2533,6 +2533,12 @@ button.secondary { border-color: #4a5662; background: transparent; }
   top: 16%;
   height: 58%;
 }
+.game-roster-card .visual-photo img {
+  object-fit: contain;
+  object-position: center bottom;
+  mix-blend-mode: normal;
+  opacity: .96;
+}
 .game-roster-card .visual-identity {
   left: 8%;
   right: 8%;

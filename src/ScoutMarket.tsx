@@ -16,7 +16,6 @@ import {
   type ScoutAgeProfile,
   type ScoutBrief,
 } from './game'
-import { VRS_SNAPSHOT_DATE, VRS_STATS } from './vrs'
 import { PlayerPortrait } from './PlayerPortrait'
 import { cardTier, countryFlag } from './playerVisuals'
 import './ScoutMarket.css'
@@ -231,17 +230,12 @@ export function ScoutMarket({
             Запустить поиск · {SCOUT_REPORT_COST} <span>→</span>
           </button>
 
-          <div className="market-database-note">
-            <span>DATABASE</span>
-            <b>{VRS_STATS.players.toLocaleString('ru-RU')} игроков</b>
-            <small>Valve VRS · {VRS_SNAPSHOT_DATE}</small>
-          </div>
         </aside>
 
         <section className="market-report">
           <div className="market-report-head">
             <div>
-              <span>SHORTLIST · REPORT #{state.scoutCycle}</span>
+              <span>SHORTLIST</span>
               <strong>
                 {state.prospects.length
                   ? (reportBrief.role === 'Any' ? 'Лучшие доступные кандидаты' : 'Кандидаты на ' + ROLE_LABELS[reportBrief.role])

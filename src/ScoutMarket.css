@@ -33,12 +33,12 @@
 .market-budget span,
 .market-budget small {
   color: var(--muted);
-  font: 800 10px/1.2 Space Mono, monospace;
+  font: 800 10px/1.2 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-budget b {
   color: var(--orange-2);
-  font: 900 23px/1 Space Mono, monospace;
+  font: 900 23px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-layout {
@@ -72,13 +72,13 @@
 .market-brief-title span,
 .market-report-head span {
   color: var(--orange-2);
-  font: 900 10px/1 Space Mono, monospace;
+  font: 900 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .14em;
 }
 
 .market-brief-title b {
   color: #3d4753;
-  font: 900 28px/1 Space Mono, monospace;
+  font: 900 28px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-field {
@@ -93,7 +93,7 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--muted);
-  font: 800 10px/1.2 Space Mono, monospace;
+  font: 800 10px/1.2 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .07em;
   text-transform: uppercase;
 }
@@ -111,7 +111,7 @@
   background: #11171e;
   color: var(--ink);
   padding: 0 11px;
-  font: 800 12px/1 Space Mono, monospace;
+  font: 800 12px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-segmented {
@@ -130,7 +130,7 @@
   color: #86919f;
   padding: 8px;
   cursor: pointer;
-  font: 800 10px/1 Space Mono, monospace;
+  font: 800 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-segmented button.active,
@@ -166,7 +166,7 @@
 .market-brief-preview span,
 .market-database-note span {
   color: #66717e;
-  font: 800 8px/1 Space Mono, monospace;
+  font: 800 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .12em;
 }
 
@@ -191,7 +191,7 @@
 }
 
 .market-database-note b {
-  font: 800 13px/1 Space Mono, monospace;
+  font: 800 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-database-note small {
@@ -221,7 +221,7 @@
 
 .market-report-head small {
   color: var(--muted);
-  font: 800 9px/1 Space Mono, monospace;
+  font: 800 9px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-empty {
@@ -341,11 +341,11 @@
 }
 
 .market-card-top b {
-  font: 900 clamp(21px, 2vw, 29px)/.9 Space Mono, monospace;
+  font: 900 clamp(21px, 2vw, 29px)/.9 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-card-top span {
-  font: 800 7px/1 Space Mono, monospace;
+  font: 800 7px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .1em;
   opacity: .72;
 }
@@ -382,7 +382,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 700 6px/1 Space Mono, monospace;
+  font: 700 6px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   opacity: .65;
 }
 
@@ -399,7 +399,7 @@
 .market-card-photo > span {
   align-self: center;
   color: rgba(255,255,255,.14);
-  font: 900 36px/1 Space Mono, monospace;
+  font: 900 36px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-card-photo img,
@@ -439,7 +439,7 @@
 
 .market-card-name span {
   margin-top: 3px;
-  font: 700 6px/1 Space Mono, monospace;
+  font: 700 6px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   opacity: .62;
 }
 
@@ -458,7 +458,7 @@
   display: grid;
   justify-items: center;
   gap: 2px;
-  font: 800 5px/1 Space Mono, monospace;
+  font: 800 5px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   opacity: .65;
 }
 
@@ -474,7 +474,7 @@
   gap: 5px 8px;
   padding: 9px 1px 7px;
   color: var(--muted);
-  font: 700 7px/1 Space Mono, monospace;
+  font: 700 7px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-card-meta span:last-child {
@@ -548,7 +548,7 @@
 
 .market-negotiation-photo > span {
   color: rgba(255,255,255,.12);
-  font: 900 24px/1 Space Mono, monospace;
+  font: 900 24px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-negotiation-photo img,
@@ -589,12 +589,12 @@
 
 .market-interest span {
   color: var(--muted);
-  font: 800 9px/1 Space Mono, monospace;
+  font: 800 9px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .12em;
 }
 
 .market-interest b {
-  font: 900 10px/1 Space Mono, monospace;
+  font: 900 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .1em;
 }
 
@@ -639,14 +639,14 @@
 
 .market-term > span {
   color: var(--muted);
-  font: 800 9px/1 Space Mono, monospace;
+  font: 800 9px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .1em;
   text-transform: uppercase;
 }
 
 .market-term > b {
   color: var(--orange-2);
-  font: 900 21px/1 Space Mono, monospace;
+  font: 900 21px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-contract-options {
@@ -688,12 +688,12 @@
 .market-negotiation-footer > div span,
 .market-negotiation-footer > div small {
   color: var(--muted);
-  font: 800 9px/1.2 Space Mono, monospace;
+  font: 800 9px/1.2 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 .market-negotiation-footer > div b {
   color: var(--ink);
-  font: 900 19px/1 Space Mono, monospace;
+  font: 900 19px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 
 @media (max-width: 1240px) {

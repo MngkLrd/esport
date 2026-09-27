@@ -286,7 +286,7 @@ export const rollPack = (packId: Exclude<PackId, 'welcome'>, serial: number, sav
   const rng = mulberry32(hashSeed(['pack-v2', saveId, packId, serial].join(':')))
   const winnerRarity = pickRarity(pack.weights, rng)
   const winnerPlayer = pickPlayer(winnerRarity, rng)
-  const winnerIndex = 37
+  const winnerIndex = 41
 
   const reel = Array.from({ length: 46 }, (_, index) => {
     const visualRarity = pickRarity(pack.weights, rng)

@@ -11,10 +11,13 @@ import {
 import {
   PACK_POOL_STATS,
   createPackState,
+  hydratePackState,
   migratePackState,
   playerPower,
   rollPack,
 } from '../src/packs'
+import { playerPhoto } from '../src/playerVisuals'
+import type { PackCard } from '../src/packState'
 
 describe('HLTV collectible card pipeline', () => {
   it('covers the full current player pool without duplicate aliases', () => {
@@ -84,6 +87,48 @@ describe('HLTV collectible card pipeline', () => {
     const player = REAL_PLAYERS.find((candidate) => candidate.alias.toLocaleLowerCase('en-US') === '0z')
     expect(player).toBeDefined()
     expect(Number.isFinite(playerPower(player!))).toBe(true)
+  })
+
+  it('enriches HLTV-known players even when the legacy metadata manifest missed them', () => {
+    const vicu = REAL_PLAYERS.find((player) => player.alias.toLocaleLowerCase('en-US') === 'vicu')
+    expect(vicu).toBeDefined()
+    expect(vicu!.realName).toBe('Wiktoria Janicka')
+    expect(vicu!.country).toBe('Poland')
+    expect(vicu!.age).toBe(23)
+    expect(vicu!.profileUrl).toContain('/22062/')
+    expect(playerPhoto('vicu')).toContain('img-cdn.hltv.org/playerbodyshot/')
+  })
+
+  it('rehydrates saved cards with current identity and profile data', () => {
+    const stale: PackCard = {
+      id: 'legacy-vicu',
+      playerKey: 'alias:vicu',
+      alias: 'vicu',
+      realName: null,
+      country: null,
+      team: 'Clutchain fe',
+      age: null,
+      profileId: null,
+      role: null,
+      power: 69,
+      rarity: 'epic',
+      sourceRating: null,
+      sourceRank: 254,
+      cardStats: null,
+      edition: 'VRS',
+      packId: 'major',
+      serial: 7,
+    }
+    const hydrated = hydratePackState({
+      version: 2,
+      serial: 8,
+      inventory: [stale],
+      history: [stale],
+    })
+    expect(hydrated.inventory[0].realName).toBe('Wiktoria Janicka')
+    expect(hydrated.inventory[0].country).toBe('Poland')
+    expect(hydrated.inventory[0].age).toBe(23)
+    expect(hydrated.inventory[0].profileId).toBe(22062)
   })
 
   it('keeps all rarity pools populated and totals aligned', () => {

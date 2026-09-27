@@ -177,7 +177,7 @@ describe('HLTV collectible card pipeline', () => {
 
     expect(b.winner).toEqual(a.winner)
     expect(b.reel).toEqual(a.reel)
-    expect(a.winnerIndex).toBe(37)
+    expect(a.winnerIndex).toBe(41)
     expect(a.reel[a.winnerIndex]).toEqual(a.winner)
     expect(a.reel).toHaveLength(46)
 

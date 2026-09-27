@@ -117,7 +117,7 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 8
+  version: 9
   saveId: string
   seed: number
   season: number
@@ -126,6 +126,8 @@ export interface GameState {
   seasonEnded: boolean
   seasonSummary: SeasonSummary | null
   credits: number
+  packTokens: number
+  managerXp: number
   fans: number
   reputation: number
   wins: number
@@ -155,6 +157,13 @@ export const DEFAULT_SCOUT_BRIEF: ScoutBrief = {
 }
 
 export const SCOUT_REPORT_COST = 300
+export const managerLevelFromXp = (xp: number) => Math.max(1, Math.floor(Math.max(0, xp) / 500) + 1)
+export const managerLevelProgress = (xp: number) => {
+  const level = managerLevelFromXp(xp)
+  const floor = (level - 1) * 500
+  const next = level * 500
+  return { level, current: Math.max(0, xp - floor), required: next - floor, percent: Math.max(0, Math.min(100, Math.round((xp - floor) / Math.max(1, next - floor) * 100))) }
+}
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 
@@ -422,7 +431,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 8,
+  version: 9,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -431,6 +440,8 @@ export const createInitialState = (): GameState => ({
   seasonEnded: false,
   seasonSummary: null,
   credits: 3200,
+  packTokens: 2600,
+  managerXp: 0,
   fans: 340,
   reputation: 38,
   wins: 0,
@@ -523,7 +534,7 @@ const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unk
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if (parsed.version === 8 && Array.isArray(parsed.roster)) {
+  if (parsed.version === 9 && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
@@ -534,12 +545,38 @@ export const migrateState = (raw: unknown): GameState => {
       season: typeof parsed.season === 'number' ? parsed.season : 1,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
+      packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
+      managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
+      roster,
+      startingFive,
+      lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
+      scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
+      packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
+      managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
+      packs,
+    }
+  }
+
+  if (parsed.version === 8 && Array.isArray(parsed.roster)) {
+    const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
+    const roster = normalizePlayers(parsed.roster, packs)
+    const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
+    return {
+      ...(parsed as unknown as Omit<GameState, 'version' | 'packTokens' | 'managerXp'>),
+      version: 9,
+      saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      welcomeComplete: Boolean(parsed.welcomeComplete),
+      season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonEnded: Boolean(parsed.seasonEnded),
+      seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
+      packTokens: 2600,
+      managerXp: 0,
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
       packs,
-    }
+    } as GameState
   }
 
   if (parsed.version === 7 && Array.isArray(parsed.roster)) {
@@ -547,8 +584,8 @@ export const migrateState = (raw: unknown): GameState => {
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
-      ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief'>),
-      version: 8,
+      ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
+      version: 9,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -567,8 +604,8 @@ export const migrateState = (raw: unknown): GameState => {
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
-      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief'>),
-      version: 8,
+      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
+      version: 9,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -578,6 +615,8 @@ export const migrateState = (raw: unknown): GameState => {
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, null),
       scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
+      packTokens: 2600,
+      managerXp: 0,
       packs,
     } as GameState
   }
@@ -615,7 +654,7 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 8,
+      version: 9,
       saveId: createSaveId(),
       welcomeComplete: true,
       season: 1,
@@ -628,6 +667,8 @@ export const migrateState = (raw: unknown): GameState => {
       lineupContinuity: typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 55,
       prospects,
       scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
+      packTokens: 2600,
+      managerXp: 0,
       history: Array.isArray(parsed.history) ? parsed.history as MatchResult[] : [],
       news: Array.isArray(parsed.news) ? parsed.news as NewsItem[] : base.news,
       lastPayroll: typeof parsed.lastPayroll === 'number' ? parsed.lastPayroll : 0,
@@ -898,6 +939,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
       ...contractNews,
       ...state.news,
     ].slice(0, 50),
+    managerXp: state.managerXp + (mode === 'cup' ? 220 : mode === 'showmatch' ? 150 : 90) + (won ? 50 : 15),
+    packTokens: state.packTokens + (won ? (mode === 'cup' ? 90 : mode === 'showmatch' ? 60 : 35) : 15),
     lastPayroll: payroll,
     lastWeekNet: net,
   }

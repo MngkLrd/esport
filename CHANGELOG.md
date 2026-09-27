@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-28 · FIFA-style game shell pass
+
+- Replaced the dashboard-first shell with a full-screen sports-game mode-select interface.
+- Added HOME mode tiles, title/loading transitions and a FIFA-like persistent status/navigation bar.
+- Added WORLD MAP with tournament pins, regions, prize pools, travel/service costs and event-week upkeep preview.
+- Split economy into Club Cash for transfers/contracts/operations and Pack Tokens for packs; saves migrate to v9.
+- Added manager XP/level progression and a dedicated progression screen.
+- Reworked squad management with an Overview & Stats side panel while retaining card drag/drop.
+- Rebuilt pack purchase flow around a centered modal: buy pack -> choose x1/x3/x5/x10 -> press SPIN to pay -> reel -> card reveal.
+- Removed the always-visible pack reel from the store surface.
+- Added regression tests for v8->v9 migration and pack-token-only spending.
+
 ## 2026-09-28 · Card identity and welcome reveal fix
 
 - Added a verified HLTV identity/bodyshot fallback layer for players missing from the legacy metadata and portrait manifests.

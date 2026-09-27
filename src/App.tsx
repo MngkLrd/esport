@@ -4,6 +4,7 @@ import {
   chemistry,
   getStartingFive,
   lineupWarnings,
+  managerLevelProgress,
   modeInfo,
   overall,
   releasePlayer,
@@ -30,6 +31,10 @@ import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { RosterBoard } from './RosterBoard'
 import { ScoutMarket } from './ScoutMarket'
+import { FifaHome } from './FifaHome'
+import { WorldMap } from './WorldMap'
+import { ManagerProfile } from './ManagerProfile'
+import { rollPack } from './packs'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 
@@ -40,17 +45,19 @@ const PacksView = lazy(() =>
 )
 
 const saveRepository = createBrowserSaveRepository()
-type Tab = 'HQ' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'AI Director' | 'Credits'
+type Tab = 'HQ' | 'World' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile' | 'AI Director' | 'Credits'
 
 const TAB_LABELS: Record<Tab, string> = {
-  HQ: 'Штаб',
-  Play: 'Матч',
-  Roster: 'Состав',
-  Packs: 'Наборы',
-  Scout: 'Скаутинг',
-  Inbox: 'Лента',
-  'AI Director': 'ИИ-директор',
-  Credits: 'Источники',
+  HQ: 'HOME',
+  World: 'WORLD MAP',
+  Play: 'MATCHDAY',
+  Roster: 'SQUAD',
+  Packs: 'PACKS',
+  Scout: 'TRANSFERS',
+  Inbox: 'NEWS',
+  Profile: 'PROFILE',
+  'AI Director': 'DIRECTOR',
+  Credits: 'CREDITS',
 }
 
 const ROLE_LABELS: Record<Player['role'], string> = {
@@ -285,6 +292,7 @@ function App() {
   const [welcomeRevealed, setWelcomeRevealed] = useState(0)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
+  const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
   const rating = useMemo(
@@ -304,9 +312,22 @@ function App() {
     saveRepository.save(state)
   }, [state])
 
+  useEffect(() => {
+    if (!transition) return
+    const switchTimer = window.setTimeout(() => {
+      setTab(transition.target)
+      if (transition.target === 'Inbox') setSeenNewsId(state.news[0]?.id ?? null)
+    }, 180)
+    const clearTimer = window.setTimeout(() => setTransition(null), 620)
+    return () => {
+      window.clearTimeout(switchTimer)
+      window.clearTimeout(clearTimer)
+    }
+  }, [transition, state.news])
+
   const openTab = (next: Tab) => {
-    setTab(next)
-    if (next === 'Inbox') setSeenNewsId(state.news[0]?.id ?? null)
+    if (next === tab && !transition) return
+    setTransition({ target: next, title: TAB_LABELS[next] })
   }
 
   const play = (mode: MatchMode) => {
@@ -326,13 +347,18 @@ function App() {
     }
   }
 
-  const commitPackRoll = (roll: PackRoll) => {
-    if (state.credits < roll.pack.price || state.packs.serial !== roll.winner.serial) return false
-    setState((current) => {
-      if (current.credits < roll.pack.price || current.packs.serial !== roll.winner.serial) return current
-      return executeGameCommand(current, { type: 'OPEN_PACK', roll }).state
-    })
-    return true
+  const commitPackBatch = (packId: Exclude<PackRoll['pack']['id'], 'welcome'>, quantity: number) => {
+    let next = state
+    const rolls: PackRoll[] = []
+    for (let index = 0; index < quantity; index += 1) {
+      const roll = rollPack(packId, next.packs.serial, next.saveId)
+      const result = executeGameCommand(next, { type: 'OPEN_PACK', roll })
+      if (result.state === next) return null
+      rolls.push(roll)
+      next = result.state
+    }
+    setState(next)
+    return rolls
   }
 
   const clearPacks = () => {
@@ -377,7 +403,8 @@ function App() {
     return notes.slice(0, 4)
   }, [state, starters, payroll, warnings])
 
-  const tabs: Tab[] = ['HQ', 'Play', 'Roster', 'Packs', 'Scout', 'Inbox', 'AI Director', 'Credits']
+  const tabs: Tab[] = ['HQ', 'World', 'Roster', 'Play', 'Scout', 'Packs', 'Inbox', 'Profile', 'AI Director', 'Credits']
+  const managerProgress = managerLevelProgress(state.managerXp)
 
   return (
     <div className="app-shell">
@@ -439,85 +466,60 @@ function App() {
       )}
       {selectedCard && <Suspense fallback={null}><CardDetails card={selectedCard} onClose={() => setSelectedCard(null)} /></Suspense>}
       {selectedPlayer && <PlayerProfileModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">E</div>
-          <div>
-            <span>ESPORT</span>
-            <strong>AI MANAGER</strong>
-          </div>
+      {transition && (
+        <div className="fifa-title-transition" aria-hidden="true">
+          <div><span>ESPORT AI MANAGER</span><strong>{transition.title}</strong><i /></div>
         </div>
-        <div className="top-stats">
-          <Metric label="РЕЙТ" value={rating} accent />
-          <Metric label="Матчи" value={state.wins + 'В ' + state.losses + 'П'} />
-          <Metric label="Неделя" value={state.week + '/' + state.seasonLength} />
-          <Metric label="Кредиты" value={format.format(state.credits)} />
-          <Metric label="Зарплаты" value={format.format(payroll)} />
+      )}
+      <header className="fifa-topbar">
+        <button className="fifa-brand" onClick={() => openTab('HQ')} aria-label="Home">
+          <span className="fifa-brand-mark">E</span>
+          <strong>ESPORT AI MANAGER</strong>
+        </button>
+        <div className="fifa-topbar-center">
+          <span>SEASON {state.season}</span>
+          <b>WEEK {state.week}/{state.seasonLength}</b>
+          <i />
+          <span>OVR {rating}</span>
+          <span>CHEM {chem}</span>
+        </div>
+        <div className="fifa-wallets">
+          <button onClick={() => openTab('Profile')}><span>LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
+          <div><span>CLUB CASH</span><b>{format.format(state.credits)}</b></div>
+          <div><span>PACK TOKENS</span><b>{format.format(state.packTokens)}</b></div>
         </div>
       </header>
 
-      <nav className="tabs domain-nav">
-        <div className="nav-group"><span className="nav-group-label">КЛУБ</span>{(['HQ', 'Play', 'Roster'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}</button>)}</div>
-        <div className="nav-group"><span className="nav-group-label">КОЛЛЕКЦИЯ</span>{(['Packs', 'Scout'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}</button>)}</div>
-        <div className="nav-group nav-group-utility"><span className="nav-group-label">ЖУРНАЛ</span>{(['Inbox', 'AI Director', 'Credits'] as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>{TAB_LABELS[item]}{item === 'Inbox' && unread > 0 && <span className="badge">{unread}</span>}</button>)}</div>
+      <nav className="fifa-screen-nav" aria-label="Game modes">
+        {tabs.map((item) => (
+          <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>
+            {TAB_LABELS[item]}{item === 'Inbox' && unread > 0 && <span className="badge">{unread}</span>}
+          </button>
+        ))}
       </nav>
 
       <main>
         {tab === 'HQ' && (
-          <section className="screen hq-screen">
+          <>
             {state.seasonEnded && state.seasonSummary && (
-              <article className="season-summary-panel broadcast-summary">
-                <div className="eyebrow">СЕЗОН {state.seasonSummary.season} · ИТОГ</div>
-                <h1>Финальный свисток.</h1>
+              <article className="season-summary-panel fifa-season-summary">
+                <div className="eyebrow">SEASON {state.seasonSummary.season} · COMPLETE</div>
+                <h1>SEASON COMPLETE</h1>
                 <div className="season-summary-grid">
-                  <span><b>{state.seasonSummary.wins}–{state.seasonSummary.losses}</b>Результат</span>
-                  <span><b>{state.seasonSummary.points}</b>Очки</span>
-                  <span><b>{state.seasonSummary.reputation}</b>Репутация</span>
-                  <span><b>{state.seasonSummary.credits}</b>Кредиты</span>
-                  <span><b>{state.seasonSummary.bestPlayer ?? '—'}</b>Лучший игрок</span>
+                  <span><b>{state.seasonSummary.wins}–{state.seasonSummary.losses}</b>Record</span>
+                  <span><b>{state.seasonSummary.points}</b>Points</span>
+                  <span><b>{state.seasonSummary.reputation}</b>Reputation</span>
+                  <span><b>{state.seasonSummary.credits}</b>Club cash</span>
+                  <span><b>{state.seasonSummary.bestPlayer ?? '—'}</b>MVP</span>
                 </div>
-                <p>{state.seasonSummary.objective.completed ? 'Цель владельца выполнена.' : 'Цель владельца не выполнена: ' + state.seasonSummary.objective.value + '/' + state.seasonSummary.objective.target + ' побед.'}</p>
-                <button className="primary" onClick={() => setState((current) => executeGameCommand(current, { type: 'START_NEXT_SEASON' }).state)}>Начать сезон {state.season + 1}</button>
+                <button className="fifa-primary-cta" onClick={() => setState((current) => executeGameCommand(current, { type: 'START_NEXT_SEASON' }).state)}>START SEASON {state.season + 1} <span>→</span></button>
               </article>
             )}
-            <div className="hq-intro-line">
-              <div><span className="eyebrow">КЛУБНЫЙ ПУЛЬТ · СЕЗОН {state.season}</span><h1>Неделя {state.week}: играем составом.</h1></div>
-              <div className="hq-week-mark"><small>WEEK</small><b>{String(state.week).padStart(2, '0')}</b><span>/{state.seasonLength}</span></div>
-            </div>
-
-            <div className="hq-layout">
-              <aside className="team-dossier">
-                <div className="hq-section-head"><span>STARTING FIVE</span><button className="text-button" onClick={() => openTab('Roster')}>Изменить</button></div>
-                <div className="team-dossier-score"><strong>{rating}</strong><span>OVR КЛУБА</span><i>{chem} ХИМИЯ</i></div>
-                <div className="hq-starter-list">
-                  {starters.length ? starters.map((player, index) => <HqStarterRow key={player.id} player={player} index={index} onOpen={() => setSelectedPlayer(player)} />) : <p className="empty">Стартовая пятёрка не собрана.</p>}
-                </div>
-                <div className="team-dossier-foot"><span><b>{state.lineupContinuity}</b> СТАБИЛЬНОСТЬ</span><span><b>{payroll}</b> КР./НЕД.</span><span><b>{state.staffEnergy}/3</b> ШТАБ</span></div>
-              </aside>
-
-              <section className="match-desk">
-                <div className="hq-section-head"><span>СЛЕДУЮЩЕЕ РЕШЕНИЕ</span><span className="desk-status">BO3 · НЕДЕЛЯ {state.week}</span></div>
-                <div className="match-desk-main">
-                  <div className="match-crest match-crest-home"><b>{starters[0]?.team?.slice(0, 3).toUpperCase() || 'CLB'}</b><small>НАШ КЛУБ</small></div>
-                  <div className="match-versus"><span>{modeInfo.scrim.name}</span><strong>VS</strong><small>соперник определяется перед стартом серии</small></div>
-                  <div className="match-crest match-crest-away"><b>?</b><small>СОПЕРНИК</small></div>
-                </div>
-                <div className="match-plan-line"><div><span>ПЛАН</span><strong>{tacticInfo[tactic].name}</strong><small>{tacticInfo[tactic].description}</small></div><button className="text-button" onClick={() => openTab('Play')}>Настроить</button></div>
-                <button className="hq-primary-action" onClick={() => openTab('Play')}>Подготовиться к матчу <span>→</span></button>
-                {last && <div className="latest-result"><div><span>ПОСЛЕДНЯЯ СЕРИЯ · {last.opponent}</span><strong>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} · {last.mvp}</strong></div><b>{last.maps.map((map) => map.us + ':' + map.them).join('  ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть recap</button></div>}
-              </section>
-
-              <aside className="club-pulse">
-                <div className="hq-section-head"><span>CLUB PULSE</span><button className="text-button" onClick={() => openTab('Inbox')}>Лента</button></div>
-                <div className="pulse-score"><b>{state.reputation}</b><span>РЕПУТАЦИЯ</span><i>{state.reputation >= 45 ? 'КУБОК ОТКРЫТ' : 'КУБОК ЗАКРЫТ'}</i></div>
-                <div className="pulse-rail"><span><b>{state.credits.toLocaleString('ru-RU')}</b> КРЕДИТЫ</span><span><b>{state.lastWeekNet >= 0 ? '+' : ''}{state.lastWeekNet}</b> ИТОГ НЕДЕЛИ</span><span><b>{state.wins}–{state.losses}</b> СЕРИИ</span></div>
-                <div className="pulse-alerts">{(warnings.length ? warnings.slice(0, 2) : directorNotes.slice(0, 2).map((note) => note.title)).map((note) => <div key={note}><span>!</span><p>{note}</p></div>)}</div>
-              </aside>
-            </div>
-
-            <div className="hq-news-strip"><span>ПОСЛЕДНИЕ ИЗМЕНЕНИЯ</span>{state.news.slice(0, 3).map((item) => <button key={item.id} onClick={() => openTab('Inbox')}><b>Н{item.week}</b><span>{item.title}</span><i>→</i></button>)}</div>
-          </section>
+            <FifaHome state={state} starters={starters} onOpen={(mode) => openTab(mode)} />
+          </>
         )}
+
+        {tab === 'World' && <WorldMap state={state} onPrepareMatch={() => openTab('Play')} />}
 
         {tab === 'Play' && (
           <section className="screen tactical-screen">
@@ -557,11 +559,10 @@ function App() {
             )}
           >
             <PacksView
-              credits={state.credits}
-              saveId={state.saveId}
+              packTokens={state.packTokens}
               packState={state.packs}
               roster={state.roster}
-              onOpen={commitPackRoll}
+              onOpenBatch={commitPackBatch}
               onClear={clearPacks}
             />
           </Suspense>
@@ -573,6 +574,8 @@ function App() {
             setState={setState}
           />
         )}
+
+        {tab === 'Profile' && <ManagerProfile state={state} />}
 
         {tab === 'Inbox' && (
           <section className="screen newsroom-screen">

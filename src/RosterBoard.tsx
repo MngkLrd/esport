@@ -139,6 +139,8 @@ export function RosterBoard({
     () => state.roster.filter((player) => !starterIds.has(player.id)).sort((a, b) => overall(b) - overall(a)),
     [state.roster, starterIds],
   )
+  const activePlayers = useMemo(() => state.startingFive.map((id) => state.roster.find((player) => player.id === id)).filter((player): player is Player => Boolean(player)), [state.startingFive, state.roster])
+  const activeAverage = (selector: (player: Player) => number) => activePlayers.length ? Math.round(activePlayers.reduce((sum, player) => sum + selector(player), 0) / activePlayers.length) : 0
 
   const candidates = useMemo<Candidate[]>(() => {
     if (!pickerSlot) return []
@@ -254,6 +256,7 @@ export function RosterBoard({
         <button className="secondary" onClick={onOpenScout}>Найти игрока</button>
       </div>
 
+      <div className="fifa-squad-overview">
       <div className="lineup-board">
         <div className="lineup-board-head">
           <div><span>STARTING FIVE</span><small>DRAG & DROP · КЛИК ПО + — ПОДБОР КАРТ</small></div>
@@ -305,6 +308,22 @@ export function RosterBoard({
             )
           })}
         </div>
+      </div>
+      <aside className="squad-stats-panel">
+        <div className="squad-stats-head"><span>OVERVIEW & STATS</span><b>{rating}</b></div>
+        <div className="squad-radar">
+          <div className="squad-radar-shape" style={{ '--aim': activeAverage((player) => player.aim) + '%', '--pos': activeAverage((player) => player.gameSense) + '%', '--utl': activeAverage((player) => player.utility) + '%', '--clu': activeAverage((player) => player.clutch) + '%' } as React.CSSProperties} />
+          <span className="radar-aim">AIM</span><span className="radar-pos">POS</span><span className="radar-utl">UTL</span><span className="radar-clu">CLU</span>
+        </div>
+        <div className="squad-stat-lines">
+          <span><b>{chem}</b> CHEMISTRY</span>
+          <span><b>{state.lineupContinuity}</b> CONTINUITY</span>
+          <span><b>{activeAverage((player) => player.form)}</b> FORM</span>
+          <span><b>{activeAverage((player) => player.morale)}</b> MORALE</span>
+          <span><b>{activeAverage((player) => player.fatigue)}</b> FATIGUE</span>
+          <span><b>{payroll}</b> PAYROLL</span>
+        </div>
+      </aside>
       </div>
 
       <div className="bench-board">

@@ -29,10 +29,15 @@ export const executeGameCommand = (state: GameState, command: GameCommand): Comm
     }
     case 'OPEN_PACK': {
       const { roll } = command
-      if (state.welcomeComplete === false || state.credits < roll.pack.price || state.packs.serial !== roll.winner.serial) {
+      if (state.welcomeComplete === false || state.packTokens < roll.pack.price || state.packs.serial !== roll.winner.serial) {
         return { state, events: [] }
       }
-      const next = { ...state, credits: state.credits - roll.pack.price, packs: collectPackWinner(state.packs, roll.winner) }
+      const next = {
+        ...state,
+        packTokens: state.packTokens - roll.pack.price,
+        managerXp: state.managerXp + 12,
+        packs: collectPackWinner(state.packs, roll.winner),
+      }
       return { state: next, events: [{ type: 'PackOpened', id: roll.winner.id }] }
     }
     case 'START_NEXT_SEASON': {

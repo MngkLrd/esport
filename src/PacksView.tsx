@@ -75,7 +75,7 @@ function CollectionCard({ card, count, onOpen }: { card: PackCard; count: number
       </div>
       <div className="collection-identity">
         <strong>{card.alias}</strong>
-        <span>{countryFlag(card.country ?? 'Неизвестно')} {card.team}</span>
+        <span>{countryFlag(card.country ?? 'Неизвестно')} {card.country ?? '—'} · {card.team}</span>
       </div>
       {card.cardStats && (
         <div className="collection-card-stats">

@@ -7,6 +7,32 @@ export type LineupSlots = Record<LineupSlot, string | null>
 export const LINEUP_SLOTS: readonly LineupSlot[] = ['Entry', 'AWP', 'Rifler', 'Support', 'IGL']
 export type MatchMode = 'scrim' | 'showmatch' | 'cup'
 export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
+export type ScoutAgeProfile = 'any' | 'u23' | 'prime' | 'veteran'
+export type ScoutRoleTarget = Role | 'Any'
+export type SquadPromise = 'starter' | 'rotation'
+
+export interface ScoutBrief {
+  role: ScoutRoleTarget
+  maxSalary: number
+  ageProfile: ScoutAgeProfile
+}
+
+export interface NegotiationTerms {
+  fee: number
+  salary: number
+  contractWeeks: number
+  squadRole: SquadPromise
+}
+
+export interface NegotiationEvaluation {
+  score: number
+  threshold: number
+  accepted: boolean
+  interest: 'cold' | 'open' | 'warm' | 'ready'
+  askingFee: number
+  askingSalary: number
+  reason: string
+}
 
 export interface Player {
   id: string
@@ -91,7 +117,7 @@ export interface NewsItem {
 }
 
 export interface GameState {
-  version: 7
+  version: 8
   saveId: string
   seed: number
   season: number
@@ -114,12 +140,21 @@ export interface GameState {
   lineupContinuity: number
   prospects: Player[]
   scoutCycle: number
+  scoutBrief: ScoutBrief
   history: MatchResult[]
   news: NewsItem[]
   lastPayroll: number
   lastWeekNet: number
   packs: PackState
 }
+
+export const DEFAULT_SCOUT_BRIEF: ScoutBrief = {
+  role: 'Any',
+  maxSalary: 170,
+  ageProfile: 'any',
+}
+
+export const SCOUT_REPORT_COST = 300
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 
@@ -387,7 +422,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 7,
+  version: 8,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -410,6 +445,7 @@ export const createInitialState = (): GameState => ({
   lineupContinuity: 50,
   prospects: [],
   scoutCycle: 0,
+  scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
   history: [],
   news: [
     {
@@ -433,6 +469,18 @@ const normalizePlayers = (players: Player[], packs: PackState): Player[] => play
     acquiredCardId: player.acquiredCardId ?? card?.id ?? null,
   }
 })
+
+const normalizeScoutBrief = (raw: unknown): ScoutBrief => {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_SCOUT_BRIEF }
+  const source = raw as Partial<ScoutBrief>
+  const validRole = source.role === 'Any' || LINEUP_SLOTS.includes(source.role as LineupSlot)
+  const validAge = source.ageProfile === 'any' || source.ageProfile === 'u23' || source.ageProfile === 'prime' || source.ageProfile === 'veteran'
+  return {
+    role: validRole ? source.role as ScoutRoleTarget : DEFAULT_SCOUT_BRIEF.role,
+    maxSalary: typeof source.maxSalary === 'number' ? Math.round(clamp(source.maxSalary, 80, 260)) : DEFAULT_SCOUT_BRIEF.maxSalary,
+    ageProfile: validAge ? source.ageProfile as ScoutAgeProfile : DEFAULT_SCOUT_BRIEF.ageProfile,
+  }
+}
 
 const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unknown): LineupSlots => {
   const slots = createEmptyLineupSlots()
@@ -467,7 +515,7 @@ const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unk
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if (parsed.version === 7 && Array.isArray(parsed.roster)) {
+  if (parsed.version === 8 && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
@@ -481,8 +529,29 @@ export const migrateState = (raw: unknown): GameState => {
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
+      scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
       packs,
     }
+  }
+
+  if (parsed.version === 7 && Array.isArray(parsed.roster)) {
+    const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
+    const roster = normalizePlayers(parsed.roster, packs)
+    const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
+    return {
+      ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief'>),
+      version: 8,
+      saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
+      welcomeComplete: Boolean(parsed.welcomeComplete),
+      season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonEnded: Boolean(parsed.seasonEnded),
+      seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
+      roster,
+      startingFive,
+      lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
+      scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
+      packs,
+    } as GameState
   }
 
   if ((parsed.version === 6 || parsed.version === 5) && Array.isArray(parsed.roster)) {
@@ -490,8 +559,8 @@ export const migrateState = (raw: unknown): GameState => {
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
-      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots'>),
-      version: 7,
+      ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief'>),
+      version: 8,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -500,6 +569,7 @@ export const migrateState = (raw: unknown): GameState => {
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, null),
+      scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
       packs,
     } as GameState
   }
@@ -537,7 +607,7 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 7,
+      version: 8,
       saveId: createSaveId(),
       welcomeComplete: true,
       season: 1,
@@ -549,6 +619,7 @@ export const migrateState = (raw: unknown): GameState => {
       lineupSlots: inferLineupSlots(roster, startingFive),
       lineupContinuity: typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 55,
       prospects,
+      scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
       history: Array.isArray(parsed.history) ? parsed.history as MatchResult[] : [],
       news: Array.isArray(parsed.news) ? parsed.news as NewsItem[] : base.news,
       lastPayroll: typeof parsed.lastPayroll === 'number' ? parsed.lastPayroll : 0,
@@ -969,13 +1040,22 @@ const simulationRoles: readonly Role[] = ['IGL', 'Entry', 'Rifler', 'AWP', 'Supp
 
 const traits = ['Чистый аим', 'Ученик игры', 'Не боится большой сцены', 'Рабочая лошадка', 'Креативный коллер', 'Чутьё в позднем раунде'] as const
 
+const matchesAgeProfile = (age: number | null, profile: ScoutAgeProfile) => {
+  if (profile === 'any' || age == null) return true
+  if (profile === 'u23') return age <= 23
+  if (profile === 'prime') return age >= 24 && age <= 28
+  return age >= 29
+}
+
 const makeProspect = (
   state: GameState,
   index: number,
   identity: (typeof proPlayerIdentities)[number],
   rng: () => number,
+  brief: ScoutBrief,
 ): Player => {
   const base = Math.round(54 + state.reputation * 0.22 + rng() * 14)
+  const role = identity.role ?? (brief.role === 'Any' ? pick(simulationRoles, rng) : brief.role)
   return {
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
     playerKey: 'alias:' + identity.alias.toLocaleLowerCase('en-US'),
@@ -986,8 +1066,8 @@ const makeProspect = (
     realName: identity.realName ?? identity.alias,
     country: identity.country ?? 'Неизвестно',
     team: identity.team,
-        age: identity.age,
-    role: identity.role ?? pick(simulationRoles, rng),
+    age: identity.age,
+    role,
     aim: clamp(base + Math.round((rng() - 0.5) * 14)),
     gameSense: clamp(base + Math.round((rng() - 0.5) * 14)),
     utility: clamp(base + Math.round((rng() - 0.5) * 14)),
@@ -1006,51 +1086,172 @@ const makeProspect = (
   }
 }
 
-export const scout = (state: GameState): GameState => {
-  if (state.credits < 300) return state
-  const rng = mulberry32(hashSeed([state.seed, 'scout', state.scoutCycle, state.week].join(':')))
-  const unavailable = new Set([...state.roster, ...state.prospects].map((p) => p.alias))
-  const available = proPlayerIdentities.filter((p) => !unavailable.has(p.alias))
-  for (let i = available.length - 1; i > 0; i -= 1) {
+export const scoutFitScore = (player: Player, brief: ScoutBrief) => {
+  const roleScore = brief.role === 'Any' ? overall(player) : lineupFitScore(player, brief.role)
+  const budgetPenalty = Math.max(0, player.salary - brief.maxSalary) * 0.45
+  const ageBonus =
+    brief.ageProfile === 'u23' && player.age != null && player.age <= 23 ? 7
+      : brief.ageProfile === 'prime' && player.age != null && player.age >= 24 && player.age <= 28 ? 6
+        : brief.ageProfile === 'veteran' && player.age != null && player.age >= 29 ? 5
+          : brief.ageProfile === 'any' ? 2 : 0
+  return Math.round(roleScore + player.potential * 0.12 + ageBonus - budgetPenalty)
+}
+
+export const scout = (state: GameState, rawBrief: ScoutBrief = state.scoutBrief ?? DEFAULT_SCOUT_BRIEF): GameState => {
+  if (state.credits < SCOUT_REPORT_COST) return state
+  const brief = normalizeScoutBrief(rawBrief)
+  const rng = mulberry32(hashSeed([
+    state.seed,
+    'scout-v2',
+    state.scoutCycle,
+    state.week,
+    brief.role,
+    brief.maxSalary,
+    brief.ageProfile,
+  ].join(':')))
+  const rosterAliases = new Set(state.roster.map((player) => player.alias.toLocaleLowerCase('en-US')))
+  const available = proPlayerIdentities
+    .filter((identity) => !rosterAliases.has(identity.alias.toLocaleLowerCase('en-US')))
+    .filter((identity) => brief.role === 'Any' || identity.role === brief.role || identity.role == null)
+    .filter((identity) => matchesAgeProfile(identity.age, brief.ageProfile))
+
+  const pool = [...available]
+  for (let i = pool.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1))
-    ;[available[i], available[j]] = [available[j], available[i]]
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
-  const selected = available.slice(0, 3)
-  const prospects = selected.map((identity, index) => makeProspect(state, index, identity, rng))
+
+  const generated = pool
+    .slice(0, Math.min(120, pool.length))
+    .map((identity, index) => makeProspect(state, index, identity, rng, brief))
+
+  const ranked = generated
+    .sort((a, b) =>
+      Number(b.salary <= brief.maxSalary) - Number(a.salary <= brief.maxSalary) ||
+      scoutFitScore(b, brief) - scoutFitScore(a, brief) ||
+      overall(b) - overall(a),
+    )
+    .slice(0, 5)
+
   return {
     ...state,
-    credits: state.credits - 300,
+    credits: state.credits - SCOUT_REPORT_COST,
     scoutCycle: state.scoutCycle + 1,
-    prospects,
+    scoutBrief: brief,
+    prospects: ranked,
     news: [{
       id: 'scout-' + state.scoutCycle,
       week: state.week,
       kind: 'scout' as const,
-      title: 'Скаутский отчёт готов',
-      body: 'Три реальных CS2-ника выбраны из расширенной базы игроков. Для проработанных профилей используются проверенные данные личности, длинный хвост берётся из срезов Valve VRS от 2026-09-07. Рейтинги, роли, зарплаты и потенциал рассчитывает менеджерская симуляция.',
+      title: 'Скаутский shortlist готов',
+      body: 'Запрос: ' + (brief.role === 'Any' ? 'любая роль' : brief.role) + ', зарплата до ' + brief.maxSalary + ' кр./нед. В shortlist попали пять кандидатов, отсортированных по пригодности под задачу.',
     }, ...state.news].slice(0, 50),
   }
 }
 
-export const signProspect = (state: GameState, playerId: string): GameState => {
-  if (state.roster.length >= 8) return state
-  const prospect = state.prospects.find((p) => p.id === playerId)
-  if (!prospect) return state
-  const fee = prospect.salary * 3
-  if (state.credits < fee) return state
-  return {
+export const prospectAskingFee = (player: Player) =>
+  Math.max(180, Math.round(player.salary * 2.15 + overall(player) * 3.1 + player.potential * 1.15))
+
+export const defaultNegotiationTerms = (player: Player): NegotiationTerms => ({
+  fee: prospectAskingFee(player),
+  salary: player.salary,
+  contractWeeks: 12,
+  squadRole: 'rotation',
+})
+
+export const evaluateNegotiation = (
+  state: GameState,
+  player: Player,
+  terms: NegotiationTerms,
+): NegotiationEvaluation => {
+  const askingFee = prospectAskingFee(player)
+  const askingSalary = player.salary
+  const normalized: NegotiationTerms = {
+    fee: Math.max(0, Math.round(terms.fee)),
+    salary: Math.max(0, Math.round(terms.salary)),
+    contractWeeks: Math.round(clamp(terms.contractWeeks, 6, 16)),
+    squadRole: terms.squadRole === 'starter' ? 'starter' : 'rotation',
+  }
+
+  const feeScore = clamp(normalized.fee / askingFee, 0, 1.3) * 40
+  const salaryScore = clamp(normalized.salary / askingSalary, 0, 1.3) * 36
+  const contractScore = normalized.contractWeeks >= 14 ? 11 : normalized.contractWeeks >= 12 ? 9 : normalized.contractWeeks >= 10 ? 7 : normalized.contractWeeks >= 8 ? 4 : 1
+  const roleScore = normalized.squadRole === 'starter' ? 10 : 4
+  const reputationBonus = clamp((state.reputation - 40) * 0.16, -4, 8)
+  const score = Math.round(feeScore + salaryScore + contractScore + roleScore + reputationBonus)
+  const threshold = Math.round(91 + Math.max(0, overall(player) - 76) * 0.28 + Math.max(0, player.potential - 82) * 0.12)
+  const affordable = state.credits >= normalized.fee
+  const accepted = affordable && score >= threshold
+  const gap = threshold - score
+  const interest: NegotiationEvaluation['interest'] = accepted ? 'ready' : gap <= 5 ? 'warm' : gap <= 13 ? 'open' : 'cold'
+  const reason = !affordable
+    ? 'В кассе недостаточно средств на трансферный платёж.'
+    : accepted
+      ? 'Условия устраивают игрока и текущий клуб.'
+      : gap <= 5
+        ? 'Почти договорились: немного улучши зарплату, платёж или роль.'
+        : gap <= 13
+          ? 'Интерес есть, но пакет условий пока слабый.'
+          : 'Игрок не готов переходить на этих условиях.'
+
+  return { score, threshold, accepted, interest, askingFee, askingSalary, reason }
+}
+
+export const negotiateProspect = (
+  state: GameState,
+  playerId: string,
+  terms: NegotiationTerms,
+): { state: GameState; evaluation: NegotiationEvaluation } => {
+  const prospect = state.prospects.find((player) => player.id === playerId)
+  if (!prospect) {
+    const dummy: Player = state.roster[0] ?? {
+      id: 'missing', alias: '—', firstName: '—', realName: '—', country: '—', team: '—', age: null, role: 'Rifler',
+      aim: 0, gameSense: 0, utility: 0, clutch: 0, leadership: 0, form: 0, morale: 0, fatigue: 0, potential: 0,
+      salary: 1, contractWeeks: 0, traits: [], bio: '',
+    }
+    return { state, evaluation: { ...evaluateNegotiation(state, dummy, terms), accepted: false, reason: 'Кандидат больше не доступен.' } }
+  }
+
+  const evaluation = evaluateNegotiation(state, prospect, terms)
+  if (state.roster.length >= 8) {
+    return { state, evaluation: { ...evaluation, accepted: false, reason: 'В ростере нет свободного места.' } }
+  }
+  if (!evaluation.accepted) return { state, evaluation }
+
+  const signed: Player = {
+    ...prospect,
+    salary: Math.max(1, Math.round(terms.salary)),
+    contractWeeks: Math.round(clamp(terms.contractWeeks, 6, 16)),
+    morale: clamp(prospect.morale + (terms.squadRole === 'starter' ? 7 : 3)),
+  }
+
+  let next: GameState = {
     ...state,
-    credits: state.credits - fee,
-    roster: [...state.roster, { ...prospect, contractWeeks: 10, morale: clamp(prospect.morale + 5) }],
-    prospects: state.prospects.filter((p) => p.id !== playerId),
+    credits: state.credits - Math.max(0, Math.round(terms.fee)),
+    roster: [...state.roster, signed],
+    prospects: state.prospects.filter((player) => player.id !== playerId),
     news: [{
-      id: 'sign-' + playerId,
+      id: 'sign-' + playerId + '-' + state.week,
       week: state.week,
       kind: 'contract' as const,
-      title: prospect.alias + ' присоединяется к проекту',
-      body: 'Подписание: ' + fee + ' кр. Недельная зарплата: ' + prospect.salary + ' кр. Игрок начинает в запасе.',
+      title: prospect.alias + ' подписывает контракт',
+      body: 'Трансфер: ' + Math.round(terms.fee) + ' кр. Зарплата: ' + Math.round(terms.salary) + ' кр./нед. Срок: ' + Math.round(terms.contractWeeks) + ' нед. Роль: ' + (terms.squadRole === 'starter' ? 'основа' : 'ротация') + '.',
     }, ...state.news].slice(0, 50),
   }
+
+  if (terms.squadRole === 'starter') {
+    const bestSlot = [...LINEUP_SLOTS].sort((a, b) => lineupFitScore(signed, b) - lineupFitScore(signed, a))[0]
+    next = assignLineupSlot(next, bestSlot, signed.id)
+  }
+
+  return { state: next, evaluation }
+}
+
+export const signProspect = (state: GameState, playerId: string): GameState => {
+  const prospect = state.prospects.find((player) => player.id === playerId)
+  if (!prospect) return state
+  const terms = defaultNegotiationTerms(prospect)
+  return negotiateProspect(state, playerId, { ...terms, fee: Math.round(terms.fee * 1.08), squadRole: 'starter' }).state
 }
 
 export const renewContract = (state: GameState, playerId: string): GameState => {

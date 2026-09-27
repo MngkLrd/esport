@@ -550,7 +550,7 @@ function App() {
               <section className="screen">
                 <div className="empty-state">
                   <span>НАГРАДЫ</span>
-                  <h2>Загружаю коллекцию и HLTV-карточки…</h2>
+                  <h2>Загрузка…</h2>
                 </div>
               </section>
             )}

@@ -5252,3 +5252,66 @@ button.primary:hover,
   color: #fff;
   box-shadow: inset 0 0 0 1px rgba(85,255,210,.18);
 }
+
+
+.tournament-group-fixtures {
+  padding: 13px 16px 16px;
+  border-bottom: 1px solid rgba(145,159,255,.12);
+  background: #0b1028;
+}
+.tournament-group-fixtures > span {
+  color: #75809d;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.tournament-group-fixtures > div {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.tournament-group-fixtures article {
+  min-height: 72px;
+  display: grid;
+  gap: 7px;
+  padding: 10px 11px;
+  border: 1px solid rgba(145,159,255,.13);
+  background: rgba(18,24,53,.82);
+}
+.tournament-group-fixtures article.complete {
+  background: rgba(255,255,255,.025);
+}
+.tournament-group-fixtures small {
+  color: #66718e;
+  font: 800 7px/1 Arial,sans-serif;
+}
+.tournament-group-fixtures strong {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+  color: #d7def1;
+  font: 900 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.tournament-group-fixtures strong span:last-child { text-align: right; }
+.tournament-group-fixtures strong i {
+  color: var(--fifa-cyan);
+  font-style: normal;
+}
+.tournament-group-fixtures article > b {
+  color: #7885a4;
+  font: 900 7px/1 Arial,sans-serif;
+  letter-spacing: .08em;
+}
+.bracket-column:not(:last-child) .bracket-match::after {
+  content: '';
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  background: rgba(145,159,255,.28);
+}
+@media (max-width: 760px) {
+  .tournament-group-fixtures > div { grid-template-columns: 1fr; }
+}

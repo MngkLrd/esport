@@ -5330,3 +5330,443 @@ button.primary:hover,
   font: 900 8px/1 Arial,sans-serif;
   letter-spacing: .09em;
 }
+
+
+/* viewport pass: keep game-native screens inside one frame */
+.app-main-hq,
+.app-main-world,
+.app-main-play {
+  height: calc(100dvh - 74px);
+  overflow: hidden;
+}
+
+.app-main-world,
+.app-main-play {
+  display: grid;
+  grid-template-rows: 42px minmax(0, 1fr);
+}
+
+.app-main-hq .fifa-home-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 12px 28px 14px;
+  grid-template-rows: 32px minmax(0, 1fr) 16px;
+  align-content: stretch;
+}
+.app-main-hq .fifa-mode-grid {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+.app-main-hq .fifa-mode-hero {
+  min-height: 0;
+  grid-row: span 3;
+}
+.app-main-hq .fifa-mode-tile {
+  min-height: 0;
+  padding: 14px 16px;
+}
+.app-main-hq .fifa-mode-tile h1 {
+  font-size: clamp(34px, 4vw, 62px);
+}
+.app-main-hq .fifa-mode-tile h2 {
+  font-size: clamp(20px, 2vw, 31px);
+}
+.app-main-hq .fifa-mode-tile > strong {
+  margin: 10px 0 4px;
+  font-size: 23px;
+}
+.app-main-hq .fifa-mini-lineup { margin: 10px 0 4px; }
+.app-main-hq .fifa-home-hints { align-items: center; }
+
+.app-main-world .screen-back-button,
+.app-main-play .screen-back-button {
+  align-self: center;
+  margin: 4px 22px;
+  min-height: 30px;
+}
+
+.app-main-world .fifa-world-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 6px 22px 14px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.app-main-world .fifa-screen-header {
+  margin-bottom: 8px;
+}
+.app-main-world .fifa-screen-header h1 {
+  font-size: clamp(26px, 3vw, 44px);
+}
+.app-main-world .fifa-screen-rank b { font-size: 26px; }
+.app-main-world .world-filter-strip {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+}
+.app-main-world .world-map-layout-v2 {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) clamp(242px, 28vw, 330px);
+}
+.app-main-world .world-map-stage-v2,
+.app-main-world .world-geo-map {
+  min-height: 0;
+  height: 100%;
+}
+.app-main-world .world-event-panel {
+  grid-column: auto;
+  min-height: 0;
+}
+
+/* map markers stay readable at every zoom and cluster instead of colliding */
+.world-marker-hit {
+  fill: transparent;
+  stroke: transparent;
+}
+.world-marker-dot {
+  fill: #929db8;
+  stroke: #081020;
+  stroke-width: 2.5;
+  transition: fill .12s ease, r .12s ease;
+}
+.world-marker .world-marker-pulse {
+  fill: transparent;
+  stroke: rgba(32,230,255,.72);
+  stroke-width: 1.5;
+  animation: world-marker-ping 1.5s ease-out infinite;
+}
+.world-marker text {
+  opacity: 0;
+  fill: #eef3ff;
+  font: 900 8px/1 Arial, sans-serif;
+  paint-order: stroke;
+  stroke: #080c20;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.world-marker.selected text,
+.world-marker:hover text,
+.world-marker:focus-visible text {
+  opacity: 1;
+}
+.world-marker.tier-1 .world-marker-dot { fill: #ff7d48; }
+.world-marker.tier-2 .world-marker-dot { fill: #a67cff; }
+.world-marker.tier-3 .world-marker-dot { fill: #21dced; }
+.world-marker.online .world-marker-dot {
+  stroke: #fff;
+  stroke-width: 2.5;
+}
+.world-marker.selected .world-marker-dot,
+.world-marker:hover .world-marker-dot {
+  fill: #fff;
+}
+.world-marker.booked .world-marker-dot { fill: #55ffd2; }
+.world-marker.locked { opacity: .28; }
+
+.world-cluster {
+  cursor: zoom-in;
+  outline: none;
+}
+.world-cluster-ring {
+  fill: rgba(32,230,255,.07);
+  stroke: rgba(32,230,255,.33);
+  stroke-width: 1.4;
+}
+.world-cluster-core {
+  fill: #182342;
+  stroke: #20e6ff;
+  stroke-width: 2;
+}
+.world-cluster text {
+  fill: #fff;
+  font: 1000 8px/1 Arial, sans-serif;
+  pointer-events: none;
+}
+.world-cluster:hover .world-cluster-ring,
+.world-cluster.selected .world-cluster-ring {
+  fill: rgba(32,230,255,.15);
+  stroke: #20e6ff;
+}
+
+/* selected tournament is a real information panel, not a hidden footer */
+.world-event-panel-v2 {
+  padding: 14px 16px;
+  overflow: hidden;
+}
+.world-event-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.world-event-panel-head > div {
+  display: grid;
+  gap: 5px;
+}
+.world-event-panel-head > div > span {
+  color: var(--fifa-cyan);
+  font: 900 8px/1 Arial, sans-serif;
+  letter-spacing: .09em;
+}
+.world-event-panel-v2 .world-event-tier {
+  margin: 0;
+  padding: 4px 6px;
+  background: rgba(154,77,255,.22);
+  border: 1px solid rgba(154,77,255,.45);
+}
+.world-event-status {
+  max-width: 112px;
+  color: #8792af;
+  font: 900 7px/1.2 Arial, sans-serif;
+  text-align: right;
+  letter-spacing: .06em;
+}
+.world-event-status.booked { color: #55ffd2; }
+.world-event-panel-v2 h2 {
+  margin: 10px 0 4px;
+  font-size: clamp(22px, 2.3vw, 34px);
+}
+.world-event-panel-v2 > p {
+  margin: 0 0 6px;
+  color: #9aa6c3;
+  font-size: 8px;
+}
+.world-event-panel-v2 .world-event-date {
+  margin: 0 0 10px;
+  font-size: 8px;
+}
+.world-event-panel-v2 .world-event-stats div {
+  min-height: 50px;
+  padding: 8px 9px;
+}
+.world-event-panel-v2 .world-event-stats b { font-size: 14px; }
+.world-event-details {
+  display: grid;
+  gap: 1px;
+  margin-top: 8px;
+  background: rgba(145,159,255,.1);
+}
+.world-event-details > div {
+  display: grid;
+  gap: 3px;
+  padding: 7px 8px;
+  background: #101630;
+}
+.world-event-details span {
+  color: #66728f;
+  font: 900 6px/1 Arial, sans-serif;
+  letter-spacing: .1em;
+}
+.world-event-details b {
+  color: #cdd5e8;
+  font: 900 8px/1.25 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.world-event-details .highlight {
+  background: rgba(32,230,255,.07);
+}
+.world-event-details .highlight b { color: #fff; }
+.world-event-panel-v2 .world-budget-preview {
+  margin: auto 0 8px;
+  padding-top: 9px;
+}
+.world-event-panel-v2 .world-budget-preview strong { font-size: 17px; }
+.world-event-panel-v2 .world-budget-preview small { font-size: 7px; }
+.world-event-panel-v2 .fifa-primary-cta {
+  min-height: 38px;
+  font-size: 9px;
+}
+
+/* Matchday uses a compact event strip; the full bracket opens as an overlay */
+.app-main-play .tactical-screen {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 6px 22px 10px;
+  display: flex;
+  flex-direction: column;
+}
+.tournament-hub-compact {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  min-height: 74px;
+  margin-bottom: 6px;
+}
+.tournament-hub-compact .tournament-hero {
+  min-height: 74px;
+  padding: 9px 12px;
+  border-bottom: 0;
+  border-right: 1px solid rgba(145,159,255,.14);
+}
+.tournament-hub-compact .tournament-hero h1 {
+  margin: 4px 0 3px;
+  font-size: clamp(19px, 2vw, 28px);
+}
+.tournament-hub-compact .tournament-hero p {
+  font-size: 7px;
+}
+.tournament-hub-compact .tournament-status { display: none; }
+.tournament-hub-compact .tournament-next-match {
+  min-height: 74px;
+  padding: 9px 12px;
+}
+.tournament-hub-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tournament-hub-actions .secondary,
+.tournament-hub-actions .fifa-primary-cta {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 8px;
+}
+.app-main-play .tactical-heading {
+  flex: 0 0 auto;
+  margin: 0 0 6px;
+  padding: 0 0 6px;
+}
+.app-main-play .tactical-heading h1 {
+  margin: 3px 0;
+  font-size: clamp(24px, 2.7vw, 38px);
+}
+.app-main-play .tactical-budget b { font-size: 17px; }
+.app-main-play .tactical-board {
+  flex: 1 1 auto;
+  min-height: 150px;
+}
+.app-main-play .tactical-team,
+.app-main-play .tactical-opponent { padding: 10px 14px; }
+.app-main-play .tactical-team-name {
+  margin: 7px 0 5px;
+  font-size: 15px;
+}
+.app-main-play .tactical-mini-roster {
+  gap: 5px;
+  margin-top: 9px;
+}
+.app-main-play .tactical-mini-roster img { height: 48px; }
+.app-main-play .tactical-mini-roster small { display: none; }
+.app-main-play .tactical-edit { margin-top: 7px; }
+.app-main-play .tactical-opponent h2 {
+  margin: 6px 0 4px;
+  font-size: 20px;
+}
+.app-main-play .tactical-opponent p { margin: 0; font-size: 9px; }
+.app-main-play .opponent-line {
+  margin-top: 12px;
+  padding-top: 8px;
+}
+.app-main-play .tactical-control {
+  flex: 0 0 auto;
+  gap: 8px;
+  padding-top: 7px;
+}
+.app-main-play .tactical-plan,
+.app-main-play .tactical-mode {
+  gap: 2px;
+  padding: 7px 9px;
+}
+.app-main-play .tactical-plan span,
+.app-main-play .tactical-mode span { font-size: 10px; }
+.app-main-play .tactical-plan small,
+.app-main-play .tactical-mode small { font-size: 8px; }
+.app-main-play .tactical-launch { padding-left: 10px; }
+.app-main-play .tactical-launch strong { font-size: 14px; }
+.app-main-play .match-recap-line {
+  flex: 0 0 auto;
+  margin-top: 6px;
+  padding-top: 6px;
+  min-height: 22px;
+  font-size: 8px;
+}
+
+/* full tournament view is modal, so it never forces Matchday itself to scroll */
+.tournament-bracket-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4,7,20,.9);
+  backdrop-filter: blur(14px);
+}
+.tournament-bracket-modal {
+  width: min(1260px, 96vw);
+  max-height: 92dvh;
+  overflow: auto;
+  border: 1px solid rgba(145,159,255,.25);
+  background: #090e25;
+  box-shadow: 0 30px 100px rgba(0,0,0,.55);
+}
+.tournament-bracket-modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 16px;
+  background: rgba(10,14,37,.96);
+  border-bottom: 1px solid rgba(145,159,255,.16);
+}
+.tournament-bracket-modal-head span {
+  color: var(--fifa-cyan);
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .1em;
+}
+.tournament-bracket-modal-head h2 {
+  margin: 4px 0 0;
+  font: 1000 26px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.tournament-bracket-modal-head > button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+@media (max-width: 900px) {
+  .app-main-world .fifa-world-screen { padding-inline: 12px; }
+  .app-main-world .world-map-layout-v2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 230px;
+  }
+  .app-main-world .world-event-panel {
+    grid-column: auto;
+    min-height: 0;
+  }
+  .world-event-panel-v2 h2 { font-size: 20px; }
+  .world-event-details > div:not(.highlight):nth-child(2) { display: none; }
+  .world-map-legend { gap: 7px; padding: 6px 8px; }
+  .world-map-stage-v2::after { display: none; }
+
+  .tournament-hub-compact { grid-template-columns: 1fr; }
+  .tournament-hub-compact .tournament-hero { display: none; }
+}
+
+@media (max-width: 700px) {
+  .app-main-world {
+    overflow: auto;
+    grid-template-rows: 42px auto;
+  }
+  .app-main-world .fifa-world-screen {
+    height: auto;
+    overflow: visible;
+  }
+  .app-main-world .world-map-layout-v2 {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .app-main-world .world-map-stage-v2 { min-height: 380px; }
+  .app-main-world .world-event-panel { grid-column: 1; }
+  .app-main-hq { overflow: auto; }
+}

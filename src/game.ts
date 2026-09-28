@@ -9,7 +9,7 @@ export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
 export type LineupSlots = Record<LineupSlot, string | null>
 export const LINEUP_SLOTS: readonly LineupSlot[] = ['Entry', 'AWP', 'Rifler', 'Support', 'IGL']
-export type MatchMode = 'scrim' | 'showmatch' | 'cup'
+export type MatchMode = 'practice' | 'scrim' | 'showmatch' | 'cup'
 export type TacticalPlan = 'balanced' | 'aggressive' | 'structured'
 export type ScoutAgeProfile = 'any' | 'u23' | 'prime' | 'veteran'
 export type ScoutRoleTarget = Role | 'Any'
@@ -822,9 +822,10 @@ const opponentNames = [
 const mapPool = ['Dust II', 'Mirage', 'Inferno', 'Nuke', 'Ancient', 'Anubis'] as const
 
 const modeTuning: Record<MatchMode, { difficulty: number; baseReward: number; fans: number; label: string }> = {
-  scrim: { difficulty: -5, baseReward: 0, fans: 0, label: 'Пракк-матч' },
-  showmatch: { difficulty: 1, baseReward: 950, fans: 70, label: 'Шоуматч сообщества' },
-  cup: { difficulty: 7, baseReward: 1450, fans: 150, label: 'Онлайн-кубок' },
+  practice: { difficulty: -5, baseReward: 0, fans: 0, label: 'Пракк-матч' },
+  scrim: { difficulty: -2, baseReward: 700, fans: 25, label: 'Tier 3 official' },
+  showmatch: { difficulty: 1, baseReward: 950, fans: 70, label: 'Tier 2 official' },
+  cup: { difficulty: 7, baseReward: 1450, fans: 150, label: 'Tier 1 official' },
 }
 
 export const tacticInfo: Record<TacticalPlan, { name: string; description: string }> = {
@@ -840,6 +841,7 @@ const matchVrsBase = (mode: MatchMode, event: TournamentEvent | null) => {
   if (event) return event.circuitTier === 1 ? 22 : event.circuitTier === 2 ? 15 : 10
   if (mode === 'cup') return 13
   if (mode === 'showmatch') return 8
+  if (mode === 'scrim') return 3
   return 0
 }
 
@@ -1319,7 +1321,7 @@ export const canPlayMatch = (state: GameState, mode: MatchMode) => {
     if (tournamentIsFinished(run)) return { ok: false, reason: 'Турнир завершён.' }
     const match = nextPlayerMatch(run)
 
-    if (mode === 'scrim') {
+    if (mode === 'practice') {
       if (match && compareGameTime(state.now, match.scheduledAt) >= 0) {
         return { ok: false, reason: 'Сначала сыграй текущий официальный матч.' }
       }
@@ -1330,7 +1332,7 @@ export const canPlayMatch = (state: GameState, mode: MatchMode) => {
     }
   }
 
-  const event = mode === 'scrim' ? null : tournamentForId(state.activeEventId)
+  const event = mode === 'practice' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
   if (effectiveMode === 'cup' && !event && state.wins < 2 && state.reputation < 45) {
     return { ok: false, reason: 'Кубок откроется после 2 побед или при 45 репутации.' }
@@ -1343,9 +1345,9 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const gate = canPlayMatch(state, mode)
   if (!gate.ok) return state
 
-  const event = mode === 'scrim' ? null : tournamentForId(state.activeEventId)
+  const event = mode === 'practice' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
-  const isPractice = effectiveMode === 'scrim' && !event
+  const isPractice = effectiveMode === 'practice' && !event
   const clubSeed = tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity)
   const clubPlayerKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
   const preparedRun = event && state.activeTournament
@@ -2036,19 +2038,24 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
 }
 
 export const modeInfo: Record<MatchMode, { name: string; description: string; risk: string }> = {
-  scrim: {
+  practice: {
     name: 'Пракк-матч',
-    description: 'Тренировочная серия без денег и VRS. Даёт только небольшой прирост сыгранности.',
+    description: 'Тренировочная BO3: 0 денег, 0 VRS, +1 к сыгранности. Нужна для проверки пятёрки между официальными матчами.',
     risk: 'Low',
   },
+  scrim: {
+    name: 'Официальный матч T3',
+    description: 'Рейтинговый матч Tier 3. Результат влияет на турнир, VRS и карьерную статистику.',
+    risk: 'Medium',
+  },
   showmatch: {
-    name: 'Шоуматч сообщества',
-    description: 'Публичный BO3 с заметным ростом аудитории и доходом, достаточным для дисциплинированного состава.',
+    name: 'Официальный матч T2',
+    description: 'Рейтинговый матч Tier 2. Результат влияет на турнир, VRS и карьерную статистику.',
     risk: 'Medium',
   },
   cup: {
-    name: 'Онлайн-кубок',
-    description: 'Сильные соперники и лучший потенциальный выигрыш. Открывается после 2 побед или при 45 репутации.',
+    name: 'Официальный матч T1',
+    description: 'Рейтинговый матч Tier 1. Максимальная турнирная ценность и влияние на VRS.',
     risk: 'High',
   },
 }

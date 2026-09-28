@@ -126,9 +126,9 @@ export function TournamentHub({
                   <article key={match.id} className={match.status === 'complete' ? 'complete' : ''}>
                     <small>{formatGameDateTime(match.scheduledAt)}</small>
                     <strong>
-                      {teamName(run, match.teamAId)}
+                      <span>{teamName(run, match.teamAId)}</span>
                       <i>{scoreLabel(match)}</i>
-                      {teamName(run, match.teamBId)}
+                      <span>{teamName(run, match.teamBId)}</span>
                     </strong>
                     <b>{match.status === 'complete' ? (match.winnerId === PLAYER_TEAM_ID ? 'WIN' : 'LOSS') : match.label}</b>
                   </article>

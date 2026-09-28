@@ -1,8 +1,19 @@
 import { useMemo, useState } from 'react'
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps'
+import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
-import { TOURNAMENTS, tournamentEntryCost, tournamentForId, type TournamentRegion } from './events'
+import {
+  TOURNAMENTS,
+  tournamentEntryCost,
+  tournamentForId,
+  type CircuitTier,
+  type EventFormat,
+  type TournamentRegion,
+} from './events'
 
 const REGIONS: Array<'All' | TournamentRegion> = ['All', 'Europe', 'Americas', 'Asia', 'CIS']
+const CIRCUITS: Array<'All' | CircuitTier> = ['All', 1, 2, 3]
+const FORMATS: Array<'All' | EventFormat> = ['All', 'LAN', 'ONLINE']
 
 export function WorldMap({
   state,
@@ -14,11 +25,21 @@ export function WorldMap({
   onPrepareMatch: () => void
 }) {
   const [region, setRegion] = useState<'All' | TournamentRegion>('All')
-  const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'helsinki')
+  const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
+  const [format, setFormat] = useState<'All' | EventFormat>('All')
+  const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'eu-open-1')
+
   const payroll = weeklyPayroll(state)
   const level = managerLevelProgress(state.managerXp).level
-  const visible = useMemo(() => TOURNAMENTS.filter((event) => region === 'All' || event.region === region), [region])
-  const selected = tournamentForId(selectedId) ?? TOURNAMENTS[0]
+  const visible = useMemo(
+    () => TOURNAMENTS.filter((event) =>
+      (region === 'All' || event.region === region) &&
+      (circuit === 'All' || event.circuitTier === circuit) &&
+      (format === 'All' || event.format === format),
+    ),
+    [region, circuit, format],
+  )
+  const selected = tournamentForId(selectedId) ?? visible[0] ?? TOURNAMENTS[0]
   const active = tournamentForId(state.activeEventId)
   const booking = canBookTournament(state, selected.id)
   const booked = state.activeEventId === selected.id
@@ -30,82 +51,123 @@ export function WorldMap({
       <div className="fifa-screen-header">
         <div>
           <span>GLOBAL CIRCUIT · MANAGER LVL {level}</span>
-          <h1>{active ? 'NEXT EVENT' : 'SELECT EVENT'}</h1>
+          <h1>{active ? 'NEXT EVENT' : 'WORLD CIRCUIT'}</h1>
         </div>
         <div className="fifa-screen-rank">
-          <small>CLUB REP</small>
-          <b>{state.reputation}</b>
+          <small>AVAILABLE</small>
+          <b>{TOURNAMENTS.filter((event) => canBookTournament(state, event.id).ok || event.id === state.activeEventId).length}</b>
         </div>
       </div>
 
-      <div className="world-map-layout">
-        <aside className="world-region-list">
-          <span className="world-section-label">REGION</span>
+      <div className="world-filter-strip">
+        <div>
+          <span>REGION</span>
           {REGIONS.map((item) => (
-            <button
-              key={item}
-              className={region === item ? 'active' : ''}
-              onClick={() => setRegion(item)}
-            >
-              <i />
-              <span>{item === 'All' ? 'ALL REGIONS' : item.toUpperCase()}</span>
-              <b>{item === 'All' ? TOURNAMENTS.length : TOURNAMENTS.filter((event) => event.region === item).length}</b>
+            <button key={item} className={region === item ? 'active' : ''} onClick={() => setRegion(item)}>
+              {item === 'All' ? 'ALL' : item.toUpperCase()}
             </button>
           ))}
-          <div className="world-upkeep">
-            <span>WEEKLY PAYROLL</span>
-            <strong>{payroll.toLocaleString('ru-RU')}</strong>
-            <small>cash {state.credits.toLocaleString('ru-RU')}</small>
+        </div>
+        <div>
+          <span>CIRCUIT</span>
+          {CIRCUITS.map((item) => (
+            <button key={item} className={circuit === item ? 'active' : ''} onClick={() => setCircuit(item)}>
+              {item === 'All' ? 'ALL' : 'T' + item}
+            </button>
+          ))}
+        </div>
+        <div>
+          <span>FORMAT</span>
+          {FORMATS.map((item) => (
+            <button key={item} className={format === item ? 'active' : ''} onClick={() => setFormat(item)}>
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="world-map-layout world-map-layout-v2">
+        <div className="world-map-stage world-map-stage-v2">
+          <ComposableMap
+            projection="geoEqualEarth"
+            projectionConfig={{ scale: 150 }}
+            width={1000}
+            height={520}
+            className="world-geo-map"
+          >
+            <ZoomableGroup center={[8, 18]} zoom={1}>
+              <Geographies geography={worldMap}>
+                {({ geographies }) =>
+                  geographies.map((geo) => (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      fill="#22294b"
+                      stroke="#4a5279"
+                      strokeWidth={0.45}
+                      style={{
+                        default: { outline: 'none' },
+                        hover: { fill: '#2c3562', outline: 'none' },
+                        pressed: { outline: 'none' },
+                      }}
+                    />
+                  ))
+                }
+              </Geographies>
+
+              {visible.map((event) => {
+                const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
+                const isSelected = selected.id === event.id
+                const isBooked = state.activeEventId === event.id
+                return (
+                  <Marker key={event.id} coordinates={[event.longitude, event.latitude]}>
+                    <g
+                      className={
+                        'world-marker ' +
+                        'tier-' + event.circuitTier +
+                        (event.format === 'ONLINE' ? ' online' : ' lan') +
+                        (isSelected ? ' selected' : '') +
+                        (isBooked ? ' booked' : '') +
+                        (locked ? ' locked' : '')
+                      }
+                      onClick={() => setSelectedId(event.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={event.name}
+                    >
+                      <circle r={isSelected ? 8 : 6} />
+                      <circle className="world-marker-pulse" r={isSelected ? 14 : 11} />
+                      <text textAnchor="middle" y={-13}>
+                        {event.format === 'ONLINE' ? '● ' : ''}{event.circuitTier === 1 ? event.city : event.name}
+                      </text>
+                    </g>
+                  </Marker>
+                )
+              })}
+            </ZoomableGroup>
+          </ComposableMap>
+
+          <div className="world-map-legend">
+            <span><i className="tier1" /> T1 LAN</span>
+            <span><i className="tier2" /> T2</span>
+            <span><i className="tier3" /> T3</span>
+            <span><i className="online" /> ONLINE</span>
           </div>
-        </aside>
 
-        <div className="world-map-stage">
-          <svg viewBox="0 0 1000 520" role="img" aria-label="Карта мира с турнирами">
-            <defs>
-              <linearGradient id="mapGlow" x1="0" x2="1">
-                <stop offset="0%" stopColor="#7161d9" stopOpacity=".42" />
-                <stop offset="100%" stopColor="#3e3a8a" stopOpacity=".16" />
-              </linearGradient>
-            </defs>
-            <path className="world-land" d="M90 108l110-46 95 14 67 46-15 54-58 25-26 41-90-8-68-51-25-44z" />
-            <path className="world-land" d="M282 243l65 12 38 55-8 95-47 77-36-18-17-92-27-65z" />
-            <path className="world-land" d="M443 86l105-30 102 23 64-14 88 32 95 68-12 55-75 5-53-30-46 26-49-10-31 36-80-14-27-54-77-14-28-34z" />
-            <path className="world-land" d="M548 236l63 12 49 42 17 96-43 75-62-21-43-96 5-70z" />
-            <path className="world-land" d="M822 352l76-18 54 39-22 54-79 10-47-42z" />
-            <path className="world-grid-line" d="M0 130h1000M0 260h1000M0 390h1000M250 0v520M500 0v520M750 0v520" />
-          </svg>
-
-          {visible.map((event) => {
-            const locked = level < event.unlockLevel
-            return (
-              <button
-                key={event.id}
-                className={'world-pin tier-' + event.tier.toLowerCase() + (selected.id === event.id ? ' active' : '') + (locked ? ' locked' : '') + (state.activeEventId === event.id ? ' booked' : '')}
-                style={{ left: event.x + '%', top: event.y + '%' }}
-                onClick={() => setSelectedId(event.id)}
-                aria-label={event.name + (locked ? ', locked' : '')}
-              >
-                <i />
-                <span>{locked ? 'LVL ' + event.unlockLevel : event.city}</span>
-              </button>
-            )
-          })}
-
-          <div className="world-map-caption">
-            <span>{active ? active.name.toUpperCase() + ' BOOKED' : 'GLOBAL EVENT NETWORK'}</span>
-            <small>{visible.filter((event) => level >= event.unlockLevel).length} available events</small>
-          </div>
+          {visible.length === 0 && (
+            <div className="world-map-empty">Нет ивентов под текущий фильтр.</div>
+          )}
         </div>
 
-        <aside className="world-event-panel">
-          <div className="world-event-tier">{selected.tier}-TIER</div>
+        <aside className="world-event-panel world-event-panel-v2">
+          <div className="world-event-tier">TIER {selected.circuitTier} · {selected.format}</div>
           <span>{selected.region.toUpperCase()} · {selected.city.toUpperCase()}</span>
           <h2>{selected.name}</h2>
           <p>{selected.label}</p>
 
           <div className="world-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>
-            <div><span>ENTRY COST</span><b>{eventCost}</b></div>
+            <div><span>{selected.format === 'ONLINE' ? 'ENTRY / OPS' : 'TRAVEL + OPS'}</span><b>{eventCost}</b></div>
             <div><span>FATIGUE</span><b>+{selected.fatigue}</b></div>
             <div><span>UNLOCK</span><b>LVL {selected.unlockLevel}</b></div>
           </div>
@@ -113,7 +175,7 @@ export function WorldMap({
           <div className="world-budget-preview">
             <span>EVENT WEEK</span>
             <strong>{weeklyOps.toLocaleString('ru-RU')} CASH</strong>
-            <small>{booked ? 'Поездка уже оплачена' : 'payroll + travel + service'}</small>
+            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'payroll + event ops' : 'payroll + travel + service'}</small>
           </div>
 
           {booked ? (

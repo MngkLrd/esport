@@ -3,7 +3,7 @@ import { collectPackCards, createPackState, type PackCard, type PackState } from
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
-import { advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -821,11 +821,42 @@ export const tacticInfo: Record<TacticalPlan, { name: string; description: strin
 const eventDifficulty = (event: TournamentEvent | null) =>
   event ? (event.circuitTier === 1 ? 7 : event.circuitTier === 2 ? 3 : 0) : 0
 
+const worldRosterSnapshot = (state: GameState, teamId: string): TournamentRosterPlayer[] =>
+  worldLineup(state.world, teamId).map((player) => ({
+    playerKey: player.key,
+    alias: player.alias,
+    role: player.role,
+    rating: player.currentRating,
+    profileId: player.profileId,
+    country: player.country,
+  }))
+
 const generateOpponent = (state: GameState, mode: MatchMode, rng: () => number) => {
   const tune = modeTuning[mode]
   const event = tournamentForId(state.activeEventId)
-  const rating = Math.round(clamp(53 + state.reputation * 0.4 + tune.difficulty + eventDifficulty(event) + (rng() - 0.5) * 9, 48, 96))
-  return { name: pick(opponentNames, rng), rating }
+  const targetRating = Math.round(clamp(53 + state.reputation * 0.4 + tune.difficulty + eventDifficulty(event) + (rng() - 0.5) * 9, 48, 96))
+  const candidates = state.world.teams
+    .filter((team) => team.rosterKeys.length >= 5)
+    .map((team) => ({ team, delta: Math.abs(team.rating - targetRating) }))
+    .sort((a, b) => a.delta - b.delta || a.team.vrsRank - b.team.vrsRank)
+    .slice(0, 12)
+
+  if (candidates.length) {
+    const chosen = candidates[Math.floor(rng() * Math.min(6, candidates.length))].team
+    return {
+      name: chosen.name,
+      rating: chosen.rating,
+      teamId: chosen.id,
+      roster: worldRosterSnapshot(state, chosen.id),
+    }
+  }
+
+  return {
+    name: pick(opponentNames, rng),
+    rating: targetRating,
+    teamId: null,
+    roster: [] as TournamentRosterPlayer[],
+  }
 }
 
 const tacticalModifier = (active: Player[], tactic: TacticalPlan) => {

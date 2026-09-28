@@ -5873,3 +5873,556 @@ button.primary:hover,
 .app-main-play .tactical-opponent .opponent-line {
   margin-top: 7px;
 }
+
+
+/* =========================================================
+   Game-frame pass: fixed screens, stronger panels, dense UI
+   ========================================================= */
+.fifa-mode-tile,
+.world-map-layout-v2,
+.world-event-panel-v2,
+.tournament-hub,
+.tactical-board,
+.tactical-control,
+.lineup-board,
+.market-layout,
+.pack-box,
+.calendar-board,
+.calendar-upcoming,
+.world-vrs-panel {
+  border-width: 2px;
+}
+
+.fifa-mode-tile,
+.pack-box,
+.calendar-board,
+.calendar-upcoming,
+.world-vrs-panel {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+/* HOME stays a mode-select screen instead of stretching like a landing page */
+.app-main-hq .fifa-home-screen {
+  grid-template-rows: 32px minmax(390px, 540px) 16px;
+  align-content: center;
+}
+.app-main-hq .fifa-mode-grid {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: 1.32fr .94fr .94fr;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.app-main-hq .fifa-mode-hero {
+  grid-row: span 2;
+  min-height: 0;
+}
+.app-main-hq .fifa-mode-tile {
+  border-color: rgba(158,171,255,.28);
+  padding: 18px 20px;
+}
+.app-main-hq .fifa-mode-tile h2 { font-size: clamp(22px, 2.15vw, 34px); }
+.app-main-hq .fifa-mode-tile > strong { font-size: 25px; }
+.app-main-hq .fifa-mini-lineup { margin-top: 14px; }
+
+/* Calendar and Packs are full game screens. The page never scrolls; their content panes can. */
+.app-main-calendar,
+.app-main-packs {
+  height: calc(100dvh - 74px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 42px minmax(0, 1fr);
+}
+.app-main-calendar .screen-back-button,
+.app-main-packs .screen-back-button {
+  align-self: center;
+  margin: 4px 22px;
+  min-height: 30px;
+}
+
+/* CALENDAR */
+.app-main-calendar .season-calendar-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 6px 22px 14px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+}
+.calendar-screen-header { margin-bottom: 7px; }
+.calendar-screen-header h1 { font-size: clamp(28px, 3.2vw, 46px); }
+.calendar-controls { margin-bottom: 9px; }
+.calendar-controls button {
+  min-height: 40px;
+  padding-inline: 16px;
+  border-width: 2px;
+  font-size: 9px;
+}
+.calendar-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 355px);
+  gap: 12px;
+}
+.calendar-board {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 46px minmax(0, 1fr);
+  border-style: solid;
+  border-color: rgba(145,159,255,.22);
+  background: #0b1028;
+}
+.calendar-board-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 2px solid rgba(145,159,255,.13);
+}
+.calendar-board-title span {
+  color: #7f8ba9;
+  font: 900 9px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.calendar-board-title b {
+  color: #e7ecfb;
+  font: 900 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-strip {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  border: 0;
+  background: rgba(145,159,255,.12);
+  gap: 2px;
+}
+.calendar-strip > article {
+  min-height: 0;
+  padding: 13px 12px;
+  background: #0d122b;
+}
+.calendar-strip > article.is-today {
+  box-shadow: inset 0 0 0 2px var(--fifa-cyan);
+}
+.calendar-strip header {
+  grid-template-columns: 1fr auto;
+  margin-bottom: 13px;
+}
+.calendar-strip header span {
+  font-size: 9px;
+  color: #8793b0;
+}
+.calendar-strip header small {
+  font-size: 8px;
+  color: #5f6b88;
+}
+.calendar-strip header b {
+  font-size: clamp(24px,2vw,32px);
+}
+.calendar-strip > article > div { gap: 7px; }
+.calendar-event {
+  min-height: 29px;
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-left-width: 3px;
+  font: 800 8px/1.15 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-event.club-match {
+  border-left-color: var(--fifa-cyan);
+  background: rgba(32,230,255,.13);
+  color: #fff;
+}
+.calendar-more {
+  color: #64708d;
+  font: 900 7px/1 Arial,sans-serif;
+  letter-spacing: .08em;
+}
+.calendar-upcoming {
+  min-height: 0;
+  margin-top: 0;
+  display: grid;
+  grid-template-rows: 46px minmax(0, 1fr);
+  border-color: rgba(145,159,255,.22);
+  overflow: hidden;
+}
+.calendar-upcoming-title {
+  min-height: 46px;
+  border-bottom-width: 2px;
+}
+.calendar-upcoming-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.calendar-upcoming-scroll > article {
+  display: grid;
+  grid-template-columns: 52px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 13px;
+  min-height: 78px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(145,159,255,.1);
+}
+.calendar-upcoming-scroll > article.active {
+  background: linear-gradient(90deg, rgba(32,230,255,.1), transparent 75%);
+}
+.calendar-tier {
+  width: 42px;
+  height: 42px;
+  border-width: 2px;
+  font-size: 13px;
+}
+.calendar-event-copy strong {
+  font-size: 13px;
+  line-height: 1.1;
+}
+.calendar-event-copy span,
+.calendar-event-copy small { font-size: 8px; }
+.calendar-event-state b { font-size: 8px; }
+
+/* PACK STORE: one decision at a time, collection is a separate pane */
+.app-main-packs .fifa-packs-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 6px 22px 14px;
+  display: grid;
+  grid-template-rows: auto 44px minmax(0, 1fr);
+  overflow: hidden;
+}
+.packs-screen-header { margin-bottom: 5px; }
+.packs-screen-header h1 { font-size: clamp(28px,3.2vw,46px); }
+.pack-section-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  border-bottom: 2px solid rgba(145,159,255,.15);
+}
+.pack-section-tabs button {
+  min-width: 150px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #717d9b;
+  cursor: pointer;
+  font: 1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing: .08em;
+}
+.pack-section-tabs button.active {
+  border-bottom-color: var(--fifa-cyan);
+  color: #fff;
+}
+.pack-section-tabs button span {
+  margin-left: 7px;
+  color: var(--fifa-cyan);
+}
+.pack-store-frame {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px;
+  padding-top: 12px;
+}
+.fifa-pack-shelf {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  overflow: hidden;
+  padding: 0;
+}
+.fifa-pack-shelf .pack-box {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  border-color: rgba(145,159,255,.25);
+  scroll-snap-align: unset;
+}
+.fifa-pack-shelf .pack-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--fifa-cyan);
+}
+.fifa-pack-shelf .pack-artwork {
+  height: clamp(150px, 23vh, 220px);
+  margin: -14px -14px 14px;
+}
+.fifa-pack-shelf .pack-box > span {
+  margin-top: 2px;
+  font-size: 8px;
+}
+.fifa-pack-shelf .pack-box h2 {
+  margin: 8px 0 10px;
+  font-size: clamp(18px,1.7vw,25px);
+  line-height: .95;
+}
+.pack-box-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.pack-box-footer > strong {
+  color: #fff;
+  font: 1000 16px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.pack-box-footer > strong small {
+  display: block;
+  margin-top: 3px;
+  color: #687490;
+  font: 800 7px/1 Arial,sans-serif;
+}
+.pack-rarity-pips {
+  display: flex;
+  gap: 5px;
+}
+.pack-rarity-pips i {
+  width: 7px;
+  height: 20px;
+  background: linear-gradient(180deg,#b45cff,#596cff);
+}
+.fifa-pack-shelf .fifa-primary-cta {
+  min-height: 44px;
+  margin-top: 0;
+}
+.pack-store-summary {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  padding: 18px;
+  border: 2px solid rgba(145,159,255,.2);
+  background: linear-gradient(160deg, rgba(90,58,188,.2), rgba(10,14,35,.9));
+}
+.pack-store-summary span {
+  color: #7783a1;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.pack-store-summary b {
+  margin: 8px 0 4px;
+  font: 1000 54px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.pack-store-summary small { color: #7b86a2; font-size: 9px; }
+.pack-collection-frame {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  padding-top: 10px;
+}
+.pack-collection-frame .collection-tools {
+  margin: 0 0 10px;
+}
+.pack-clear { margin-left: auto; }
+.pack-collection-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.pack-collection-scroll .collection-grid {
+  margin: 0;
+  padding-bottom: 10px;
+}
+
+/* WORLD MAP / VRS switch */
+.world-view-switch {
+  min-height: 38px;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  margin-bottom: 7px;
+  border-bottom: 2px solid rgba(145,159,255,.13);
+}
+.world-view-switch button {
+  min-width: 130px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #75819f;
+  cursor: pointer;
+  font: 1000 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing: .08em;
+}
+.world-view-switch button.active {
+  color: #fff;
+  border-bottom-color: var(--fifa-cyan);
+}
+.world-view-switch > span {
+  margin-left: auto;
+  align-self: center;
+  color: var(--fifa-cyan);
+  font: 1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.app-main-world .fifa-world-screen.world-view-map {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.app-main-world .fifa-world-screen.world-view-vrs {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.world-vrs-panel { display: none; }
+.world-view-vrs .world-filter-strip,
+.world-view-vrs .world-map-layout-v2 { display: none; }
+.world-view-vrs .world-vrs-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  grid-template-rows: 42px minmax(0, 1fr);
+  border-style: solid;
+  border-color: rgba(145,159,255,.22);
+  background: #0b1028;
+  overflow: hidden;
+}
+.vrs-table-head {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: 58px minmax(180px,.8fr) minmax(360px,1.5fr) 100px;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 2px solid rgba(145,159,255,.14);
+  color: #697591;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.vrs-table-head span:last-child { text-align: right; }
+.vrs-table-scroll {
+  grid-column: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.vrs-row {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 58px minmax(180px,.8fr) minmax(360px,1.5fr) 100px;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(145,159,255,.08);
+}
+.vrs-row:hover { background: rgba(255,255,255,.025); }
+.vrs-row.is-player {
+  position: relative;
+  background: linear-gradient(90deg, rgba(32,230,255,.13), rgba(32,230,255,.025));
+  box-shadow: inset 4px 0 0 var(--fifa-cyan);
+}
+.vrs-rank {
+  color: #7e89a5;
+  font: 1000 16px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.vrs-row.is-player .vrs-rank { color: var(--fifa-cyan); }
+.vrs-team {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.vrs-team strong {
+  overflow: hidden;
+  color: #eef2ff;
+  font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vrs-team small {
+  color: #5f6b87;
+  font: 800 7px/1 Arial,sans-serif;
+  letter-spacing: .08em;
+}
+.vrs-lineup {
+  min-width: 0;
+  display: flex;
+  gap: 5px;
+  overflow: hidden;
+}
+.vrs-lineup span {
+  overflow: hidden;
+  max-width: 100px;
+  padding: 5px 7px;
+  border: 1px solid rgba(145,159,255,.12);
+  background: rgba(255,255,255,.025);
+  color: #929db8;
+  font: 800 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vrs-points {
+  text-align: right;
+  color: #fff;
+  font: 1000 17px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.vrs-club-pin {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px;
+  border-left: 2px solid rgba(145,159,255,.14);
+  background:
+    radial-gradient(circle at 100% 0, rgba(32,230,255,.16), transparent 45%),
+    #0d132d;
+}
+.vrs-club-pin span {
+  color: var(--fifa-cyan);
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .13em;
+}
+.vrs-club-pin strong {
+  margin: 12px 0 5px;
+  font: 1000 62px/.85 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.vrs-club-pin b {
+  color: #fff;
+  font: 1000 18px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.vrs-club-pin small {
+  margin-top: 12px;
+  color: #687490;
+  font: 800 7px/1.35 Arial,sans-serif;
+}
+
+/* Responsive fallback remains block-scrolling, never page-scrolling on game screens */
+@media (max-width: 1100px) {
+  .app-main-hq .fifa-home-screen { grid-template-rows: 32px minmax(360px, 500px) 16px; }
+  .app-main-hq .fifa-mode-grid { grid-template-columns: 1.15fr 1fr; grid-template-rows: repeat(3,minmax(0,1fr)); }
+  .app-main-hq .fifa-mode-hero { grid-row: span 2; }
+  .calendar-layout { grid-template-columns: minmax(0,1fr) 300px; }
+  .calendar-strip { grid-template-columns: repeat(4, minmax(145px,1fr)); grid-template-rows: repeat(4,minmax(0,1fr)); overflow-x: auto; }
+  .fifa-pack-shelf { grid-template-columns: repeat(2,minmax(0,1fr)); overflow-y: auto; padding-right: 4px; }
+  .pack-store-frame { grid-template-columns: minmax(0,1fr) 150px; }
+  .world-view-vrs .world-vrs-panel { grid-template-columns: minmax(0,1fr) 180px; }
+  .vrs-table-head,
+  .vrs-row { grid-template-columns: 50px minmax(160px,.8fr) minmax(260px,1.2fr) 90px; }
+}
+@media (max-width: 760px) {
+  .app-main-calendar,
+  .app-main-packs { height: auto; min-height: calc(100dvh - 74px); overflow: visible; display: block; }
+  .app-main-calendar .season-calendar-screen,
+  .app-main-packs .fifa-packs-screen { height: auto; overflow: visible; display: block; }
+  .calendar-layout { grid-template-columns: 1fr; }
+  .calendar-strip { display: flex; min-height: 250px; overflow-x: auto; }
+  .calendar-strip > article { min-width: 155px; min-height: 210px; }
+  .calendar-upcoming { max-height: 390px; margin-top: 10px; }
+  .pack-section-tabs { height: 44px; margin-bottom: 10px; }
+  .pack-store-frame { display: block; }
+  .fifa-pack-shelf { display: flex; overflow-x: auto; overflow-y: hidden; }
+  .fifa-pack-shelf .pack-box { flex: 0 0 78vw; min-height: 460px; }
+  .pack-store-summary { display: none; }
+  .world-view-vrs .world-vrs-panel { grid-template-columns: 1fr; grid-template-rows: 42px minmax(0,1fr); }
+  .vrs-club-pin { display: none; }
+  .vrs-table-head,
+  .vrs-row { grid-template-columns: 44px minmax(130px,1fr) 90px; }
+  .vrs-table-head span:nth-child(3),
+  .vrs-lineup { display: none; }
+}

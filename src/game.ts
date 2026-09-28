@@ -1,5 +1,6 @@
 import { REAL_PLAYERS } from './players'
 import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
+import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -135,6 +136,7 @@ export interface GameState {
   streak: number
   seasonPoints: number
   staffEnergy: number
+  activeEventId: string | null
   welcomeComplete: boolean
   roster: Player[]
   startingFive: string[]
@@ -449,6 +451,7 @@ export const createInitialState = (): GameState => ({
   streak: 0,
   seasonPoints: 0,
   staffEnergy: 3,
+  activeEventId: null,
   welcomeComplete: false,
   roster: [],
   startingFive: [],
@@ -547,6 +550,7 @@ export const migrateState = (raw: unknown): GameState => {
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
       managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
+      activeEventId: typeof parsed.activeEventId === 'string' ? parsed.activeEventId : null,
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
@@ -696,9 +700,13 @@ export const tacticInfo: Record<TacticalPlan, { name: string; description: strin
   structured: { name: 'Структурно', description: 'Вознаграждает понимание игры, гранаты и лидерство. Разброс ниже.' },
 }
 
+const eventDifficulty = (event: TournamentEvent | null) =>
+  event ? (event.tier === 'S' ? 7 : event.tier === 'A' ? 3 : 0) : 0
+
 const generateOpponent = (state: GameState, mode: MatchMode, rng: () => number) => {
   const tune = modeTuning[mode]
-  const rating = Math.round(clamp(53 + state.reputation * 0.4 + tune.difficulty + (rng() - 0.5) * 9, 48, 94))
+  const event = tournamentForId(state.activeEventId)
+  const rating = Math.round(clamp(53 + state.reputation * 0.4 + tune.difficulty + eventDifficulty(event) + (rng() - 0.5) * 9, 48, 96))
   return { name: pick(opponentNames, rng), rating }
 }
 
@@ -764,6 +772,38 @@ const performanceRating = (player: Player, won: boolean, tactic: TacticalPlan, r
 export const weeklyPayroll = (state: GameState) =>
   state.roster.reduce((sum, player) => sum + (player.contractWeeks > 0 ? player.salary : 0), 0)
 
+export const canBookTournament = (state: GameState, eventId: string) => {
+  const event = tournamentForId(eventId)
+  if (!event) return { ok: false, reason: 'Событие недоступно.' }
+  const level = managerLevelFromXp(state.managerXp)
+  if (level < event.unlockLevel) return { ok: false, reason: 'Откроется на уровне менеджера ' + event.unlockLevel + '.' }
+  const cost = tournamentEntryCost(event)
+  if (state.credits < cost) return { ok: false, reason: 'Недостаточно средств на поездку и обслуживание.' }
+  if (state.seasonEnded) return { ok: false, reason: 'Сезон завершён.' }
+  return { ok: true, reason: '' }
+}
+
+export const bookTournament = (state: GameState, eventId: string): GameState => {
+  const event = tournamentForId(eventId)
+  const gate = canBookTournament(state, eventId)
+  if (!event || !gate.ok) return state
+  if (state.activeEventId === eventId) return state
+
+  const cost = tournamentEntryCost(event)
+  return {
+    ...state,
+    credits: Math.max(0, state.credits - cost),
+    activeEventId: event.id,
+    news: [{
+      id: 'event-' + event.id + '-' + state.week,
+      week: state.week,
+      kind: 'media' as const,
+      title: 'Следующая остановка — ' + event.city,
+      body: event.name + ' подтверждён. Поездка и обслуживание оплачены: ' + cost + ' кр. Призовой фонд: ' + event.prize + ' кр.',
+    }, ...state.news].slice(0, 50),
+  }
+}
+
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   if (!state.welcomeComplete) return { ok: false, reason: 'Сначала открой стартовый набор и собери пятёрку.' }
   if (state.seasonEnded || state.week > state.seasonLength) return { ok: false, reason: 'Сезон завершён. Открой итог и начни следующий сезон.' }
@@ -780,8 +820,10 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const gate = canPlayMatch(state, mode)
   if (!gate.ok) return state
 
-  const rng = mulberry32(hashSeed([state.seed, state.week, state.history.length, mode, tactic, state.startingFive.join(',')].join(':')))
-  const opponent = generateOpponent(state, mode, rng)
+  const event = tournamentForId(state.activeEventId)
+  const effectiveMode = event ? tournamentMode(event) : mode
+  const rng = mulberry32(hashSeed([state.seed, state.week, state.history.length, effectiveMode, tactic, state.activeEventId ?? 'open', state.startingFive.join(',')].join(':')))
+  const opponent = generateOpponent(state, effectiveMode, rng)
   const active = getStartingFive(state.roster, state.startingFive)
   const baseRating = teamRating(state.roster, state.startingFive, state.lineupContinuity)
   const tacticMod = tacticalModifier(active, tactic)
@@ -817,19 +859,24 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     .sort((a, b) => b.rating - a.rating)
   const mvpPerf = performances[0]
   const mvp = active.find((p) => p.id === mvpPerf.playerId) ?? active[0]
-  const tune = modeTuning[mode]
-  const reward = Math.round(tune.baseReward * (won ? 1 : 0.42))
+  const tune = modeTuning[effectiveMode]
+  const reward = event
+    ? Math.round(event.prize * (won ? 1 : 0.16))
+    : Math.round(tune.baseReward * (won ? 1 : 0.42))
   const payroll = weeklyPayroll(state)
   const net = reward - payroll
   const fansDelta = Math.round(tune.fans * (won ? 1 : 0.25))
-  const story = narrative(state, opponent.name, won, mvp, mode, tactic, net, rng)
+  const storyBase = narrative(state, opponent.name, won, mvp, effectiveMode, tactic, net, rng)
+  const story = event
+    ? { ...storyBase, detail: storyBase.detail + ' Турнир: ' + event.name + ', ' + event.city + '.' }
+    : storyBase
 
   const activeIds = new Set(active.map((p) => p.id))
   const roster = state.roster.map((player) => {
     const played = activeIds.has(player.id)
     const formDelta = played ? (won ? 3 : -2) + Math.round((rng() - 0.5) * 3) : Math.round((rng() - 0.5) * 2)
     const moraleDelta = played ? (won ? 4 : -4) : (won ? 1 : 0)
-    const fatigueGain = tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10
+    const fatigueGain = (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * 0.45) : 0)
     return {
       ...player,
       form: clamp(player.form + formDelta),
@@ -844,7 +891,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     id: 'm-' + state.week + '-' + state.history.length,
     season: state.season,
     week: state.week,
-    mode,
+    mode: effectiveMode,
     tactic,
     opponent: opponent.name,
     opponentRating: opponent.rating,
@@ -900,8 +947,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
         season: state.season,
         wins: state.wins + (won ? 1 : 0),
         losses: state.losses + (won ? 0 : 1),
-        points: state.seasonPoints + (won ? (mode === 'cup' ? 5 : mode === 'showmatch' ? 3 : 1) : 0),
-        reputation: clamp(state.reputation + (won ? (mode === 'cup' ? 5 : 3) : -1)),
+        points: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
+        reputation: clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
         fans: Math.max(0, state.fans + fansDelta),
         credits: Math.max(0, state.credits + net),
         bestPlayer,
@@ -922,11 +969,11 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     seasonSummary,
     credits: Math.max(0, state.credits + net),
     fans: Math.max(0, state.fans + fansDelta),
-    reputation: clamp(state.reputation + (won ? (mode === 'cup' ? 5 : 3) : -1)),
+    reputation: clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
     wins: state.wins + (won ? 1 : 0),
     losses: state.losses + (won ? 0 : 1),
     streak: won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
-    seasonPoints: state.seasonPoints + (won ? (mode === 'cup' ? 5 : mode === 'showmatch' ? 3 : 1) : 0),
+    seasonPoints: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
     staffEnergy: 3,
     roster,
     lineupContinuity: clamp(state.lineupContinuity + (won ? 3 : 1), 0, 100),
@@ -937,8 +984,9 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
       ...contractNews,
       ...state.news,
     ].slice(0, 50),
-    managerXp: state.managerXp + (mode === 'cup' ? 220 : mode === 'showmatch' ? 150 : 90) + (won ? 50 : 15),
-    packTokens: state.packTokens + (won ? (mode === 'cup' ? 90 : mode === 'showmatch' ? 60 : 35) : 15),
+    managerXp: state.managerXp + (effectiveMode === 'cup' ? 220 : effectiveMode === 'showmatch' ? 150 : 90) + (won ? 50 : 15),
+    packTokens: state.packTokens + (won ? (effectiveMode === 'cup' ? 90 : effectiveMode === 'showmatch' ? 60 : 35) : 15),
+    activeEventId: null,
     lastPayroll: payroll,
     lastWeekNet: net,
   }
@@ -962,6 +1010,7 @@ export const startNextSeason = (state: GameState): GameState => {
     losses: 0,
     streak: 0,
     seasonPoints: 0,
+    activeEventId: null,
     roster,
     news: [{
       id: 'season-start-' + (state.season + 1),
@@ -1174,13 +1223,14 @@ export const scout = (state: GameState, rawBrief: ScoutBrief = state.scoutBrief 
     .slice(0, Math.min(120, pool.length))
     .map((identity, index) => makeProspect(state, index, identity, rng, brief))
 
+  const shortlistSize = managerLevelFromXp(state.managerXp) >= 5 ? 7 : managerLevelFromXp(state.managerXp) >= 3 ? 6 : 5
   const ranked = generated
     .sort((a, b) =>
       Number(b.salary <= brief.maxSalary) - Number(a.salary <= brief.maxSalary) ||
       scoutFitScore(b, brief) - scoutFitScore(a, brief) ||
       overall(b) - overall(a),
     )
-    .slice(0, 5)
+    .slice(0, shortlistSize)
 
   return {
     ...state,
@@ -1193,7 +1243,7 @@ export const scout = (state: GameState, rawBrief: ScoutBrief = state.scoutBrief 
       week: state.week,
       kind: 'scout' as const,
       title: 'Скаутский shortlist готов',
-      body: 'Запрос: ' + (brief.role === 'Any' ? 'любая роль' : brief.role) + ', зарплата до ' + brief.maxSalary + ' кр./нед. В shortlist попали пять кандидатов, отсортированных по пригодности под задачу.',
+      body: 'Запрос: ' + (brief.role === 'Any' ? 'любая роль' : brief.role) + ', зарплата до ' + brief.maxSalary + ' кр./нед. Штаб вернул ' + ranked.length + ' кандидатов.',
     }, ...state.news].slice(0, 50),
   }
 }

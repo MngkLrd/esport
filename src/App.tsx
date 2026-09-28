@@ -33,7 +33,7 @@ import { PlayerPortrait } from './PlayerPortrait'
 import { MatchRadar } from './MatchRadar'
 import { RosterBoard } from './RosterBoard'
 import { tournamentForId, tournamentMode } from './events'
-import { formatGameDate, formatGameTime } from './calendar'
+import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
 import { opponentForPlayerMatch } from './tournamentEngine'
 import { ScoutMarket } from './ScoutMarket'
 import { FifaHome } from './FifaHome'
@@ -310,6 +310,12 @@ function App() {
   const activeEventMode = activeEvent ? tournamentMode(activeEvent) : null
   const bracketMatch = activeTournamentMatch(state)
   const bracketOpponent = opponentForPlayerMatch(state.activeTournament)
+  const currentPlayGate = canPlayMatch(state, activeEventMode ?? 'scrim')
+  const canAdvanceTournamentClock = Boolean(
+    state.activeTournament &&
+    (!bracketMatch || compareGameTime(state.now, bracketMatch.scheduledAt) < 0) &&
+    !state.pendingDecision,
+  )
   const unreadNews = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
   const unread = Math.min(9, unreadNews + (state.pendingDecision ? 1 : 0))
 
@@ -554,7 +560,7 @@ function App() {
                 <div className="control-label">{activeEvent ? 'EVENT FORMAT' : 'УРОВЕНЬ СЕРИИ'}</div>
                 {activeEventMode ? (() => { const gate = canPlayMatch(state, activeEventMode); return <button className="tactical-mode selected" disabled={!gate.ok} onClick={() => play(activeEventMode)}><span>{modeInfo[activeEventMode].name}</span><small>{RISK_LABELS[modeInfo[activeEventMode].risk]} · {gate.ok ? 'TIER ' + activeEvent?.circuitTier + ' · ' + activeEvent?.format : gate.reason}</small></button> })() : (['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => { const gate = canPlayMatch(state, mode); return <button key={mode} className={'tactical-mode ' + (mode === 'scrim' ? 'selected' : '')} disabled={!gate.ok} onClick={() => play(mode)}><span>{modeInfo[mode].name}</span><small>{RISK_LABELS[modeInfo[mode].risk]} · {gate.ok ? 'готово' : gate.reason}</small></button> })}
               </div>
-              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong>{activeEvent && !canPlayMatch(state, activeEventMode ?? 'scrim').ok ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button> : <button className="hq-primary-action" disabled={!canPlayMatch(state, activeEventMode ?? 'scrim').ok} onClick={() => play(activeEventMode ?? 'scrim')}>{activeEvent ? 'ИГРАТЬ МАТЧ' : 'НАЧАТЬ СЕРИЮ'} <span>→</span></button>}{warnings.length > 0 && <small>{warnings[0]}</small>}</div>
+              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong>{activeEvent && canAdvanceTournamentClock ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button> : <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode ?? 'scrim')}>{activeEvent ? 'ИГРАТЬ МАТЧ' : 'НАЧАТЬ СЕРИЮ'} <span>→</span></button>}{!currentPlayGate.ok && !canAdvanceTournamentClock ? <small>{currentPlayGate.reason}</small> : warnings.length > 0 && <small>{warnings[0]}</small>}</div>
             </div>
             {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
           </section>

@@ -4606,3 +4606,195 @@ button.primary:hover,
   letter-spacing: .1em;
   pointer-events: none;
 }
+
+
+/* canvas tactical simulation v2 */
+.match-radar-shell-canvas {
+  grid-template-rows: 76px minmax(0, 1fr) 5px;
+}
+.match-radar-main-canvas {
+  grid-template-columns: minmax(0, 1fr) 270px;
+}
+.match-radar-canvas-wrap {
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.match-radar-canvas {
+  display: block;
+  width: min(100%, calc(94vh - 125px));
+  max-height: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border: 1px solid rgba(145,159,255,.16);
+  background: #090d1c;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.24);
+  cursor: crosshair;
+}
+.match-radar-context {
+  position: absolute;
+  left: 28px;
+  bottom: 26px;
+  display: grid;
+  gap: 5px;
+  min-width: 190px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--fifa-cyan);
+  background: rgba(5,8,20,.78);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.match-radar-context span,
+.match-radar-context small {
+  color: #7784a2;
+  font: 900 7px/1 Arial, sans-serif;
+  letter-spacing: .11em;
+}
+.match-radar-context b {
+  color: #eef2ff;
+  font: 1000 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+}
+.match-radar-roster-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 14px;
+  overflow-y: auto;
+}
+.radar-side-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 7px 0 5px;
+  padding: 8px 8px 7px;
+  border-bottom: 1px solid rgba(145,159,255,.15);
+}
+.radar-side-heading span {
+  font: 900 8px/1 Arial, sans-serif;
+  letter-spacing: .08em;
+}
+.radar-side-heading b {
+  font: 1000 14px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+}
+.radar-side-heading.home span,
+.radar-side-heading.home b { color: #4ba7ff; }
+.radar-side-heading.away span,
+.radar-side-heading.away b { color: #f2a04b; }
+.match-radar-roster-v2 > button {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(145,159,255,.08);
+  background: transparent;
+  color: #dce3f4;
+  text-align: left;
+  cursor: pointer;
+}
+.match-radar-roster-v2 > button:hover,
+.match-radar-roster-v2 > button.selected {
+  background: rgba(255,255,255,.045);
+}
+.match-radar-roster-v2 > button.selected {
+  box-shadow: inset 2px 0 0 var(--fifa-cyan);
+}
+.match-radar-roster-v2 > button > i {
+  width: 7px;
+  height: 7px;
+  margin: 0;
+  border-radius: 50%;
+  background: #4ba7ff;
+}
+.radar-side-heading.away ~ button > i { background: #f2a04b; }
+.match-radar-roster-v2 > button > span {
+  display: grid;
+  gap: 3px;
+}
+.match-radar-roster-v2 > button > span b {
+  font: 900 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+}
+.match-radar-roster-v2 > button > span small {
+  color: #6f7b9a;
+  font: 800 7px/1 Arial, sans-serif;
+}
+.match-radar-roster-v2 > button > strong {
+  color: #dfe6f7;
+  font: 900 9px/1 Arial, sans-serif;
+}
+.match-radar-roster-v2 > button.dead { opacity: .33; }
+.match-radar-roster-v2 > button.dead > strong { color: #ff6579; }
+.radar-selected-player {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(145,159,255,.13);
+  background: rgba(255,255,255,.025);
+}
+.radar-selected-player span {
+  color: var(--fifa-cyan);
+  font: 900 7px/1 Arial, sans-serif;
+  letter-spacing: .1em;
+}
+.radar-selected-player b {
+  font: 1000 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+}
+.radar-selected-player small {
+  color: #7e89a6;
+  font: 800 8px/1 Arial, sans-serif;
+}
+.radar-playback-controls {
+  display: grid;
+  grid-template-columns: 1fr 54px 1fr;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+.radar-playback-controls button {
+  min-height: 36px;
+  margin: 0;
+  border: 1px solid rgba(145,159,255,.18);
+  background: rgba(9,13,31,.9);
+  color: #9ca8c6;
+  cursor: pointer;
+  font: 900 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+}
+.radar-playback-controls button:hover {
+  color: #fff;
+  border-color: var(--fifa-cyan);
+}
+.match-radar-feed {
+  top: 28px;
+  right: 28px;
+}
+.match-radar-feed div {
+  min-width: 230px;
+}
+.match-radar-feed b.our { color: #4ba7ff; }
+.match-radar-feed b.their { color: #f2a04b; }
+.match-radar-result {
+  z-index: 10;
+}
+.match-radar-progress {
+  position: relative;
+  overflow: hidden;
+}
+.match-radar-progress i {
+  transition: width .08s linear;
+}
+@media (max-width: 1100px) {
+  .match-radar-main-canvas { grid-template-columns: minmax(0, 1fr) 220px; }
+  .match-radar-canvas-wrap { padding: 10px; }
+}
+@media (max-width: 820px) {
+  .match-radar-main-canvas { grid-template-columns: 1fr; }
+  .match-radar-roster-v2 { display: none; }
+  .match-radar-canvas {
+    width: min(100%, calc(94vh - 120px));
+  }
+}

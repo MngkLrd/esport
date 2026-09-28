@@ -106,7 +106,7 @@ function PlayerVisualCard({ player, starter = false, compact = false, onClick }:
   return (
     <CollectiblePlayerCard
       rating={ovr}
-      tier={cardTier(ovr)}
+      tier={player.cardRarity ? tierForPackRarity(player.cardRarity) : cardTier(ovr)}
       role={player.role}
       alias={player.alias}
       team={player.team}

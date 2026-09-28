@@ -12,7 +12,6 @@ import {
   restPlayer,
   teamRating,
   trainPlayer,
-  weeklyPayroll,
   type GameState,
   type LineupSlot,
   type Player,
@@ -133,7 +132,6 @@ export function RosterBoard({
 
   const rating = teamRating(state.roster, state.startingFive, state.lineupContinuity)
   const chem = chemistry(state.roster, state.startingFive, state.lineupContinuity)
-  const payroll = weeklyPayroll(state)
   const starterIds = useMemo(() => new Set(state.startingFive), [state.startingFive])
   const bench = useMemo(
     () => state.roster.filter((player) => !starterIds.has(player.id)).sort((a, b) => overall(b) - overall(a)),
@@ -237,8 +235,8 @@ export function RosterBoard({
     <section className="screen roster-screen game-roster-screen">
       <div className="roster-heading game-roster-heading">
         <div>
-          <span className="eyebrow">SQUAD BOARD · {state.roster.length}/8 PLAYERS</span>
-          <h1>Собери боевую пятёрку.</h1>
+          <span className="eyebrow">ACTIVE LINEUP</span>
+          <h1>STARTING FIVE</h1>
         </div>
         <div className="roster-score">
           <b>{rating}</b>
@@ -248,11 +246,9 @@ export function RosterBoard({
       </div>
 
       <div className="roster-sheet-summary game-roster-summary">
-        <span><b>{state.startingFive.length}/5</b> СТАРТ</span>
-        <span><b>{bench.length}</b> ЗАПАС</span>
-        <span><b>{state.packs.inventory.length}</b> КАРТ В КОЛЛЕКЦИИ</span>
-        <span><b>{payroll}</b> КР./НЕД.</span>
-        <button className="secondary" onClick={onOpenScout}>Найти игрока</button>
+        <span><b>{state.startingFive.length}/5</b> START</span>
+        <span><b>{bench.length}</b> BENCH</span>
+        <button className="secondary" onClick={onOpenScout}>TRANSFER MARKET</button>
       </div>
 
       <div className="fifa-squad-overview">

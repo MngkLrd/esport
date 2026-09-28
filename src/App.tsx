@@ -25,11 +25,11 @@ import {
   clearPackCollection,
   type PackRoll,
 } from './packState'
-import { CreditsView } from './CreditsView'
 import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { RosterBoard } from './RosterBoard'
+import { tournamentForId } from './events'
 import { ScoutMarket } from './ScoutMarket'
 import { FifaHome } from './FifaHome'
 import { WorldMap } from './WorldMap'
@@ -45,7 +45,7 @@ const PacksView = lazy(() =>
 )
 
 const saveRepository = createBrowserSaveRepository()
-type Tab = 'HQ' | 'World' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile' | 'AI Director' | 'Credits'
+type Tab = 'HQ' | 'World' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'
 
 const TAB_LABELS: Record<Tab, string> = {
   HQ: 'HOME',
@@ -56,8 +56,6 @@ const TAB_LABELS: Record<Tab, string> = {
   Scout: 'TRANSFERS',
   Inbox: 'NEWS',
   Profile: 'PROFILE',
-  'AI Director': 'DIRECTOR',
-  Credits: 'CREDITS',
 }
 
 const ROLE_LABELS: Record<Player['role'], string> = {
@@ -82,12 +80,6 @@ const RISK_LABELS: Record<string, string> = {
   Medium: 'Средний',
   High: 'Высокий',
 }
-
-const DIRECTOR_LEVEL_LABELS = {
-  urgent: 'СРОЧНО',
-  watch: 'ВНИМАНИЕ',
-  good: 'НОРМА',
-} as const
 
 const format = new Intl.NumberFormat('ru-RU')
 
@@ -305,6 +297,7 @@ function App() {
   const warnings = useMemo(() => lineupWarnings(state.roster, state.startingFive), [state.roster, state.startingFive])
   const payroll = useMemo(() => weeklyPayroll(state), [state])
   const last = state.history[0]
+  const activeEvent = tournamentForId(state.activeEventId)
   const unread = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
 
   useEffect(() => {
@@ -364,6 +357,13 @@ function App() {
     setState((current) => ({ ...current, packs: clearPackCollection(current.packs) }))
   }
 
+  const bookEvent = (eventId: string) => {
+    const result = executeGameCommand(state, { type: 'BOOK_EVENT', eventId })
+    if (result.state === state) return
+    setState(result.state)
+    openTab('Play')
+  }
+
   const welcomeCards = useMemo(() => rollWelcomePack(state.saveId), [state.saveId])
 
   const finishWelcome = () => {
@@ -372,37 +372,7 @@ function App() {
     setTab('HQ')
   }
 
-  const directorNotes = useMemo(() => {
-    const notes: { level: 'urgent' | 'watch' | 'good'; title: string; body: string }[] = []
-    const tired = starters.filter((p) => p.fatigue >= 65)
-    const expiring = state.roster.filter((p) => p.contractWeeks <= 2)
-    const runway = payroll > 0 ? state.credits / payroll : 99
 
-    if (state.startingFive.length !== 5) {
-      notes.push({ level: 'urgent', title: 'Состав не укомплектован', body: 'Матч недоступен, пока не выбраны ровно пять игроков с действующими контрактами.' })
-    }
-    if (expiring.length) {
-      notes.push({ level: 'urgent', title: 'Риск по контрактам', body: 'До окончания контрактов осталось не больше двух недель: ' + expiring.map((p) => p.alias).join(', ') + '.' })
-    }
-    if (tired.length) {
-      notes.push({ level: 'watch', title: 'Высокая усталость', body: 'Усталость выше 65 у: ' + tired.map((p) => p.alias).join(', ') + '. Перед сложной серией лучше дать отдых или посадить в запас.' })
-    }
-    if (runway < 3) {
-      notes.push({ level: 'watch', title: 'Короткий финансовый запас', body: 'Текущих средств хватит примерно на ' + runway.toFixed(1) + ' зарплатных цикла без дохода от матчей.' })
-    }
-    if (!starters.some((player) => player.role === 'IGL')) {
-      notes.push({ level: 'watch', title: 'В пятёрке нет IGL', body: 'Симуляция реально снижает рейтинг активного состава, если в нём нет IGL.' })
-    }
-    if (!starters.some((player) => player.role === 'AWP')) {
-      notes.push({ level: 'watch', title: 'В пятёрке нет AWP', body: 'Без выделенного AWP активный состав получает штраф к контролю карты.' })
-    }
-    if (!notes.length) {
-      notes.push({ level: 'good', title: 'Клуб в рабочем состоянии', body: 'Состав корректен, контракты стабильны, критических рисков по усталости и деньгам сейчас нет.' })
-    }
-    return notes.slice(0, 4)
-  }, [state, starters, payroll, warnings])
-
-  const tabs: Tab[] = ['HQ', 'World', 'Roster', 'Play', 'Scout', 'Packs', 'Inbox', 'Profile', 'AI Director', 'Credits']
   const managerProgress = managerLevelProgress(state.managerXp)
 
   return (
@@ -477,23 +447,17 @@ function App() {
           <span>SEASON {state.season}</span>
           <b>WEEK {state.week}/{state.seasonLength}</b>
           <i />
-          <span>OVR {rating}</span>
-          <span>CHEM {chem}</span>
+          <span>{activeEvent ? 'NEXT · ' + activeEvent.city.toUpperCase() : 'NO EVENT BOOKED'}</span>
         </div>
         <div className="fifa-wallets">
-          <button onClick={() => openTab('Profile')}><span>LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
+          <button onClick={() => openTab('Inbox')} className={unread > 0 ? 'has-unread' : ''}><span>INBOX</span><b>{unread > 0 ? unread + ' NEW' : 'CLEAR'}</b></button>
+          <button onClick={() => openTab('Profile')}><span>MANAGER LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
           <div><span>CLUB CASH</span><b>{format.format(state.credits)}</b></div>
           <div><span>PACK TOKENS</span><b>{format.format(state.packTokens)}</b></div>
         </div>
       </header>
 
-      <nav className="fifa-screen-nav" aria-label="Game modes">
-        {tabs.map((item) => (
-          <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}>
-            {TAB_LABELS[item]}{item === 'Inbox' && unread > 0 && <span className="badge">{unread}</span>}
-          </button>
-        ))}
-      </nav>
+
 
       <main>
         {tab === 'HQ' && (
@@ -512,15 +476,15 @@ function App() {
                 <button className="fifa-primary-cta" onClick={() => setState((current) => executeGameCommand(current, { type: 'START_NEXT_SEASON' }).state)}>START SEASON {state.season + 1} <span>→</span></button>
               </article>
             )}
-            <FifaHome state={state} starters={starters} onOpen={(mode) => openTab(mode)} />
+            <FifaHome state={state} starters={starters} unread={unread} onOpen={(mode) => openTab(mode)} />
           </>
         )}
 
-        {tab === 'World' && <WorldMap state={state} onPrepareMatch={() => openTab('Play')} />}
+        {tab === 'World' && <WorldMap state={state} onBook={bookEvent} onPrepareMatch={() => openTab('Play')} />}
 
         {tab === 'Play' && (
           <section className="screen tactical-screen">
-            <div className="tactical-heading"><div><span className="eyebrow">TACTICAL DESK · WEEK {state.week}</span><h1>Решение до серии.</h1></div><div className="tactical-budget"><span>ЗАРПЛАТА</span><b>{payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
+            <div className="tactical-heading"><div><span className="eyebrow">{activeEvent ? activeEvent.city.toUpperCase() + ' · ' + activeEvent.tier + '-TIER' : 'TACTICAL DESK · WEEK ' + state.week}</span><h1>{activeEvent ? activeEvent.name : 'Решение до серии.'}</h1></div><div className="tactical-budget"><span>{activeEvent ? 'PRIZE POOL' : 'ЗАРПЛАТА'}</span><b>{activeEvent ? activeEvent.prize.toLocaleString('ru-RU') : payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
             <div className="tactical-board">
               <section className="tactical-team tactical-team-home"><div className="tactical-team-label">НАШ КЛУБ · {rating} OVR</div><div className="tactical-team-name">{starters.map((player) => player.alias).join(' · ')}</div><div className="tactical-team-meta"><span>{chem} химия</span><span>{state.lineupContinuity} стабильность</span></div><div className="tactical-mini-roster">{starters.map((player) => <button key={player.id} onClick={() => setSelectedPlayer(player)}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><b>{player.alias}</b><small>{ROLE_LABELS[player.role]}</small></button>)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>Изменить пятёрку</button></section>
               <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
@@ -576,55 +540,41 @@ function App() {
 
         {tab === 'Inbox' && (
           <section className="screen newsroom-screen">
-            <div className="section-title">
+            <div className="fifa-screen-header">
               <div>
-                <div className="eyebrow">CLUB NEWSROOM · {state.news.length} СОБЫТИЙ</div>
-                <h1>Новости, которые меняют сезон.</h1>
+                <span>CLUB FEED · WEEK {state.week}</span>
+                <h1>INBOX</h1>
+              </div>
+              <div className="fifa-screen-rank"><small>EVENTS</small><b>{state.news.length}</b></div>
+            </div>
+            <div className="newsroom-layout">
+              <div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
+              <div className="timeline">
+                {state.news.map((item) => {
+                  const target: Tab | null =
+                    item.kind === 'contract' || item.kind === 'lineup' ? 'Roster' :
+                    item.kind === 'scout' ? 'Scout' :
+                    item.kind === 'match' ? 'Play' :
+                    item.kind === 'media' ? 'World' :
+                    item.kind === 'finance' ? 'Profile' : null
+                  return (
+                    <article key={item.id}>
+                      <div className="timeline-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
+                      <div>
+                        <span>Неделя {item.week} · {NEWS_KIND_LABELS[item.kind]}</span>
+                        <h2>{item.title}</h2>
+                        <p>{item.body}</p>
+                        {target && <button className="news-action" onClick={() => openTab(target)}>ОТКРЫТЬ <b>→</b></button>}
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             </div>
-            <div className="newsroom-layout"><div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div><div className="timeline">
-              {state.news.map((item) => (
-                <article key={item.id}>
-                  <div className="timeline-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
-                  <div>
-                    <span>Неделя {item.week} · {NEWS_KIND_LABELS[item.kind]}</span>
-                    <h2>{item.title}</h2>
-                    <p>{item.body}</p>
-                  </div>
-                </article>
-              ))}
-            </div></div>
+            <button className="danger-button save-reset" onClick={reset}>Сбросить сохранение</button>
           </section>
         )}
-
-        {tab === 'AI Director' && (
-          <section className="screen narrow">
-            <div className="section-title">
-              <div>
-                <div className="eyebrow">ЛОКАЛЬНЫЙ ДИРЕКТОР · АНАЛИЗ ТЕКУЩЕГО СОСТОЯНИЯ</div>
-              </div>
-            </div>
-
-            <div className="director-grid">
-              {directorNotes.map((note) => (
-                <article className={'director-note ' + note.level} key={note.title}>
-                  <span>{DIRECTOR_LEVEL_LABELS[note.level]}</span>
-                  <h2>{note.title}</h2>
-                  <p>{note.body}</p>
-                </article>
-              ))}
-            </div>
-
-            <button className="danger-button" onClick={reset}>Сбросить сохранение</button>
-          </section>
-        )}
-        {tab === 'Credits' && <CreditsView />}
       </main>
-
-      <footer>
-        <span>ESPORT AI Manager · локальный фан-проект</span>
-        <button className="footer-link" onClick={() => openTab('Credits')}>Источники и авторство</button>
-      </footer>
     </div>
   )
 }

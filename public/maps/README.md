@@ -1,6 +1,9 @@
 # CS2 radar assets
 
-Radar PNGs are sourced from the public `MurkyYT/cs2-map-icons` repository for the match-simulation prototype.
-That project states the tactical map radars are Counter-Strike 2/Valve assets. They are used here only as in-game visual references for the fan-project prototype.
+The PNG files in this directory are tactical radar/overview images, not map logos/icons.
 
-Source repository: https://github.com/MurkyYT/cs2-map-icons
+Source:
+- https://github.com/MurkyYT/cs2-map-icons
+- paths: `images/radars/*_radar_psd.png`
+
+The repository states these assets are extracted from Counter-Strike 2 game files. They are used here in the fan-project match-simulation prototype.

@@ -298,7 +298,8 @@ function App() {
   const payroll = useMemo(() => weeklyPayroll(state), [state])
   const last = state.history[0]
   const activeEvent = tournamentForId(state.activeEventId)
-  const unread = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
+  const unreadNews = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
+  const unread = Math.min(9, unreadNews + (state.pendingDecision ? 1 : 0))
 
   useEffect(() => {
     saveRepository.save(state)
@@ -362,6 +363,12 @@ function App() {
     if (result.state === state) return
     setState(result.state)
     openTab('Play')
+  }
+
+  const resolveDecision = (choice: 'a' | 'b') => {
+    const result = executeGameCommand(state, { type: 'RESOLVE_DECISION', choice })
+    if (result.state === state) return
+    setState(result.state)
   }
 
   const welcomeCards = useMemo(() => rollWelcomePack(state.saveId), [state.saveId])
@@ -545,8 +552,19 @@ function App() {
                 <span>CLUB FEED · WEEK {state.week}</span>
                 <h1>INBOX</h1>
               </div>
-              <div className="fifa-screen-rank"><small>EVENTS</small><b>{state.news.length}</b></div>
+              <div className="fifa-screen-rank"><small>EVENTS</small><b>{state.news.length + (state.pendingDecision ? 1 : 0)}</b></div>
             </div>
+            {state.pendingDecision && (
+              <article className={'club-decision-card decision-' + state.pendingDecision.kind}>
+                <span>DECISION REQUIRED</span>
+                <h2>{state.pendingDecision.title}</h2>
+                <p>{state.pendingDecision.body}</p>
+                <div>
+                  <button onClick={() => resolveDecision('a')}>{state.pendingDecision.optionA}</button>
+                  <button onClick={() => resolveDecision('b')}>{state.pendingDecision.optionB}</button>
+                </div>
+              </article>
+            )}
             <div className="newsroom-layout">
               <div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
               <div className="timeline">

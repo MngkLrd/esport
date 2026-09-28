@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  advanceCareerTo,
+  advanceToNextTournamentMatch,
   applyWelcomePack,
   assignLineupSlot,
   bookTournament,
@@ -74,18 +76,19 @@ describe('P0 career flow', () => {
     )
   })
 
-  it('advances a match deterministically and closes the season at its boundary', () => {
+  it('separates match time from the career clock and closes a season by date', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
     const a = playMatch({ ...ready, seasonLength: 2 }, 'scrim', 'balanced')
     const b = playMatch({ ...ready, seasonLength: 2 }, 'scrim', 'balanced')
     expect(a).toEqual(b)
-    expect(a.week).toBe(2)
+    expect(a.week).toBe(1)
     expect(a.history).toHaveLength(1)
-    expect(a.roster.every((player) => player.contractWeeks < 12)).toBe(true)
+    expect(a.now).not.toBe(ready.now)
+    expect(a.roster.map((player) => player.contractWeeks)).toEqual(ready.roster.map((player) => player.contractWeeks))
 
     const continued = resolveClubDecision(a, 'a')
-    const final = playMatch({ ...continued, seasonLength: 2 }, 'scrim', 'balanced')
+    const final = advanceCareerTo(continued, '2026-10-20T09:00:00')
     expect(final.seasonEnded).toBe(true)
     expect(final.seasonSummary?.season).toBe(1)
     expect(canPlayMatch(final, 'scrim').ok).toBe(false)
@@ -126,7 +129,7 @@ describe('P0 career flow', () => {
     expect(lineupFitScore(awp, 'AWP')).toBeGreaterThan(lineupFitScore(support, 'AWP'))
   })
 
-  it('turns a world-map booking into a real season event', () => {
+  it('turns a world-map booking into a multi-match tournament run', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
     const levelTwo = { ...ready, managerXp: 500 }
@@ -134,13 +137,18 @@ describe('P0 career flow', () => {
 
     const booked = bookTournament(levelTwo, 'helsinki')
     expect(booked.activeEventId).toBe('helsinki')
+    expect(booked.activeTournament?.matches.length).toBeGreaterThan(10)
     expect(booked.credits).toBe(levelTwo.credits - 420)
 
-    const played = playMatch(booked, 'scrim', 'balanced')
-    expect(played.activeEventId).toBeNull()
+    const atMatch = advanceToNextTournamentMatch(booked)
+    expect(atMatch.now).not.toBe(booked.now)
+    expect(canPlayMatch(atMatch, 'showmatch').ok).toBe(true)
+
+    const played = playMatch(atMatch, 'showmatch', 'balanced')
+    expect(played.activeEventId).toBe('helsinki')
+    expect(played.activeTournament).toBeTruthy()
     expect(played.history[0].mode).toBe('showmatch')
-    expect(played.history[0].reward).toBeGreaterThan(0)
-    expect(played.news.some((item) => item.title.includes('Helsinki') || item.body.includes('Nordic Masters'))).toBe(true)
+    expect(played.history[0].tournamentId).toBe('helsinki')
   })
 
   it('uses manager progression to unlock deeper scouting', () => {
@@ -165,6 +173,28 @@ describe('P0 career flow', () => {
     const resolved = resolveClubDecision(played, 'a')
     expect(resolved.pendingDecision).toBeNull()
     expect(canPlayMatch(resolved, 'scrim').ok).toBe(true)
+  })
+
+  it('keeps online tournaments free and scheduled in real calendar time', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const booked = bookTournament(ready, 'eu-open-1')
+    expect(booked.credits).toBe(ready.credits)
+    expect(booked.activeTournament?.startsAt).toContain('2026-09-30')
+    expect(canPlayMatch(booked, 'scrim').ok).toBe(false)
+
+    const atMatch = advanceToNextTournamentMatch(booked)
+    expect(canPlayMatch(atMatch, 'scrim').ok).toBe(true)
+    expect(atMatch.activeTournament?.matches.some((match) => match.status === 'complete' && ![match.teamAId, match.teamBId].includes('club'))).toBe(true)
+  })
+
+  it('charges payroll when calendar weeks pass instead of after every match', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const payroll = ready.roster.reduce((sum, player) => sum + player.salary, 0)
+    const advanced = advanceCareerTo(ready, '2026-10-05T09:00:00')
+    expect(advanced.credits).toBe(Math.max(0, ready.credits - payroll))
+    expect(advanced.roster.every((player, index) => player.contractWeeks === Math.max(0, ready.roster[index].contractWeeks - 1))).toBe(true)
   })
 
   it('targets scouting to a requested role and persists the brief', () => {
@@ -210,7 +240,7 @@ describe('P0 career flow', () => {
     const legacy = createInitialState()
     const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }
     const migrated = migrateState(raw)
-    expect(migrated.version).toBe(9)
+    expect(migrated.version).toBe(10)
     expect(migrated.credits).toBe(legacy.credits)
     expect(migrated.packTokens).toBe(2600)
     expect(migrated.managerXp).toBe(0)

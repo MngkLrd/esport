@@ -149,6 +149,59 @@ body::before{
 .sim-head-stat b{font:1000 26px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-head-stat span{color:var(--sim-muted);font-size:9px}
 
+/* DESKTOP SCREEN CONTRACT ------------------------------------------------
+   Legacy styles still define several .app-main-* containers as 2-row grids
+   (back button + old .screen). The new back button is absolute, so new
+   sim-screen pages were auto-placed into the legacy 42px row and appeared
+   "missing". New sim screens own the whole game viewport explicitly. */
+
+@media (min-width:901px){
+  .app-main.app-main-world,
+  .app-main.app-main-calendar,
+  .app-main.app-main-play,
+  .app-main.app-main-training,
+  .app-main.app-main-roster,
+  .app-main.app-main-packs,
+  .app-main.app-main-scout,
+  .app-main.app-main-inbox,
+  .app-main.app-main-profile{
+    display:block !important;
+    grid-template-rows:none !important;
+    grid-template-columns:none !important;
+    align-items:initial !important;
+    height:calc(100dvh - 74px) !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+
+  .app-main > .sim-screen{
+    position:absolute;
+    inset:0;
+    width:min(1700px,100%);
+    max-width:1700px;
+    height:100%;
+    min-height:0;
+    margin:0 auto;
+    box-sizing:border-box;
+  }
+
+  .app-main.app-main-world > .screen-back-button,
+  .app-main.app-main-calendar > .screen-back-button,
+  .app-main.app-main-play > .screen-back-button,
+  .app-main.app-main-training > .screen-back-button,
+  .app-main.app-main-roster > .screen-back-button,
+  .app-main.app-main-packs > .screen-back-button,
+  .app-main.app-main-scout > .screen-back-button,
+  .app-main.app-main-inbox > .screen-back-button,
+  .app-main.app-main-profile > .screen-back-button{
+    position:absolute !important;
+    top:10px !important;
+    left:18px !important;
+    margin:0 !important;
+    align-self:auto !important;
+  }
+}
+
 /* HOME: recognizable, only polish --------------------------------------- */
 
 .app-main-hq{height:calc(100dvh - 74px);overflow:hidden}

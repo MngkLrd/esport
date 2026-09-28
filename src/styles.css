@@ -7344,3 +7344,109 @@ button.primary:hover,
   .app-main-world .world-event-rail button { height: 56px; }
   .app-main-world .world-event-timeline { min-height: 104px; }
 }
+
+
+/* =========================================================
+   Matchday portraits v2
+   Compact cards need a dedicated portrait composition. HLTV bodyshots are
+   transparent square cutouts, so "contain" at 100% made the player look like
+   a tiny head strip on dark jerseys. Scale and anchor the cutout like a real
+   collectible-card portrait, and remove the decorative monogram in lobby.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  .app-main-play .tactical-mini-roster .visual-player-card.compact,
+  .app-main-play .tactical-opponent-roster .match-opponent-card {
+    min-width: 0;
+    aspect-ratio: 5 / 7;
+    overflow: hidden;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-photo,
+  .app-main-play .tactical-opponent-roster .visual-photo {
+    top: 15%;
+    left: 2%;
+    right: 2%;
+    height: 62%;
+    overflow: hidden;
+    place-items: end center;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(255,255,255,.08), transparent 44%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 86%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 86%, transparent 100%);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-photo img,
+  .app-main-play .tactical-opponent-roster .visual-photo img {
+    position: absolute;
+    top: auto;
+    left: -11%;
+    right: auto;
+    bottom: -14%;
+    width: 122%;
+    height: 122%;
+    object-fit: contain;
+    object-position: center bottom;
+    mix-blend-mode: normal;
+    filter:
+      drop-shadow(0 8px 10px rgba(0,0,0,.34))
+      saturate(1.02)
+      contrast(1.03);
+    opacity: 1;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-monogram,
+  .app-main-play .tactical-opponent-roster .visual-monogram {
+    display: none;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-identity,
+  .app-main-play .tactical-opponent-roster .visual-identity {
+    z-index: 6;
+    left: 6%;
+    right: 6%;
+    bottom: 8%;
+    padding: 5% 4% 4%;
+    background:
+      linear-gradient(90deg, transparent, rgba(4,8,20,.68) 22%, rgba(4,8,20,.68) 78%, transparent);
+    -webkit-backdrop-filter: blur(1px);
+    backdrop-filter: blur(1px);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-stats {
+    display: none;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-rarity,
+  .app-main-play .tactical-opponent-roster .visual-rarity {
+    display: none;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-card-top,
+  .app-main-play .tactical-opponent-roster .visual-card-top {
+    z-index: 7;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-country,
+  .app-main-play .tactical-opponent-roster .visual-country {
+    z-index: 7;
+  }
+}
+
+/* On short laptop screens keep the same bodyshot treatment instead of the
+   legacy fixed-height photo strip. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .app-main-play .tactical-mini-roster .visual-photo,
+  .app-main-play .tactical-opponent-roster .visual-photo {
+    top: 14%;
+    height: 63%;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-photo img,
+  .app-main-play .tactical-opponent-roster .visual-photo img {
+    width: 126%;
+    height: 126%;
+    left: -13%;
+    bottom: -16%;
+  }
+}

@@ -29,7 +29,7 @@ import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { RosterBoard } from './RosterBoard'
-import { tournamentForId } from './events'
+import { tournamentForId, tournamentMode } from './events'
 import { ScoutMarket } from './ScoutMarket'
 import { FifaHome } from './FifaHome'
 import { WorldMap } from './WorldMap'
@@ -298,6 +298,7 @@ function App() {
   const payroll = useMemo(() => weeklyPayroll(state), [state])
   const last = state.history[0]
   const activeEvent = tournamentForId(state.activeEventId)
+  const activeEventMode = activeEvent ? tournamentMode(activeEvent) : null
   const unreadNews = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
   const unread = Math.min(9, unreadNews + (state.pendingDecision ? 1 : 0))
 
@@ -496,12 +497,15 @@ function App() {
             <div className="tactical-board">
               <section className="tactical-team tactical-team-home"><div className="tactical-team-label">НАШ КЛУБ · {rating} OVR</div><div className="tactical-team-name">{starters.map((player) => player.alias).join(' · ')}</div><div className="tactical-team-meta"><span>{chem} химия</span><span>{state.lineupContinuity} стабильность</span></div><div className="tactical-mini-roster">{starters.map((player) => <button key={player.id} onClick={() => setSelectedPlayer(player)}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><b>{player.alias}</b><small>{ROLE_LABELS[player.role]}</small></button>)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>Изменить пятёрку</button></section>
               <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
-              <section className="tactical-opponent"><span className="eyebrow">СЕРИЯ</span><h2>{modeInfo.scrim.name}</h2><p>{modeInfo.scrim.description}</p><div className="opponent-line"><b>?</b><span>СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН</span></div></section>
+              <section className="tactical-opponent"><span className="eyebrow">{activeEvent ? 'EVENT FORMAT' : 'СЕРИЯ'}</span><h2>{modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{modeInfo[activeEventMode ?? 'scrim'].description}</p><div className="opponent-line"><b>?</b><span>СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН</span></div></section>
             </div>
             <div className="tactical-control">
               <div className="tactical-plans"><div className="control-label">ПЛАН ИГРЫ</div>{(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}><span>{tacticInfo[plan].name}</span><small>{tacticInfo[plan].description}</small></button>)}</div>
-              <div className="tactical-modes"><div className="control-label">УРОВЕНЬ СЕРИИ</div>{(['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => { const gate = canPlayMatch(state, mode); return <button key={mode} className={'tactical-mode ' + (mode === 'scrim' ? 'selected' : '')} disabled={!gate.ok} onClick={() => play(mode)}><span>{modeInfo[mode].name}</span><small>{RISK_LABELS[modeInfo[mode].risk]} · {gate.ok ? 'готово' : gate.reason}</small></button> })}</div>
-              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong><button className="hq-primary-action" disabled={!canPlayMatch(state, 'scrim').ok} onClick={() => play('scrim')}>Начать серию <span>→</span></button>{warnings.length > 0 && <small>{warnings[0]}</small>}</div>
+              <div className="tactical-modes">
+                <div className="control-label">{activeEvent ? 'EVENT FORMAT' : 'УРОВЕНЬ СЕРИИ'}</div>
+                {activeEventMode ? (() => { const gate = canPlayMatch(state, activeEventMode); return <button className="tactical-mode selected" disabled={!gate.ok} onClick={() => play(activeEventMode)}><span>{modeInfo[activeEventMode].name}</span><small>{RISK_LABELS[modeInfo[activeEventMode].risk]} · {gate.ok ? activeEvent?.tier + '-TIER' : gate.reason}</small></button> })() : (['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => { const gate = canPlayMatch(state, mode); return <button key={mode} className={'tactical-mode ' + (mode === 'scrim' ? 'selected' : '')} disabled={!gate.ok} onClick={() => play(mode)}><span>{modeInfo[mode].name}</span><small>{RISK_LABELS[modeInfo[mode].risk]} · {gate.ok ? 'готово' : gate.reason}</small></button> })}
+              </div>
+              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong><button className="hq-primary-action" disabled={!canPlayMatch(state, activeEventMode ?? 'scrim').ok} onClick={() => play(activeEventMode ?? 'scrim')}>{activeEvent ? 'Играть турнир' : 'Начать серию'} <span>→</span></button>{warnings.length > 0 && <small>{warnings[0]}</small>}</div>
             </div>
             {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
           </section>

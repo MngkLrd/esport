@@ -715,7 +715,7 @@ export const tacticInfo: Record<TacticalPlan, { name: string; description: strin
 }
 
 const eventDifficulty = (event: TournamentEvent | null) =>
-  event ? (event.tier === 'S' ? 7 : event.tier === 'A' ? 3 : 0) : 0
+  event ? (event.circuitTier === 1 ? 7 : event.circuitTier === 2 ? 3 : 0) : 0
 
 const generateOpponent = (state: GameState, mode: MatchMode, rng: () => number) => {
   const tune = modeTuning[mode]
@@ -883,7 +883,7 @@ export const canBookTournament = (state: GameState, eventId: string) => {
   if (state.pendingDecision) return { ok: false, reason: 'Сначала закрой решение недели в Inbox.' }
   const level = managerLevelFromXp(state.managerXp)
   if (level < event.unlockLevel) return { ok: false, reason: 'Откроется на уровне менеджера ' + event.unlockLevel + '.' }
-  if (event.tier === 'S' && state.wins < 2 && state.reputation < 45) return { ok: false, reason: 'S-tier требует 2 победы или 45 репутации.' }
+  if (event.circuitTier === 1 && state.wins < 2 && state.reputation < 45) return { ok: false, reason: 'T1 требует 2 победы или 45 репутации.' }
   if (state.activeEventId && state.activeEventId !== eventId) return { ok: false, reason: 'Сначала заверши уже выбранный турнир.' }
   const cost = tournamentEntryCost(event)
   if (state.credits < cost) return { ok: false, reason: 'Недостаточно средств на поездку и обслуживание.' }

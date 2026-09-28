@@ -25,6 +25,7 @@ import { executeGameCommand } from '../src/gameCommands'
 import { generateMatchPlayback, simulationFrameAt, type SimRound } from '../src/matchSimulation'
 import { constrainRoundToNavigation, isNavigationSegmentClear, type RadarNavigationGrid } from '../src/radarNavigation'
 import { hoursBetween } from '../src/calendar'
+import { PLAYER_CLUB_WORLD_ID, createWorldState } from '../src/world'
 import { tournamentForId } from '../src/events'
 import {
   advanceTournamentTo,
@@ -38,6 +39,17 @@ import {
 describe('P0 career flow', () => {
   it('keeps game time deterministic across DST boundaries', () => {
     expect(hoursBetween('2026-10-24T09:00:00', '2026-10-26T09:00:00')).toBe(48)
+  })
+
+  it('seeds one persistent owner for every real player in the competitive world', () => {
+    const world = createWorldState()
+    expect(world.teams.length).toBeGreaterThan(30)
+    expect(world.teams.some((team) => team.name === 'Spirit')).toBe(true)
+    expect(world.teams.some((team) => team.name === 'Vitality')).toBe(true)
+
+    const rosterKeys = world.teams.flatMap((team) => team.rosterKeys)
+    expect(new Set(rosterKeys).size).toBe(rosterKeys.length)
+    expect(world.teams.every((team) => team.rosterKeys.length === 5)).toBe(true)
   })
 
   it('starts empty and creates one deterministic playable five from welcome cards', () => {
@@ -59,6 +71,13 @@ describe('P0 career flow', () => {
     expect(ready.startingFive).toHaveLength(5)
     expect(Object.values(ready.lineupSlots).filter(Boolean)).toHaveLength(5)
     expect(ready.roster.every((player) => player.playerKey && player.acquiredCardId)).toBe(true)
+    expect(ready.roster.every((player) => {
+      const key = player.playerKey!
+      return ready.world.players[key]?.teamId === PLAYER_CLUB_WORLD_ID
+    })).toBe(true)
+    expect(ready.world.teams.every((team) =>
+      ready.roster.every((player) => !player.playerKey || !team.rosterKeys.includes(player.playerKey)),
+    )).toBe(true)
     expect(ready.packs.inventory).toHaveLength(5)
     expect(canPlayMatch(ready, 'scrim').ok).toBe(true)
     expect(executeGameCommand(initial, { type: 'OPEN_WELCOME_PACK', cards: cardsA }).events[0].type).toBe('WelcomePackOpened')
@@ -210,6 +229,12 @@ describe('P0 career flow', () => {
     const booked = bookTournament(levelTwo, 'helsinki')
     expect(booked.activeEventId).toBe('helsinki')
     expect(booked.activeTournament?.matches.length).toBeGreaterThan(10)
+    expect(booked.activeTournament?.teams.filter((team) => !team.isPlayer).every((team) =>
+      Boolean(team.worldTeamId) && team.roster.length === 5,
+    )).toBe(true)
+    expect(booked.activeTournament?.teams.filter((team) => !team.isPlayer).some((team) =>
+      ['Spirit', 'Vitality', 'MOUZ', 'Falcons', 'G2', 'Natus Vincere'].includes(team.name),
+    )).toBe(true)
     expect(booked.credits).toBe(levelTwo.credits - 420)
 
     const atMatch = advanceToNextTournamentMatch(booked)
@@ -223,6 +248,10 @@ describe('P0 career flow', () => {
     expect(played.history[0].mode).toBe('showmatch')
     expect(played.history[0].tournamentId).toBe('helsinki')
     expect(played.history[0].opponent).toBe(bracketOpponent?.name)
+    expect(played.history[0].opponentRoster?.map((player) => player.alias)).toEqual(
+      bracketOpponent?.roster.map((player) => player.alias),
+    )
+    expect(played.history[0].opponentRoster).toHaveLength(5)
   })
 
   it('uses manager progression to unlock deeper scouting', () => {
@@ -347,6 +376,21 @@ describe('P0 career flow', () => {
     expect(signed.startingFive).toContain(prospect.id)
     expect(signed.startingFive).toHaveLength(5)
     expect(signed.credits).toBe(report.credits - strong.fee)
+    expect(signed.world.players[prospect.playerKey!]?.teamId).toBe(PLAYER_CLUB_WORLD_ID)
+    expect(signed.world.teams.every((team) => !team.rosterKeys.includes(prospect.playerKey!))).toBe(true)
+  })
+
+  it('advances AI-team form and roster world state with career time', () => {
+    const initial = createInitialState()
+    const sample = Object.values(initial.world.players).find((player) => player.teamId && player.teamId !== PLAYER_CLUB_WORLD_ID)!
+    const advanced = advanceCareerTo(initial, '2026-10-19T09:00:00')
+    expect(advanced.world.weeksSimulated).toBeGreaterThanOrEqual(3)
+    expect(advanced.world.players[sample.key]).toBeTruthy()
+    expect(
+      advanced.world.players[sample.key].form !== sample.form ||
+      advanced.world.players[sample.key].currentRating !== sample.currentRating ||
+      advanced.world.transferHistory.length > 0,
+    ).toBe(true)
   })
 
   it('migrates a legacy selected event into a full tournament run', () => {
@@ -362,7 +406,7 @@ describe('P0 career flow', () => {
       now: undefined,
     }
     const migrated = migrateState(legacy)
-    expect(migrated.version).toBe(10)
+    expect(migrated.version).toBe(11)
     expect(migrated.activeEventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.eventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.matches.length).toBe(7)
@@ -373,7 +417,7 @@ describe('P0 career flow', () => {
     const legacy = createInitialState()
     const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }
     const migrated = migrateState(raw)
-    expect(migrated.version).toBe(10)
+    expect(migrated.version).toBe(11)
     expect(migrated.credits).toBe(legacy.credits)
     expect(migrated.packTokens).toBe(2600)
     expect(migrated.managerXp).toBe(0)
@@ -392,7 +436,7 @@ describe('P0 career flow', () => {
 
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(10)
+    expect(migrated.version).toBe(11)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

@@ -5315,3 +5315,18 @@ button.primary:hover,
 @media (max-width: 760px) {
   .tournament-group-fixtures > div { grid-template-columns: 1fr; }
 }
+
+
+.calendar-controls button:disabled {
+  cursor: not-allowed;
+  opacity: .35;
+  border-color: rgba(145,159,255,.1);
+}
+.calendar-blocked {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: #ff9b70;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .09em;
+}

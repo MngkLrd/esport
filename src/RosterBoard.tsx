@@ -126,48 +126,27 @@ function PoolCard({
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void
   onDragEnd?: () => void
 }) {
-  const player = entry.player
-  const ovr = overall(player)
-  const tier = cardTier(ovr)
-
   return (
-    <button
-      type="button"
-      className={'sim-pool-card tier-' + tier + (starter ? ' is-in-squad' : '') + (selected ? ' is-selected' : '')}
-      onClick={onSelect}
-      draggable={entry.source === 'roster' && player.contractWeeks > 0}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
+    <div
+      className={
+        'sim-pool-card-shell' +
+        (starter ? ' is-in-squad' : '') +
+        (selected ? ' is-selected' : '') +
+        (entry.source === 'collection' ? ' is-collection' : ' is-club')
+      }
     >
-      <div className="sim-pool-card-copy">
-        <div className="sim-pool-card-top">
-          <strong>{ovr}</strong>
-          <span>{ROLE_LABELS[player.role]}</span>
-        </div>
-        <div className="sim-pool-card-name">
-          <b>{player.alias}</b>
-          <span>{player.team}</span>
-        </div>
-        <div className="sim-pool-card-stats">
-          <span><b>{player.aim}</b>AIM</span>
-          <span><b>{player.utility}</b>UTL</span>
-          <span><b>{player.gameSense}</b>POS</span>
-        </div>
-      </div>
-      <div className="sim-pool-card-photo">
-        <PlayerPortrait
-          alias={player.alias}
-          playerId={player.profileId}
-          alt={player.realName + ' (' + player.alias + ')'}
-          draggable={false}
-        />
-      </div>
-      <div className="sim-pool-card-flags">
-        <span>{countryFlag(player.country)}</span>
-        <span>{entry.source === 'collection' ? 'COLLECTION' : starter ? 'IN SQUAD' : 'CLUB'}</span>
-      </div>
-      {starter && <div className="sim-pool-card-lock">IN SQUAD</div>}
-    </button>
+      <GameCard
+        player={entry.player}
+        starter={starter}
+        draggable={entry.source === 'roster' && entry.player.contractWeeks > 0}
+        onOpen={onSelect}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      />
+      <span className="sim-pool-source-badge">
+        {entry.source === 'collection' ? 'COLLECTION' : starter ? 'IN SQUAD' : 'CLUB'}
+      </span>
+    </div>
   )
 }
 

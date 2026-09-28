@@ -6562,3 +6562,370 @@ button.primary:hover,
   .world-event-rail { display: flex; }
   .app-main-play .tactical-mini-roster, .app-main-play .tactical-opponent-roster { grid-template-columns: repeat(5, minmax(92px,1fr)); overflow-x: auto; }
 }
+
+
+/* =========================================================
+   Game-native interaction correction · 2026-09-28
+   ========================================================= */
+
+/* HOME: one fixed mode-select frame. Hero occupies one column; Practice closes the grid. */
+@media (min-width: 1101px) {
+  .app-main-hq .fifa-mode-grid {
+    grid-template-columns: 1.32fr .92fr .92fr .92fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .app-main-hq .fifa-mode-hero {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .app-main-hq .fifa-practice-tile {
+    grid-column: span 2;
+  }
+}
+.fifa-practice-tile {
+  background:
+    radial-gradient(circle at 78% 26%, rgba(85,255,210,.16), transparent 28%),
+    linear-gradient(145deg, #143d4b, #13183a 74%);
+}
+
+/* Current official fixture replaces the ordinary clock/calendar affordance. */
+.fifa-current-match-button {
+  min-width: 0;
+  min-height: 50px;
+  padding: 7px 16px;
+  border: 2px solid rgba(85,255,210,.58);
+  background:
+    linear-gradient(90deg, rgba(85,255,210,.16), rgba(32,230,255,.06)),
+    #0b1428;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 0 24px rgba(32,230,255,.08);
+}
+.fifa-current-match-button > span {
+  color: #55ffd2;
+  font: 1000 8px/1 Arial,sans-serif;
+  letter-spacing: .14em;
+}
+.fifa-current-match-button > b {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fifa-current-match-button > b em {
+  margin: 0 7px;
+  color: #66728e;
+  font-style: normal;
+  font-size: 8px;
+}
+.fifa-current-match-button > i { background: rgba(85,255,210,.28); }
+.fifa-current-match-button > strong {
+  color: #55ffd2;
+  font: 1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  white-space: nowrap;
+}
+.fifa-current-match-button:hover {
+  border-color: #55ffd2;
+  background:
+    linear-gradient(90deg, rgba(85,255,210,.22), rgba(32,230,255,.09)),
+    #0b1428;
+}
+
+/* Calendar: adjacent-month dates are not rendered. Dynamic week count grows the real month cells. */
+.calendar-empty-day {
+  min-width: 0;
+  min-height: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.008), transparent),
+    #090e24;
+  opacity: .32;
+}
+.calendar-month-grid > article {
+  padding: 10px 10px 8px;
+}
+.calendar-month-grid header {
+  margin-bottom: 8px;
+}
+.calendar-month-grid header b {
+  font-size: clamp(21px,1.8vw,28px);
+}
+.calendar-month-grid header span,
+.calendar-month-grid header small {
+  font-size: 8px;
+}
+.calendar-phase {
+  min-height: 29px;
+  padding: 6px 7px;
+}
+.calendar-phase b { font-size: 8px; }
+.calendar-phase span { font-size: 8px; }
+
+/* MATCHDAY: official fixture room only. Each team now receives full width for real 5:7 cards. */
+@media (min-width: 901px) {
+  .app-main-play .tactical-screen {
+    padding-top: 6px;
+    padding-bottom: 8px;
+  }
+  .app-main-play .tactical-board {
+    flex: 1 1 auto;
+    min-height: 390px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(170px,1fr) 34px minmax(170px,1fr);
+    align-items: stretch;
+    overflow: hidden;
+  }
+  .app-main-play .tactical-team,
+  .app-main-play .tactical-opponent {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(210px, .30fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 18px;
+    align-items: center;
+    padding: 9px 14px;
+  }
+  .app-main-play .tactical-team-home {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .app-main-play .tactical-opponent {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .app-main-play .tactical-team-label,
+  .app-main-play .tactical-opponent > .eyebrow {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .app-main-play .tactical-team-name,
+  .app-main-play .tactical-opponent > h2 {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .app-main-play .tactical-team-meta,
+  .app-main-play .tactical-opponent > p {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .app-main-play .tactical-edit,
+  .app-main-play .opponent-line {
+    grid-column: 1;
+    grid-row: 4;
+    align-self: end;
+  }
+  .app-main-play .tactical-mini-roster,
+  .app-main-play .tactical-opponent-roster {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    align-self: center;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(108px, 142px));
+    justify-content: start;
+    gap: 8px;
+    margin: 0;
+  }
+  .app-main-play .tactical-mini-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .match-opponent-card {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 5 / 7;
+    transform: none;
+    border-radius: 7px;
+  }
+  .app-main-play .tactical-vs {
+    flex-direction: row;
+    gap: 10px;
+    padding: 0;
+    border: 0;
+    background: rgba(255,255,255,.018);
+  }
+  .app-main-play .tactical-vs strong {
+    font-size: 24px;
+    color: #66728e;
+  }
+  .app-main-play .tactical-vs span { font-size: 8px; }
+  .app-main-play .tactical-control {
+    grid-template-columns: minmax(0,1.25fr) minmax(220px,.75fr) minmax(250px,.62fr);
+    gap: 10px;
+    padding-top: 8px;
+  }
+}
+.tactical-event-lock {
+  min-height: 58px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 2px solid rgba(32,230,255,.25);
+  background: rgba(32,230,255,.045);
+}
+.tactical-event-lock span {
+  color: #eef5ff;
+  font: 1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.tactical-event-lock small {
+  color: #6e7b99;
+  font: 800 8px/1.2 Arial,sans-serif;
+}
+.tactical-event-lock.muted-lock {
+  border-color: rgba(145,159,255,.14);
+  background: rgba(255,255,255,.018);
+}
+
+/* Dedicated practice room, deliberately separated from Matchday. */
+.app-main-training {
+  height: calc(100dvh - 74px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 42px minmax(0,1fr);
+}
+.app-main-training .screen-back-button {
+  align-self: center;
+  margin: 4px 22px;
+  min-height: 30px;
+}
+.practice-room-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 8px 28px 16px;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  overflow: hidden;
+}
+.practice-room-header { margin-bottom: 10px; }
+.practice-room-header h1 { font-size: clamp(30px,3.3vw,48px); }
+.practice-continuity {
+  width: 210px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 10px;
+  align-items: end;
+}
+.practice-continuity small {
+  color: #7a86a4;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .1em;
+}
+.practice-continuity b {
+  color: #55ffd2;
+  font: 1000 25px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.practice-continuity i {
+  grid-column: 1 / -1;
+  height: 5px;
+  overflow: hidden;
+  background: rgba(255,255,255,.09);
+}
+.practice-continuity em {
+  display: block;
+  height: 100%;
+  background: #55ffd2;
+}
+.practice-room-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 330px;
+  gap: 14px;
+}
+.practice-squad-panel,
+.practice-console {
+  min-height: 0;
+  border: 2px solid rgba(145,159,255,.25);
+  background: #0b1028;
+}
+.practice-squad-panel {
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+}
+.practice-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: start;
+}
+.practice-panel-head > div { display: grid; gap: 7px; }
+.practice-panel-head span {
+  color: #55ffd2;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .11em;
+}
+.practice-panel-head strong {
+  color: #eef3ff;
+  font: 1000 17px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.practice-card-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 168px));
+  justify-content: center;
+  align-content: center;
+  gap: 12px;
+}
+.practice-card-row .visual-player-card {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 5 / 7;
+  transform: none;
+}
+.practice-console {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.practice-console h2 {
+  margin: 8px 0 14px;
+  font: 1000 28px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.practice-rules {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 7px;
+  margin-bottom: 16px;
+}
+.practice-rules span {
+  min-height: 54px;
+  display: grid;
+  place-content: center;
+  gap: 3px;
+  border: 1px solid rgba(145,159,255,.14);
+  background: rgba(255,255,255,.02);
+  color: #697590;
+  text-align: center;
+  font: 900 7px/1 Arial,sans-serif;
+  letter-spacing: .08em;
+}
+.practice-rules b {
+  color: #fff;
+  font: 1000 18px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.practice-tactics {
+  display: grid;
+  gap: 7px;
+}
+.practice-tactics .tactical-plan { padding: 8px 10px; }
+.practice-tactics .tactical-plan span { font-size: 10px; }
+.practice-tactics .tactical-plan small { font-size: 8px; }
+.practice-start { margin-top: auto; }
+.practice-start:disabled {
+  cursor: not-allowed;
+  opacity: .38;
+}
+.practice-block-reason,
+.practice-next-official {
+  margin: 8px 0 0;
+  color: #ff9b70;
+  font: 800 8px/1.3 Arial,sans-serif;
+}
+.practice-next-official { color: #73809e; }
+
+@media (max-width: 1100px) {
+  .practice-room-layout { grid-template-columns: minmax(0,1fr) 280px; }
+  .practice-card-row { grid-template-columns: repeat(5,minmax(90px,1fr)); gap: 7px; }
+}

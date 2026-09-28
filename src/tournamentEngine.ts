@@ -86,6 +86,7 @@ export interface TournamentRun {
   matches: TournamentMatch[]
   earnedPrize: number
   prizePaid: boolean
+  vrsPaid?: boolean
   placement: string | null
 }
 
@@ -392,6 +393,7 @@ export const createTournamentRun = (
     matches,
     earnedPrize: 0,
     prizePaid: false,
+    vrsPaid: false,
     placement: null,
   }
 }

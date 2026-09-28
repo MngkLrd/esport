@@ -1,6 +1,6 @@
-import { REAL_PLAYERS, type RealPlayerRole } from './players'
+import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
 import type { PackCard } from './packState'
-import { playerPower, rarityForPlayer } from './packs'
+import { rarityForPlayer } from './packs'
 
 const ROLES: readonly RealPlayerRole[] = ['IGL', 'AWP', 'Entry', 'Support', 'Rifler']
 const hashSeed = (input: string) => {
@@ -17,6 +17,16 @@ const mulberry32 = (seed: number) => () => {
   value = Math.imul(value ^ (value >>> 15), value | 1)
   value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
   return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+}
+
+const powerFor = (player: RealPlayerSeed) => {
+  if (player.rating != null) return Math.max(58, Math.min(99, Math.round(60 + (player.rating - 0.8) * 62)))
+  const rank = player.vrsRank ?? 401
+  if (rank <= 10) return 92
+  if (rank <= 30) return 86
+  if (rank <= 75) return 80
+  if (rank <= 160) return 73
+  return Math.max(55, 68 - Math.floor((rank - 160) / 90))
 }
 
 export const rollWelcomePack = (saveId: string): PackCard[] => {
@@ -38,7 +48,7 @@ export const rollWelcomePack = (saveId: string): PackCard[] => {
       age: player.age,
       profileId: profileId ? Number(profileId) : null,
       role,
-      power: playerPower(player),
+      power: powerFor(player),
       rarity: rarityForPlayer(player),
       sourceRating: player.rating,
       sourceRank: player.vrsRank ?? null,

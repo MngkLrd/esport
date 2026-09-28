@@ -1893,10 +1893,22 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
   if (!player) return state
   const severance = player.contractWeeks <= 0 ? 0 : player.salary
   if (state.credits < severance) return state
+  const nextRoster = state.roster.filter((p) => p.id !== playerId)
+  const nextWorld = releaseWorldPlayerFromClub(state.world, player.playerKey, player.alias, state.now)
+  const clubKeys = new Set(
+    nextRoster
+      .map((candidate) => candidate.playerKey ?? worldPlayerByAlias(nextWorld, candidate.alias)?.key)
+      .filter((key): key is string => Boolean(key)),
+  )
+
   return {
     ...state,
+    world: nextWorld,
+    activeTournament: state.activeTournament
+      ? refreshTournamentTeamsFromWorld(state.activeTournament, nextWorld, clubKeys)
+      : null,
     credits: state.credits - severance,
-    roster: state.roster.filter((p) => p.id !== playerId),
+    roster: nextRoster,
     startingFive: state.startingFive.filter((id) => id !== playerId),
     lineupSlots: Object.fromEntries(
       LINEUP_SLOTS.map((slot) => [slot, currentLineupSlots(state)[slot] === playerId ? null : currentLineupSlots(state)[slot]]),

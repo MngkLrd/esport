@@ -308,6 +308,7 @@ describe('P0 career flow', () => {
     expect(migrated.activeEventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.eventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.matches.length).toBe(7)
+    expect(migrated.seasonLength).toBe(16)
   })
 
   it('migrates v8 saves into split club cash and pack-token economy', () => {

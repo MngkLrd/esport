@@ -13,6 +13,7 @@ import {
   migrateState,
   negotiateProspect,
   playMatch,
+  resolveClubDecision,
   scout,
   startNextSeason,
 } from '../src/game'
@@ -128,6 +129,19 @@ describe('P0 career flow', () => {
     expect(report.prospects).toHaveLength(6)
     expect(canBookTournament(levelThree, 'dallas').ok).toBe(true)
     expect(canBookTournament(ready, 'dallas').ok).toBe(false)
+  })
+
+  it('forces one weekly club decision before the next event loop', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const played = playMatch(ready, 'scrim', 'balanced')
+    expect(played.pendingDecision).toBeTruthy()
+    expect(canPlayMatch(played, 'scrim').ok).toBe(false)
+    expect(canBookTournament(played, 'helsinki').ok).toBe(false)
+
+    const resolved = resolveClubDecision(played, 'a')
+    expect(resolved.pendingDecision).toBeNull()
+    expect(canPlayMatch(resolved, 'scrim').ok).toBe(true)
   })
 
   it('targets scouting to a requested role and persists the brief', () => {

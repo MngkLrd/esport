@@ -241,7 +241,7 @@ export function ScoutMarket({
 
           <button
             type="button"
-            className="hq-primary-action market-search"
+            className="sim-primary-action market-search"
             disabled={state.credits < SCOUT_REPORT_COST}
             onClick={() => setState((current) => scout(current, brief))}
           >
@@ -363,7 +363,7 @@ export function ScoutMarket({
                 <b>{terms.fee} кр.</b>
                 <small>останется {Math.max(0, state.credits - terms.fee)} кр.</small>
               </div>
-              <button type="button" className="hq-primary-action" onClick={submitOffer} disabled={state.roster.length >= 8}>
+              <button type="button" className="sim-primary-action" onClick={submitOffer} disabled={state.roster.length >= 8}>
                 СДЕЛАТЬ ПРЕДЛОЖЕНИЕ <span>→</span>
               </button>
             </div>

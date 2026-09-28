@@ -266,26 +266,26 @@ export function WorldMap({
   }
 
   return (
-    <section className={'screen fifa-world-screen world-view-' + viewMode}>
-      <div className="fifa-screen-header">
+    <section className={'sim-screen sim-world sim-world-' + viewMode}>
+      <div className="sim-screen-head sim-world-head">
         <div>
           <span>GLOBAL CIRCUIT · MANAGER LVL {level}</span>
           <h1>{active ? 'NEXT EVENT' : 'WORLD CIRCUIT'}</h1>
         </div>
-        <div className="fifa-screen-rank">
+        <div className="sim-head-stat">
           <small>AVAILABLE</small>
           <b>{TOURNAMENTS.filter((event) => canBookTournament(state, event.id).ok || event.id === state.activeEventId).length}</b>
         </div>
       </div>
 
-      <div className="world-toolbar">
-        <div className="world-view-switch" role="tablist" aria-label="Circuit view">
+      <div className="sim-world-toolbar">
+        <div className="sim-segmented sim-world-tabs" role="tablist" aria-label="Circuit view">
           <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>WORLD MAP</button>
           <button className={viewMode === 'vrs' ? 'active' : ''} onClick={() => setViewMode('vrs')}>VRS RANKING</button>
           <span>{clubVrs ? '#' + clubVrs.rank + ' · ' + clubVrs.points.toLocaleString('ru-RU') + ' VRS' : state.clubVrsPoints + ' VRS'}</span>
         </div>
 
-        <div className="world-filter-strip">
+        <div className="sim-world-filters">
           <div>
             <span>REGION</span>
             {REGIONS.map((item) => (
@@ -313,7 +313,7 @@ export function WorldMap({
         </div>
       </div>
 
-      <div className="world-event-rail" aria-label="Tournament selector">
+      <div className="sim-event-carousel" aria-label="Tournament selector">
         {visible.map((event) => {
           const start = tournamentStartsAt(event, state.seasonStart)
           const gate = canBookTournament(state, event.id)
@@ -335,11 +335,11 @@ export function WorldMap({
         })}
       </div>
 
-      <div className="world-map-layout world-map-layout-v2">
-        <div className="world-map-stage world-map-stage-v2">
+      <div className="sim-world-body">
+        <div className="sim-world-map">
           <svg
             viewBox={'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT}
-            className="world-geo-map"
+            className="world-geo-map sim-world-geo"
             role="img"
             aria-label="Мировая карта турнирного circuit"
             onWheel={handleWheel}
@@ -433,7 +433,7 @@ export function WorldMap({
             </g>
           </svg>
 
-          <div className="world-map-legend">
+          <div className="sim-map-legend">
             <span><i className="tier1" /> T1 LAN</span>
             <span><i className="tier2" /> T2</span>
             <span><i className="tier3" /> T3</span>
@@ -441,32 +441,32 @@ export function WorldMap({
           </div>
 
           {visible.length === 0 && (
-            <div className="world-map-empty">Нет ивентов под текущий фильтр.</div>
+            <div className="sim-map-empty">Нет ивентов под текущий фильтр.</div>
           )}
         </div>
 
-        <aside className="world-event-panel world-event-panel-v2">
-          <div className="world-event-panel-head">
+        <aside className="sim-event-dossier">
+          <div className="sim-event-dossier-head">
             <div>
-              <div className="world-event-tier">TIER {selected.circuitTier} · {selected.format}</div>
+              <div className="sim-event-tier">TIER {selected.circuitTier} · {selected.format}</div>
               <span>{selected.region.toUpperCase()} · {selected.city.toUpperCase()}</span>
             </div>
-            <b className={'world-event-status' + (booked ? ' booked' : '')}>{selectedStatus}</b>
+            <b className={'sim-event-status' + (booked ? ' booked' : '')}>{selectedStatus}</b>
           </div>
 
           <h2>{selected.name}</h2>
           <p>{STRUCTURE_LABELS[selected.structure]}</p>
-          <div className="world-event-date">{formatGameDateTime(selectedStart)} — {formatGameDateTime(selectedEnd)}</div>
-          <div className="world-registration-deadline">REGISTRATION CLOSES · {formatGameDateTime(registrationClosesAt)}</div>
+          <div className="sim-event-date">{formatGameDateTime(selectedStart)} — {formatGameDateTime(selectedEnd)}</div>
+          <div className="sim-registration-deadline">REGISTRATION CLOSES · {formatGameDateTime(registrationClosesAt)}</div>
 
-          <div className="world-event-stats">
+          <div className="sim-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>
             <div><span>ENTRY</span><b>{selected.format === 'ONLINE' ? 'FREE' : eventCost + ' CR.'}</b></div>
             <div><span>DURATION</span><b>{selected.durationDays} DAYS</b></div>
             <div><span>FATIGUE</span><b>+{selected.fatigue}</b></div>
           </div>
 
-          <div className="world-event-details">
+          <div className="sim-event-details">
             <div><span>FORMAT</span><b>{selected.label}</b></div>
             <div><span>MANAGER ACCESS</span><b>LVL {selected.unlockLevel}+</b></div>
             {selectedNextMatch && (
@@ -477,7 +477,7 @@ export function WorldMap({
             )}
           </div>
 
-          <div className="world-event-timeline">
+          <div className="sim-event-timeline">
             <div className={compareGameTime(state.now, registrationClosesAt) > 0 ? 'done' : 'current'}>
               <i />
               <span>REGISTRATION CLOSES</span>
@@ -495,18 +495,18 @@ export function WorldMap({
             </div>
           </div>
 
-          <div className="world-budget-preview">
+          <div className="sim-event-cost">
             <span>{selected.format === 'ONLINE' ? 'REGISTRATION COST' : 'EVENT COMMITMENT'}</span>
             <strong>{selected.format === 'ONLINE' ? '0 CASH' : eventCost.toLocaleString('ru-RU') + ' CASH'}</strong>
             <small>{selected.format === 'ONLINE' ? 'ONLINE ENTRY IS FREE' : 'travel + event operations · payroll stays weekly'}</small>
           </div>
 
           {booked ? (
-            <button className="fifa-primary-cta" onClick={onPrepareMatch}>
+            <button className="sim-primary-action" onClick={onPrepareMatch}>
               OPEN TOURNAMENT <span>→</span>
             </button>
           ) : (
-            <button className="fifa-primary-cta" disabled={!booking.ok} onClick={() => onBook(selected.id)}>
+            <button className="sim-primary-action" disabled={!booking.ok} onClick={() => onBook(selected.id)}>
               {booking.ok ? 'COMMIT TO EVENT' : booking.reason.toUpperCase()} <span>→</span>
             </button>
           )}

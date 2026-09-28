@@ -234,6 +234,11 @@ export function WorldMap({
   }
 
   const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+    // Do not turn a tournament click into a map drag. Pointer capture on the
+    // root SVG was stealing the click from marker/cluster children.
+    const target = event.target as Element | null
+    if (target?.closest('.world-marker, .world-cluster')) return
+
     event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }
   }
@@ -355,6 +360,7 @@ export function WorldMap({
                       key={cluster.id}
                       transform={'translate(' + cluster.point[0] + ' ' + cluster.point[1] + ')'}
                       className={'world-cluster' + (clusterSelected ? ' selected' : '')}
+                      onPointerDown={(eventPointer) => eventPointer.stopPropagation()}
                       onClick={(eventClick) => {
                         eventClick.stopPropagation()
                         openCluster(cluster)
@@ -393,6 +399,7 @@ export function WorldMap({
                       (isBooked ? ' booked' : '') +
                       (locked ? ' locked' : '')
                     }
+                    onPointerDown={(eventPointer) => eventPointer.stopPropagation()}
                     onClick={(eventClick) => {
                       eventClick.stopPropagation()
                       setSelectedId(event.id)

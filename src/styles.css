@@ -5423,6 +5423,10 @@ button.primary:hover,
 .world-marker-hit {
   fill: transparent;
   stroke: transparent;
+  pointer-events: all;
+}
+.world-marker-ui {
+  pointer-events: all;
 }
 .world-marker-dot {
   fill: #929db8;

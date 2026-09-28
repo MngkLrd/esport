@@ -1,6 +1,8 @@
 import { REAL_PLAYERS } from './players'
 import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
+import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
+import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentRun } from './tournamentEngine'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -129,10 +131,12 @@ export interface ClubDecision {
 }
 
 export interface GameState {
-  version: 9
+  version: 10
   saveId: string
   seed: number
   season: number
+  seasonStart: string
+  now: string
   week: number
   seasonLength: number
   seasonEnded: boolean
@@ -148,6 +152,8 @@ export interface GameState {
   seasonPoints: number
   staffEnergy: number
   activeEventId: string | null
+  activeTournament: TournamentRun | null
+  tournamentHistory: TournamentRun[]
   pendingDecision: ClubDecision | null
   welcomeComplete: boolean
   roster: Player[]
@@ -445,12 +451,14 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 9,
+  version: 10,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
+  seasonStart: INITIAL_SEASON_START,
+  now: INITIAL_SEASON_START,
   week: 1,
-  seasonLength: 12,
+  seasonLength: 16,
   seasonEnded: false,
   seasonSummary: null,
   credits: 3200,
@@ -464,6 +472,8 @@ export const createInitialState = (): GameState => ({
   seasonPoints: 0,
   staffEnergy: 3,
   activeEventId: null,
+  activeTournament: null,
+  tournamentHistory: [],
   pendingDecision: null,
   welcomeComplete: false,
   roster: [],
@@ -550,15 +560,24 @@ const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unk
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if (parsed.version === 9 && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as GameState),
+      version: 10,
+      seasonStart: typeof parsed.seasonStart === 'string' ? parsed.seasonStart : INITIAL_SEASON_START,
+      now: typeof parsed.now === 'string' ? parsed.now : addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
+      activeTournament: parsed.activeTournament && typeof parsed.activeTournament === 'object' ? parsed.activeTournament as TournamentRun : null,
+      tournamentHistory: Array.isArray(parsed.tournamentHistory) ? parsed.tournamentHistory as TournamentRun[] : [],
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonStart: INITIAL_SEASON_START,
+      now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
+      activeTournament: null,
+      tournamentHistory: [],
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
@@ -579,10 +598,14 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'packTokens' | 'managerXp'>),
-      version: 9,
+      version: 10,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonStart: INITIAL_SEASON_START,
+      now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
+      activeTournament: null,
+      tournamentHistory: [],
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: 2600,
@@ -601,10 +624,14 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 9,
+      version: 10,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonStart: INITIAL_SEASON_START,
+      now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
+      activeTournament: null,
+      tournamentHistory: [],
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       roster,
@@ -621,10 +648,14 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 9,
+      version: 10,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
+      seasonStart: INITIAL_SEASON_START,
+      now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
+      activeTournament: null,
+      tournamentHistory: [],
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       roster,
@@ -670,13 +701,17 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 9,
+      version: 10,
       saveId: createSaveId(),
       welcomeComplete: true,
       season: 1,
+      seasonStart: INITIAL_SEASON_START,
+      now: INITIAL_SEASON_START,
+      activeTournament: null,
+      tournamentHistory: [],
       seasonEnded: false,
       seasonSummary: null,
-      seasonLength: 12,
+      seasonLength: 16,
       roster,
       startingFive,
       lineupSlots: inferLineupSlots(roster, startingFive),

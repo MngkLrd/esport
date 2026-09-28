@@ -67,6 +67,19 @@ const TAB_LABELS: Record<Tab, string> = {
   Profile: 'PROFILE',
 }
 
+const SCREEN_TITLES: Record<Tab, string> = {
+  HQ: 'HOME',
+  World: 'WORLD CIRCUIT',
+  Calendar: 'CALENDAR',
+  Play: 'MATCHDAY',
+  Training: 'PRACTICE',
+  Roster: 'SQUAD',
+  Packs: 'PACK STORE',
+  Scout: 'BUILD YOUR SHORTLIST',
+  Inbox: 'INBOX',
+  Profile: 'MANAGER LEVEL',
+}
+
 const ROLE_LABELS: Record<Player['role'], string> = {
   IGL: 'IGL',
   Entry: 'Энтри',
@@ -505,9 +518,8 @@ function App() {
         </div>
       )}
       <header className="fifa-topbar">
-        <button className="fifa-brand" onClick={() => openTab('HQ')} aria-label="Home">
-          <span className="fifa-brand-mark">E</span>
-          <strong>ESPORT AI MANAGER</strong>
+        <button className="fifa-brand fifa-screen-title" onClick={() => openTab('HQ')} aria-label="Вернуться на главную">
+          <strong>{SCREEN_TITLES[tab]}</strong>
         </button>
         {currentFixtureDue ? (
           <button className="fifa-topbar-center fifa-current-match-button" onClick={() => openTab('Play')}>

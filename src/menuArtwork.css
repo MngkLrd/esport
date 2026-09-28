@@ -15,3 +15,30 @@
   background-size:auto 100%;
   background-repeat:no-repeat;
 }
+
+
+/* Current screen title lives in the global topbar instead of being repeated inside each view. */
+.fifa-screen-title{
+  min-width:0;
+  max-width:100%;
+  align-self:stretch;
+  display:flex;
+  align-items:center;
+  padding:0 2px;
+}
+.fifa-screen-title strong{
+  color:#fff;
+  font:1000 clamp(20px,1.55vw,29px)/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing:-.035em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.fifa-screen-title:hover strong{color:var(--sim-cyan)}
+
+/* The same title used to be rendered again inside every screen header. */
+.app-main:not(.app-main-hq) .sim-screen-head h1{display:none}
+.app-main:not(.app-main-hq) .sim-screen-head>div:first-child{align-content:center}
+
+@media (max-width:900px){
+  .fifa-screen-title strong{font-size:18px}
+}

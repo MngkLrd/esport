@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { managerLevelProgress, type GameState, type Player } from './game'
 import { tournamentForId } from './events'
 import { PlayerPortrait } from './PlayerPortrait'
-import { formatGameDate, formatGameTime } from './calendar'
+import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
+import { nextPlayerMatch, opponentForPlayerMatch } from './tournamentEngine'
 
-type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Inbox'
+type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Inbox' | 'Training'
 
 export function FifaHome({
   state,
@@ -20,20 +21,32 @@ export function FifaHome({
   const level = managerLevelProgress(state.managerXp)
   const hero = starters[0]
   const activeEvent = tournamentForId(state.activeEventId)
-  const latestNews = state.news[0]
   const pendingDecision = state.pendingDecision
-  const heroTarget: ModeKey = pendingDecision ? 'Inbox' : activeEvent ? 'Play' : 'World'
+  const nextMatch = nextPlayerMatch(state.activeTournament)
+  const matchDue = Boolean(nextMatch && compareGameTime(nextMatch.scheduledAt, state.now) <= 0)
+  const opponent = opponentForPlayerMatch(state.activeTournament)
+  const heroTarget: ModeKey = pendingDecision ? 'Inbox' : matchDue ? 'Play' : activeEvent ? 'Play' : 'World'
   const heroKicker = pendingDecision
     ? 'CLUB DECISION · ACTION REQUIRED'
-    : activeEvent
-      ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase()
-      : 'GLOBAL CIRCUIT'
-  const heroTitle = pendingDecision ? pendingDecision.title : activeEvent ? activeEvent.name : 'SELECT EVENT'
+    : matchDue
+      ? 'CURRENT MATCH · TIME LOCKED'
+      : activeEvent
+        ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase()
+        : 'GLOBAL CIRCUIT'
+  const heroTitle = pendingDecision
+    ? pendingDecision.title
+    : matchDue
+      ? 'YOUR CLUB vs ' + (opponent?.name ?? 'OPPONENT')
+      : activeEvent
+        ? activeEvent.name
+        : 'SELECT EVENT'
   const heroMeta = pendingDecision
     ? pendingDecision.body
-    : activeEvent
-      ? activeEvent.label + ' · ' + activeEvent.prize.toLocaleString('ru-RU') + ' PRIZE'
-      : null
+    : matchDue
+      ? (nextMatch?.label ?? 'OFFICIAL MATCH') + ' · PLAY TO CONTINUE TIME'
+      : activeEvent
+        ? activeEvent.label + ' · ' + activeEvent.prize.toLocaleString('ru-RU') + ' PRIZE'
+        : null
   const [focusIndex, setFocusIndex] = useState(0)
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -126,10 +139,10 @@ export function FifaHome({
           <strong>{state.packTokens.toLocaleString('ru-RU')} <small>PACK TOKENS</small></strong>
         </button>
 
-        <button {...tileProps(5)} className="fifa-mode-tile fifa-inbox-tile" onClick={() => onOpen('Inbox')}>
-          <div className="fifa-tile-kicker">CLUB FEED {unread > 0 ? '· ' + unread + ' NEW' : ''}</div>
-          <h2>INBOX</h2>
-          <p>{pendingDecision ? pendingDecision.title : latestNews?.title ?? 'No pending club events'}</p>
+        <button {...tileProps(5)} className="fifa-mode-tile fifa-practice-tile" onClick={() => onOpen('Training')}>
+          <div className="fifa-tile-kicker">TRAINING GROUND</div>
+          <h2>PRACTICE</h2>
+          <p>0 CASH · 0 VRS · +1 сыгранность. Отдельная тренировочная комната, не Matchday.</p>
         </button>
       </div>
 

@@ -127,32 +127,20 @@ function PlayerVisualCard({ player, starter = false, compact = false, onClick }:
 
 
 function OpponentVisualCard({ player }: { player: TournamentRosterPlayer }) {
-  const tier = cardTier(player.rating)
-  const role = player.role === 'Rifler' ? 'РИФ' : player.role === 'Support' ? 'САП' : player.role === 'Entry' ? 'ЕНТ' : player.role ?? 'PRO'
-  const initials = player.alias.slice(0, 3).toUpperCase()
-
   return (
-    <article className={'visual-player-card match-opponent-card tier-' + tier}>
-      <div className="visual-card-shine" />
-      <div className="visual-card-top">
-        <div>
-          <strong>{player.rating}</strong>
-          <span>{role}</span>
-        </div>
-      </div>
-      <div className="visual-country">{countryFlag(player.country ?? '')} <span>{player.country ?? 'INT'}</span></div>
-      <div className="visual-photo">
-        <div className="visual-monogram">{initials}</div>
-        <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} />
-      </div>
-      <div className="visual-identity">
-        <strong>{player.alias}</strong>
-        <span>OPPONENT</span>
-      </div>
-      <div className="visual-rarity">MATCH CARD</div>
-    </article>
+    <CollectiblePlayerCard
+      rating={player.rating}
+      tier={cardTier(player.rating)}
+      role={player.role}
+      alias={player.alias}
+      team="OPPONENT"
+      country={player.country ?? 'INT'}
+      profileId={player.profileId}
+      className="match-opponent-card"
+    />
   )
 }
+
 
 function PlayerCard({
   player,

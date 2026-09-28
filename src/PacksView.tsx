@@ -151,6 +151,7 @@ export function PacksView({
 }) {
   const [section, setSection] = useState<'store' | 'collection'>('store')
   const [selectedPackId, setSelectedPackId] = useState<Exclude<PackId, 'welcome'> | null>(null)
+  const [focusedPackId, setFocusedPackId] = useState<Exclude<PackId, 'welcome'>>('challenger')
   const [quantity, setQuantity] = useState<(typeof QUANTITIES)[number]>(1)
   const [queue, setQueue] = useState<PackRoll[]>([])
   const [queueIndex, setQueueIndex] = useState(0)
@@ -164,6 +165,7 @@ export function PacksView({
   const viewState = useMemo(() => hydratePackState(packState), [packState])
   const stats = useMemo(() => packCollectionStats(viewState), [viewState])
   const selectedPack = PACKS.find((item) => item.id === selectedPackId) ?? null
+  const focusedPack = PACKS.find((item) => item.id === focusedPackId) ?? PACKS[0]
   const roll = queue[queueIndex] ?? null
   const selectedPlayer = selectedCard
     ? roster.find((player) => player.acquiredCardId === selectedCard.id || player.playerKey === selectedCard.playerKey || player.alias.toLowerCase() === selectedCard.alias.toLowerCase())
@@ -302,19 +304,19 @@ export function PacksView({
   }, [viewState.inventory, query, rarityFilter])
 
   return (
-    <section className="screen packs-screen fifa-packs-screen">
-      <div className="fifa-screen-header packs-screen-header">
+    <section className="sim-screen sim-packs">
+      <div className="sim-screen-head sim-packs-head">
         <div>
           <span>STORE · PLAYER PACKS</span>
           <h1>{section === 'store' ? 'PACK STORE' : 'MY CLUB'}</h1>
         </div>
-        <div className="packs-header-metrics">
-          <div className="pack-collection-summary-inline"><small>COLLECTION</small><b>{stats.unique}</b><span>{stats.legendary} LEGENDARY</span></div>
-          <div className="fifa-currency-large"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
+        <div className="sim-head-metrics">
+          <div className="sim-head-stat"><small>COLLECTION</small><b>{stats.unique}</b><span>{stats.legendary} LEGENDARY</span></div>
+          <div className="sim-head-stat"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
         </div>
       </div>
 
-      <div className="pack-section-tabs">
+      <div className="sim-subnav">
         <button className={section === 'store' ? 'active' : ''} onClick={() => setSection('store')}>PACKS</button>
         <button className={section === 'collection' ? 'active' : ''} onClick={() => setSection('collection')}>
           COLLECTION <span>{stats.unique}</span>
@@ -322,32 +324,42 @@ export function PacksView({
       </div>
 
       {section === 'store' ? (
-        <div className="pack-store-frame">
-          <div className="pack-shelf fifa-pack-shelf">
+        <div className="sim-pack-store">
+          <section className="sim-pack-hero" style={{ '--pack-accent': focusedPack.accent } as React.CSSProperties}>
+            <div className="sim-pack-hero-art"><PackArtwork variant={focusedPack.id} title={focusedPack.name} kicker={focusedPack.eyebrow} /></div>
+            <div className="sim-pack-hero-copy">
+              <span>{focusedPack.eyebrow}</span>
+              <h2>{focusedPack.name}</h2>
+              <p>{focusedPack.description}</p>
+              <div className="sim-pack-odds">
+                <div><small>RARE</small><b>{focusedPack.weights.rare}%</b></div>
+                <div><small>EPIC</small><b>{focusedPack.weights.epic}%</b></div>
+                <div><small>LEGENDARY</small><b>{focusedPack.weights.legendary}%</b></div>
+              </div>
+              <div className="sim-pack-price"><small>PRICE</small><strong>{focusedPack.price.toLocaleString('ru-RU')}</strong><span>PACK TOKENS</span></div>
+              <button className="sim-primary-action" onClick={() => openPurchase(focusedPack.id as Exclude<PackId, 'welcome'>)}>
+                OPEN PACK <span>→</span>
+              </button>
+            </div>
+          </section>
+          <aside className="sim-pack-selector">
+            <div className="sim-pack-selector-head"><span>PACK CATALOG</span><b>{PACKS.length}</b></div>
             {PACKS.map((pack) => (
-              <article className={'pack-box pack-' + pack.id} key={pack.id} style={{ '--pack-accent': pack.accent } as React.CSSProperties}>
-                <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
-                <div className="pack-box-glow" />
-                <span>{pack.eyebrow}</span>
-                <h2>{pack.name}</h2>
-                <div className="pack-box-footer">
-                  <div className="pack-rarity-pips" aria-label="Pack rarity chances">
-                    <i style={{ opacity: Math.max(.18, pack.weights.rare / 40) }} />
-                    <i style={{ opacity: Math.max(.18, pack.weights.epic / 22) }} />
-                    <i style={{ opacity: Math.max(.18, pack.weights.legendary / 10) }} />
-                  </div>
-                  <strong>{pack.price.toLocaleString('ru-RU')} <small>TOKENS</small></strong>
-                </div>
-                <button className="fifa-primary-cta" onClick={() => openPurchase(pack.id as Exclude<PackId, 'welcome'>)}>
-                  OPEN <span>→</span>
-                </button>
-              </article>
+              <button
+                key={pack.id}
+                className={focusedPack.id === pack.id ? 'active' : ''}
+                onClick={() => setFocusedPackId(pack.id as Exclude<PackId, 'welcome'>)}
+              >
+                <i style={{ background: pack.accent }} />
+                <span><b>{pack.name}</b><small>{pack.eyebrow}</small></span>
+                <strong>{pack.price}</strong>
+              </button>
             ))}
-          </div>
+          </aside>
         </div>
       ) : (
-        <div className="pack-collection-frame">
-          <div className="collection-tools">
+        <div className="sim-collection">
+          <div className="sim-collection-tools">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -368,7 +380,7 @@ export function PacksView({
             {stats.total > 0 && <button className="text-button release pack-clear" onClick={resetCollection}>Очистить</button>}
           </div>
 
-          <div className="pack-collection-scroll">
+          <div className="sim-collection-scroll">
             {viewState.inventory.length ? (
               collection.length ? (
                 <div className="collection-grid">

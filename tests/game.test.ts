@@ -29,6 +29,7 @@ import {
   advanceTournamentTo,
   createTournamentRun,
   nextPlayerMatch,
+  opponentForPlayerMatch,
   resolvePlayerTournamentMatch,
   tournamentIsFinished,
 } from '../src/tournamentEngine'
@@ -156,12 +157,14 @@ describe('P0 career flow', () => {
     const atMatch = advanceToNextTournamentMatch(booked)
     expect(atMatch.now).not.toBe(booked.now)
     expect(canPlayMatch(atMatch, 'showmatch').ok).toBe(true)
+    const bracketOpponent = opponentForPlayerMatch(atMatch.activeTournament)
 
     const played = playMatch(atMatch, 'showmatch', 'balanced')
     expect(played.activeEventId).toBe('helsinki')
     expect(played.activeTournament).toBeTruthy()
     expect(played.history[0].mode).toBe('showmatch')
     expect(played.history[0].tournamentId).toBe('helsinki')
+    expect(played.history[0].opponent).toBe(bracketOpponent?.name)
   })
 
   it('uses manager progression to unlock deeper scouting', () => {
@@ -199,6 +202,16 @@ describe('P0 career flow', () => {
     const atMatch = advanceToNextTournamentMatch(booked)
     expect(canPlayMatch(atMatch, 'scrim').ok).toBe(true)
     expect(atMatch.activeTournament?.matches.some((match) => match.status === 'ready' && [match.teamAId, match.teamBId].includes('club'))).toBe(true)
+  })
+
+  it('does not let manual calendar advance skip a mandatory club fixture', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const booked = bookTournament(ready, 'eu-open-1')
+    const farFuture = advanceCareerTo(booked, '2026-10-20T09:00:00')
+    const fixture = nextPlayerMatch(farFuture.activeTournament)
+    expect(fixture).toBeTruthy()
+    expect(farFuture.now).toBe(fixture?.scheduledAt)
   })
 
   it('charges payroll when calendar weeks pass instead of after every match', () => {

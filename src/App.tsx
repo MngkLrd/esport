@@ -463,29 +463,29 @@ function App() {
               <div className="welcome-card-grid">
                 {welcomeCards.map((card, index) => {
                   const visible = index < welcomeRevealed
-                  return <button key={card.id} className={'welcome-card rarity-' + card.rarity + (visible ? ' is-visible' : '')} onClick={() => visible && setSelectedCard(card)} aria-label={visible ? 'Карточка ' + card.alias : 'Скрытая карта'}>
-                    {visible ? <>
-                      <div className="welcome-card-top">
-                        <div><b>{card.power}</b><small>{card.role ?? 'PRO'}</small></div>
-                        <span>{countryFlag(card.country ?? '')}</span>
-                      </div>
-                      <div className="welcome-card-photo">
-                        <i>{card.alias.slice(0, 3).toUpperCase()}</i>
-                        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} draggable={false} loading="eager" />
-                      </div>
-                      <div className="welcome-card-identity">
-                        <strong>{card.alias}</strong>
-                        <span>{card.team}</span>
-                      </div>
-                      <div className="welcome-card-stats">
-                        <span><b>{card.cardStats?.aim ?? '—'}</b>AIM</span>
-                        <span><b>{card.cardStats?.utility ?? '—'}</b>UTL</span>
-                        <span><b>{card.cardStats?.positioning ?? '—'}</b>POS</span>
-                        <span><b>{card.cardStats?.clutch ?? '—'}</b>CLU</span>
-                      </div>
-                      <em>{card.edition}</em>
-                    </> : <div className="welcome-card-back"><span>E</span><small>ESPORT AI MANAGER</small></div>}
-                  </button>
+                  return (
+                    <div key={card.id} className={'welcome-card-shell ' + (visible ? 'is-visible' : 'is-hidden')}>
+                      <CollectiblePlayerCard
+                        rating={card.power}
+                        tier={tierForPackRarity(card.rarity)}
+                        role={card.role}
+                        alias={card.alias}
+                        team={card.team}
+                        country={card.country}
+                        profileId={card.profileId}
+                        stats={card.cardStats ? {
+                          aim: card.cardStats.aim,
+                          utility: card.cardStats.utility,
+                          positioning: card.cardStats.positioning,
+                          clutch: card.cardStats.clutch,
+                        } : null}
+                        onOpen={visible ? () => setSelectedCard(card) : undefined}
+                        loading="eager"
+                        className={'welcome-shared-card' + (visible ? '' : ' show-back')}
+                        badge={visible ? card.edition : undefined}
+                      />
+                    </div>
+                  )
                 })}
               </div>
               <div className="welcome-actions">

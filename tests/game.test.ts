@@ -22,7 +22,8 @@ import {
 import { rollWelcomePack } from '../src/welcomePack'
 import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
-import { generateMatchPlayback, simulationFrameAt } from '../src/matchSimulation'
+import { generateMatchPlayback, simulationFrameAt, type SimRound } from '../src/matchSimulation'
+import { constrainRoundToNavigation, isNavigationSegmentClear, type RadarNavigationGrid } from '../src/radarNavigation'
 import { hoursBetween } from '../src/calendar'
 import { tournamentForId } from '../src/events'
 import {
@@ -61,6 +62,63 @@ describe('P0 career flow', () => {
     expect(ready.packs.inventory).toHaveLength(5)
     expect(canPlayMatch(ready, 'scrim').ok).toBe(true)
     expect(executeGameCommand(initial, { type: 'OPEN_WELCOME_PACK', cards: cardsA }).events[0].type).toBe('WelcomePackOpened')
+  })
+
+  it('routes tactical movement around blocked radar geometry', () => {
+    const cols = 16
+    const rows = 16
+    const walkable = new Uint8Array(cols * rows)
+    walkable.fill(1)
+
+    // Vertical wall with one legal opening near the bottom.
+    for (let row = 0; row < 13; row += 1) {
+      walkable[row * cols + 8] = 0
+    }
+
+    const grid: RadarNavigationGrid = { cols, rows, cellSize: 8, walkable }
+    const round: SimRound = {
+      id: 'navigation-test',
+      map: 'Test',
+      mapKey: 'test',
+      homeSide: 'T',
+      scenario: 'default',
+      scenarioLabel: 'DEFAULT',
+      site: 'A',
+      duration: 900,
+      events: [],
+      winner: 'HOME',
+      frames: Array.from({ length: 10 }, (_, index) => ({
+        time: index * 100,
+        players: [{
+          id: 'p1',
+          name: 'P1',
+          side: 'T' as const,
+          x: 20 + index * 10,
+          y: 28,
+          yaw: 0,
+          hp: 100,
+          alive: true,
+          weapon: 'AK-47',
+          hasBomb: false,
+        }],
+      })),
+    }
+
+    const constrained = constrainRoundToNavigation(round, grid)
+    const points = constrained.frames.map((frame) => ({
+      x: frame.players[0].x,
+      y: frame.players[0].y,
+    }))
+
+    for (let index = 1; index < points.length; index += 1) {
+      expect(isNavigationSegmentClear(grid, points[index - 1], points[index])).toBe(true)
+      expect(Math.hypot(
+        points[index].x - points[index - 1].x,
+        points[index].y - points[index - 1].y,
+      )).toBeLessThanOrEqual(15.01)
+    }
+
+    expect(points.some((point) => point.y > 28)).toBe(true)
   })
 
   it('builds deterministic frame-based tactical playback for every map', () => {

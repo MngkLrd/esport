@@ -6929,3 +6929,158 @@ button.primary:hover,
   .practice-room-layout { grid-template-columns: minmax(0,1fr) 280px; }
   .practice-card-row { grid-template-columns: repeat(5,minmax(90px,1fr)); gap: 7px; }
 }
+
+
+/* =========================================================
+   Matchday card composition fix
+   Base collectible cards were authored around ~350px height.
+   In the match lobby they are smaller, so fixed pixel offsets
+   cropped portraits and collapsed the card composition.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  .app-main-play .tactical-mini-roster,
+  .app-main-play .tactical-opponent-roster {
+    width: min(100%, 980px);
+    grid-template-columns: repeat(5, minmax(128px, 1fr));
+    gap: 10px;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .visual-player-card {
+    width: 100%;
+    max-width: 182px;
+    justify-self: stretch;
+    aspect-ratio: 5 / 7;
+    min-height: 0;
+    border-radius: 9px;
+  }
+
+  /* Scale all internal geometry with the card instead of desktop-card pixels. */
+  .app-main-play .tactical-mini-roster .visual-card-top,
+  .app-main-play .tactical-opponent-roster .visual-card-top {
+    top: 5.5%;
+    left: 7%;
+    right: 7%;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-card-top strong,
+  .app-main-play .tactical-opponent-roster .visual-card-top strong {
+    font-size: clamp(21px, 1.65vw, 29px);
+    line-height: .9;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-card-top span,
+  .app-main-play .tactical-opponent-roster .visual-card-top span {
+    margin-top: 3px;
+    font-size: clamp(6px, .47vw, 8px);
+  }
+
+  .app-main-play .tactical-mini-roster .starter-star {
+    font-size: clamp(11px, .9vw, 16px);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-country,
+  .app-main-play .tactical-opponent-roster .visual-country {
+    top: 19%;
+    left: 7%;
+    gap: 4px;
+    font-size: clamp(10px, .8vw, 13px);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-country span,
+  .app-main-play .tactical-opponent-roster .visual-country span {
+    max-width: 64px;
+    font-size: clamp(5px, .38vw, 7px);
+  }
+
+  /* Portrait is now a contained player cutout, not a cover-cropped thumbnail. */
+  .app-main-play .tactical-mini-roster .visual-photo,
+  .app-main-play .tactical-opponent-roster .visual-photo {
+    top: 17%;
+    left: 3%;
+    right: 3%;
+    height: 55%;
+    place-items: end center;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-photo img,
+  .app-main-play .tactical-opponent-roster .visual-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    mix-blend-mode: normal;
+    filter: saturate(.96) contrast(1.03);
+    opacity: .98;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-monogram,
+  .app-main-play .tactical-opponent-roster .visual-monogram {
+    font-size: clamp(32px, 3vw, 52px);
+    opacity: .55;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-identity,
+  .app-main-play .tactical-opponent-roster .visual-identity {
+    left: 6%;
+    right: 6%;
+    bottom: 16%;
+    padding: 5% 4% 4%;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-identity strong,
+  .app-main-play .tactical-opponent-roster .visual-identity strong {
+    font-size: clamp(10px, .82vw, 14px);
+    line-height: 1;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-identity span,
+  .app-main-play .tactical-opponent-roster .visual-identity span {
+    margin-top: 3px;
+    font-size: clamp(4px, .32vw, 6px);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-stats {
+    left: 7%;
+    right: 7%;
+    bottom: 5.5%;
+    gap: 2px;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-stats span {
+    gap: 2px;
+    font-size: clamp(4px, .3vw, 6px);
+  }
+
+  .app-main-play .tactical-mini-roster .visual-stats b {
+    font-size: clamp(8px, .65vw, 11px);
+  }
+
+  /* The edition caption added noise at lobby size and collided with stats. */
+  .app-main-play .tactical-mini-roster .visual-rarity,
+  .app-main-play .tactical-opponent-roster .visual-rarity {
+    display: none;
+  }
+
+  /* Opponent cards have no 4-stat row, so let the name sit lower. */
+  .app-main-play .tactical-opponent-roster .visual-identity {
+    bottom: 7%;
+  }
+}
+
+/* Short laptop screens: keep the same composition rather than reverting
+   to the old thumbnail rules from the legacy low-height media query. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .app-main-play .tactical-mini-roster img,
+  .app-main-play .tactical-opponent-roster img {
+    height: 100%;
+  }
+
+  .app-main-play .tactical-mini-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .visual-player-card {
+    min-height: 0;
+  }
+}

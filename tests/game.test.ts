@@ -20,7 +20,8 @@ import {
   startNextSeason,
 } from '../src/game'
 import { rollWelcomePack } from '../src/welcomePack'
-import { rollPack } from '../src/packs'
+import { rarityForPlayer, rollPack } from '../src/packs'
+import { REAL_PLAYERS } from '../src/players'
 import { executeGameCommand } from '../src/gameCommands'
 import { generateMatchPlayback, simulationFrameAt, type SimRound } from '../src/matchSimulation'
 import { constrainRoundToNavigation, isNavigationSegmentClear, type RadarNavigationGrid } from '../src/radarNavigation'
@@ -65,6 +66,10 @@ describe('P0 career flow', () => {
     expect(cardsA).toHaveLength(5)
     expect(new Set(cardsA.map((card) => card.alias.toLocaleLowerCase('en-US'))).size).toBe(5)
     expect(new Set(cardsA.map((card) => card.role)).size).toBe(5)
+    expect(cardsA.every((card) => {
+      const identity = REAL_PLAYERS.find((player) => player.alias.toLocaleLowerCase('en-US') === card.alias.toLocaleLowerCase('en-US'))
+      return Boolean(identity) && card.rarity === rarityForPlayer(identity!)
+    })).toBe(true)
 
     const ready = applyWelcomePack(initial, cardsA)
     expect(ready.welcomeComplete).toBe(true)
@@ -72,6 +77,7 @@ describe('P0 career flow', () => {
     expect(ready.startingFive).toHaveLength(5)
     expect(Object.values(ready.lineupSlots).filter(Boolean)).toHaveLength(5)
     expect(ready.roster.every((player) => player.playerKey && player.acquiredCardId)).toBe(true)
+    expect(ready.roster.map((player) => player.cardRarity)).toEqual(cardsA.map((card) => card.rarity))
     expect(ready.roster.every((player) => {
       const key = player.playerKey!
       return ready.world.players[key]?.teamId === PLAYER_CLUB_WORLD_ID

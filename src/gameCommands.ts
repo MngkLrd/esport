@@ -1,14 +1,15 @@
-import { applyWelcomePack, playMatch, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
+import { applyWelcomePack, bookTournament, playMatch, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
 import { collectPackWinner, type PackCard, type PackRoll } from './packState'
 
 export type GameCommand =
   | { type: 'OPEN_WELCOME_PACK'; cards: PackCard[] }
   | { type: 'PLAY_MATCH'; mode: MatchMode; tactic: TacticalPlan }
+  | { type: 'BOOK_EVENT'; eventId: string }
   | { type: 'OPEN_PACK'; roll: PackRoll }
   | { type: 'START_NEXT_SEASON' }
 
 export interface GameEvent {
-  type: 'WelcomePackOpened' | 'MatchPlayed' | 'PackOpened' | 'SeasonStarted'
+  type: 'WelcomePackOpened' | 'MatchPlayed' | 'EventBooked' | 'PackOpened' | 'SeasonStarted'
   id: string
 }
 
@@ -26,6 +27,10 @@ export const executeGameCommand = (state: GameState, command: GameCommand): Comm
     case 'PLAY_MATCH': {
       const next = playMatch(state, command.mode, command.tactic)
       return { state: next, events: next === state ? [] : [{ type: 'MatchPlayed', id: next.history[0]?.id ?? 'match' }] }
+    }
+    case 'BOOK_EVENT': {
+      const next = bookTournament(state, command.eventId)
+      return { state: next, events: next === state ? [] : [{ type: 'EventBooked', id: command.eventId }] }
     }
     case 'OPEN_PACK': {
       const { roll } = command

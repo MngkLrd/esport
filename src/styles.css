@@ -4211,6 +4211,14 @@ button.primary:hover,
   height: 100%;
   min-height: 590px;
 }
+.world-country {
+  fill: #22294b;
+  stroke: #4a5279;
+  stroke-width: .55;
+  vector-effect: non-scaling-stroke;
+  transition: fill .16s ease;
+}
+.world-country:hover { fill: #2c3562; }
 .world-marker {
   cursor: pointer;
   outline: none;

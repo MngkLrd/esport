@@ -69,6 +69,7 @@ export function SeasonCalendar({
             return gameDayKey(start) <= dayKey && gameDayKey(end) >= dayKey
           })
           const current = gameDayKey(day) === gameDayKey(state.now)
+          const clubMatchToday = nextClubMatch && gameDayKey(nextClubMatch.scheduledAt) === dayKey
           return (
             <article key={dayKey} className={current ? 'is-today' : ''}>
               <header>
@@ -77,6 +78,11 @@ export function SeasonCalendar({
                 <small>{label.month}</small>
               </header>
               <div>
+                {clubMatchToday && (
+                  <span className="calendar-event club-match">
+                    YOUR MATCH · {formatGameTime(nextClubMatch.scheduledAt)}
+                  </span>
+                )}
                 {events.map((event) => (
                   <span
                     key={event.id}

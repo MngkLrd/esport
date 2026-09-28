@@ -1073,6 +1073,10 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   const advancedWorld = payrollCycles > 0
     ? advanceWorldWeeks(state.world, payrollCycles, state.seed + previousWeek * 4099 + state.season * 131, effectiveTarget)
     : state.world
+  const knownTransferIds = new Set(state.world.transferHistory.map((transfer) => transfer.id))
+  const newAiTransfers = advancedWorld.transferHistory
+    .filter((transfer) => !knownTransferIds.has(transfer.id) && transfer.kind === 'ai-transfer')
+    .slice(0, 4)
 
   let next: GameState = {
     ...state,
@@ -1092,15 +1096,31 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   }
 
   if (payrollCycles > 0) {
+    const transferNews: NewsItem[] = newAiTransfers.map((transfer) => {
+      const from = advancedWorld.teams.find((team) => team.id === transfer.fromTeamId)?.name ?? 'Free Agents'
+      const to = advancedWorld.teams.find((team) => team.id === transfer.toTeamId)?.name ?? 'Free Agents'
+      return {
+        id: 'world-' + transfer.id,
+        week: next.week,
+        kind: 'contract' as const,
+        title: transfer.alias + ' меняет команду',
+        body: from + ' → ' + to + '. Составы AI-клубов обновлены в мировом пуле.',
+      }
+    })
+
     next = {
       ...next,
-      news: [{
-        id: 'payroll-' + effectiveTarget,
-        week: next.week,
-        kind: 'finance' as const,
-        title: 'Недельный расчёт клуба',
-        body: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
-      }, ...next.news].slice(0, 50),
+      news: [
+        ...transferNews,
+        {
+          id: 'payroll-' + effectiveTarget,
+          week: next.week,
+          kind: 'finance' as const,
+          title: 'Недельный расчёт клуба',
+          body: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
+        },
+        ...next.news,
+      ].slice(0, 50),
     }
   }
 

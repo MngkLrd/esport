@@ -1,4 +1,4 @@
-import { applyWelcomePack, bookTournament, playMatch, resolveClubDecision, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
+import { advanceCareerTo, advanceToNextTournamentMatch, applyWelcomePack, bookTournament, playMatch, resolveClubDecision, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
 import { collectPackWinner, type PackCard, type PackRoll } from './packState'
 
 export type GameCommand =
@@ -6,11 +6,13 @@ export type GameCommand =
   | { type: 'PLAY_MATCH'; mode: MatchMode; tactic: TacticalPlan }
   | { type: 'BOOK_EVENT'; eventId: string }
   | { type: 'RESOLVE_DECISION'; choice: 'a' | 'b' }
+  | { type: 'ADVANCE_TIME'; target: string }
+  | { type: 'ADVANCE_TO_MATCH' }
   | { type: 'OPEN_PACK'; roll: PackRoll }
   | { type: 'START_NEXT_SEASON' }
 
 export interface GameEvent {
-  type: 'WelcomePackOpened' | 'MatchPlayed' | 'EventBooked' | 'DecisionResolved' | 'PackOpened' | 'SeasonStarted'
+  type: 'WelcomePackOpened' | 'MatchPlayed' | 'EventBooked' | 'DecisionResolved' | 'TimeAdvanced' | 'PackOpened' | 'SeasonStarted'
   id: string
 }
 
@@ -37,6 +39,14 @@ export const executeGameCommand = (state: GameState, command: GameCommand): Comm
       const decisionId = state.pendingDecision?.id ?? 'decision'
       const next = resolveClubDecision(state, command.choice)
       return { state: next, events: next === state ? [] : [{ type: 'DecisionResolved', id: decisionId }] }
+    }
+    case 'ADVANCE_TIME': {
+      const next = advanceCareerTo(state, command.target)
+      return { state: next, events: next === state ? [] : [{ type: 'TimeAdvanced', id: command.target }] }
+    }
+    case 'ADVANCE_TO_MATCH': {
+      const next = advanceToNextTournamentMatch(state)
+      return { state: next, events: next === state ? [] : [{ type: 'TimeAdvanced', id: next.now }] }
     }
     case 'OPEN_PACK': {
       const { roll } = command

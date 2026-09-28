@@ -3,7 +3,7 @@ import { collectPackCards, createPackState, type PackCard, type PackState } from
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
-import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -102,6 +102,7 @@ export interface MatchResult {
   tournamentMatchId?: string | null
   opponentTeamId?: string | null
   opponentRoster?: TournamentRosterPlayer[]
+  vrsDelta?: number
 }
 
 export interface SeasonSummary {
@@ -137,7 +138,7 @@ export interface ClubDecision {
 }
 
 export interface GameState {
-  version: 11
+  version: 12
   saveId: string
   seed: number
   season: number
@@ -156,6 +157,7 @@ export interface GameState {
   losses: number
   streak: number
   seasonPoints: number
+  clubVrsPoints: number
   staffEnergy: number
   activeEventId: string | null
   activeTournament: TournamentRun | null
@@ -459,7 +461,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 11,
+  version: 12,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -478,6 +480,7 @@ export const createInitialState = (): GameState => ({
   losses: 0,
   streak: 0,
   seasonPoints: 0,
+  clubVrsPoints: 720,
   staffEnergy: 3,
   activeEventId: null,
   activeTournament: null,
@@ -600,7 +603,7 @@ const normalizedWorld = (
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if ((parsed.version === 11 || parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 12 || parsed.version === 11 || parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
@@ -632,7 +635,7 @@ export const migrateState = (raw: unknown): GameState => {
         : null
     return {
       ...(parsed as unknown as GameState),
-      version: 11,
+      version: 12,
       seasonStart,
       now,
       world,
@@ -641,11 +644,12 @@ export const migrateState = (raw: unknown): GameState => {
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
-      seasonLength: parsed.version === 11 && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
+      seasonLength: (parsed.version === 12 || parsed.version === 11) && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
       managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
+      clubVrsPoints: typeof parsed.clubVrsPoints === 'number' ? parsed.clubVrsPoints : 720,
       activeEventId: activeTournament?.eventId ?? activeEventId,
       pendingDecision: parsed.pendingDecision && typeof parsed.pendingDecision === 'object' ? parsed.pendingDecision as ClubDecision : null,
       roster,
@@ -662,7 +666,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'packTokens' | 'managerXp'>),
-      version: 11,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -675,6 +679,8 @@ export const migrateState = (raw: unknown): GameState => {
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: 2600,
       managerXp: 0,
+      clubVrsPoints: 720,
+
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
@@ -689,7 +695,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 11,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -702,6 +708,8 @@ export const migrateState = (raw: unknown): GameState => {
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
       managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
+      clubVrsPoints: 720,
+
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
@@ -716,7 +724,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 11,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -733,6 +741,8 @@ export const migrateState = (raw: unknown): GameState => {
       scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
       packTokens: 2600,
       managerXp: 0,
+      clubVrsPoints: 720,
+
       packs,
     } as GameState
   }
@@ -770,7 +780,7 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 11,
+      version: 12,
       saveId: createSaveId(),
       welcomeComplete: true,
       season: 1,
@@ -790,6 +800,8 @@ export const migrateState = (raw: unknown): GameState => {
       scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
       packTokens: 2600,
       managerXp: 0,
+      clubVrsPoints: 720,
+
       history: Array.isArray(parsed.history) ? parsed.history as MatchResult[] : [],
       news: Array.isArray(parsed.news) ? parsed.news as NewsItem[] : base.news,
       lastPayroll: typeof parsed.lastPayroll === 'number' ? parsed.lastPayroll : 0,
@@ -821,6 +833,36 @@ export const tacticInfo: Record<TacticalPlan, { name: string; description: strin
 
 const eventDifficulty = (event: TournamentEvent | null) =>
   event ? (event.circuitTier === 1 ? 7 : event.circuitTier === 2 ? 3 : 0) : 0
+
+const matchVrsBase = (mode: MatchMode, event: TournamentEvent | null) => {
+  if (event) return event.circuitTier === 1 ? 22 : event.circuitTier === 2 ? 15 : 10
+  if (mode === 'cup') return 13
+  if (mode === 'showmatch') return 8
+  return 3
+}
+
+const matchVrsAward = (
+  mode: MatchMode,
+  event: TournamentEvent | null,
+  won: boolean,
+  opponentRating: number,
+  ourRating: number,
+) => {
+  if (!won) return 0
+  const base = matchVrsBase(mode, event)
+  const strength = Math.round(clamp((opponentRating - ourRating) * .32, -3, 8))
+  return Math.max(1, base + strength)
+}
+
+const tournamentVrsAward = (event: TournamentEvent | null, run: TournamentRun | null) => {
+  if (!event || !run) return 0
+  const tierBase = event.circuitTier === 1 ? 90 : event.circuitTier === 2 ? 55 : 32
+  if (run.status === 'champion') return tierBase
+  if (run.placement === 'RUNNER-UP') return Math.round(tierBase * .62)
+  if (run.placement === 'PLAYOFFS' || run.placement === 'SEMIFINAL') return Math.round(tierBase * .34)
+  if (run.placement === 'GROUP STAGE') return Math.round(tierBase * .14)
+  return 0
+}
 
 const worldRosterSnapshot = (state: GameState, teamId: string): TournamentRosterPlayer[] =>
   worldLineup(state.world, teamId).map((player) => ({
@@ -1024,15 +1066,18 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
 
   const event = tournamentForId(run.eventId)
   const prize = run.prizePaid ? 0 : tournamentPrizeForStatus(run.eventId, run)
+  const vrs = run.vrsPaid ? 0 : tournamentVrsAward(event, run)
   const settledRun: TournamentRun = {
     ...run,
     earnedPrize: run.earnedPrize + prize,
     prizePaid: true,
+    vrsPaid: true,
   }
 
   return {
     ...state,
     credits: state.credits + prize,
+    clubVrsPoints: state.clubVrsPoints + vrs,
     activeEventId: null,
     activeTournament: null,
     tournamentHistory: [settledRun, ...state.tournamentHistory].slice(0, 30),
@@ -1041,9 +1086,9 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
       week: state.week,
       kind: 'match' as const,
       title: event.name + ' · ' + (settledRun.placement ?? settledRun.status).toUpperCase(),
-      body: prize > 0
+      body: (prize > 0
         ? 'Турнир завершён. Призовые: ' + prize + ' кр.'
-        : 'Турнир завершён без призовых.',
+        : 'Турнир завершён без призовых.') + (vrs > 0 ? ' · VRS +' + vrs : ''),
     }, ...state.news].slice(0, 50) : state.news,
   }
 }
@@ -1347,6 +1392,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   }
 
   const won = ourMaps > theirMaps
+  const matchVrs = matchVrsAward(effectiveMode, event ?? null, won, opponent.rating, baseRating)
+  const opponentVrs = !won ? matchVrsBase(effectiveMode, event ?? null) : 0
   const matchEnd = addGameHours(state.now, 3)
   let resolvedRun = preparedRun
     ? resolvePlayerTournamentMatch(preparedRun, won, ourMaps, theirMaps)
@@ -1357,12 +1404,16 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const tournamentPrize = resolvedRun && tournamentFinished && !resolvedRun.prizePaid
     ? tournamentPrizeForStatus(resolvedRun.eventId, resolvedRun)
     : 0
+  const tournamentVrs = resolvedRun && tournamentFinished && !resolvedRun.vrsPaid
+    ? tournamentVrsAward(event ?? null, resolvedRun)
+    : 0
 
   if (resolvedRun && tournamentFinished) {
     resolvedRun = {
       ...resolvedRun,
       earnedPrize: resolvedRun.earnedPrize + tournamentPrize,
       prizePaid: true,
+      vrsPaid: true,
     }
   }
 
@@ -1422,6 +1473,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     tournamentMatchId: tournamentMatch?.id ?? null,
     opponentTeamId: opponent.teamId ?? null,
     opponentRoster: opponent.roster ?? [],
+    vrsDelta: matchVrs + tournamentVrs,
   }
 
   const contractNews: NewsItem[] = roster.some((player) => player.contractWeeks <= 2)
@@ -1450,8 +1502,13 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     ? [resolvedRun, ...state.tournamentHistory].slice(0, 30)
     : state.tournamentHistory
 
+  const updatedWorld = opponent.teamId && opponent.teamId !== PLAYER_CLUB_WORLD_ID
+    ? awardWorldTeamVrs(state.world, opponent.teamId, opponentVrs)
+    : state.world
+
   const next: GameState = {
     ...state,
+    world: updatedWorld,
     now: matchEnd,
     week: nextWeek,
     credits: state.credits + reward,
@@ -1461,11 +1518,12 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     losses: state.losses + (won ? 0 : 1),
     streak: won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
     seasonPoints: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
+    clubVrsPoints: state.clubVrsPoints + matchVrs + tournamentVrs,
     roster,
     lineupContinuity: clamp(state.lineupContinuity + (won ? 3 : 1), 0, 100),
     history: [result, ...state.history].slice(0, 80),
     news: [
-      { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail },
+      { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail + (result.vrsDelta ? ' · VRS +' + result.vrsDelta : '') },
       ...financeNews,
       ...contractNews,
       ...state.news,

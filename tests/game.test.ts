@@ -185,7 +185,7 @@ describe('P0 career flow', () => {
 
     const atMatch = advanceToNextTournamentMatch(booked)
     expect(canPlayMatch(atMatch, 'scrim').ok).toBe(true)
-    expect(atMatch.activeTournament?.matches.some((match) => match.status === 'complete' && ![match.teamAId, match.teamBId].includes('club'))).toBe(true)
+    expect(atMatch.activeTournament?.matches.some((match) => match.status === 'ready' && [match.teamAId, match.teamBId].includes('club'))).toBe(true)
   })
 
   it('charges payroll when calendar weeks pass instead of after every match', () => {
@@ -259,7 +259,7 @@ describe('P0 career flow', () => {
 
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(9)
+    expect(migrated.version).toBe(10)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

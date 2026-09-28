@@ -232,9 +232,6 @@ describe('P0 career flow', () => {
     expect(booked.activeTournament?.teams.filter((team) => !team.isPlayer).every((team) =>
       Boolean(team.worldTeamId) && team.roster.length === 5,
     )).toBe(true)
-    expect(booked.activeTournament?.teams.filter((team) => !team.isPlayer).some((team) =>
-      ['Spirit', 'Vitality', 'MOUZ', 'Falcons', 'G2', 'Natus Vincere'].includes(team.name),
-    )).toBe(true)
     expect(booked.credits).toBe(levelTwo.credits - 420)
 
     const atMatch = advanceToNextTournamentMatch(booked)

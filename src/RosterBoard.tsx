@@ -315,7 +315,6 @@ export function RosterBoard({
           <span><b>{activeAverage((player) => player.form)}</b> FORM</span>
           <span><b>{activeAverage((player) => player.morale)}</b> MORALE</span>
           <span><b>{activeAverage((player) => player.fatigue)}</b> FATIGUE</span>
-          <span><b>{payroll}</b> PAYROLL</span>
         </div>
       </aside>
       </div>

@@ -4146,3 +4146,13 @@ button.primary:hover,
   max-width: 690px;
   overflow-wrap: anywhere;
 }
+
+
+@media (max-width: 820px) {
+  .fifa-wallets > button { display: grid; }
+  .fifa-wallets > button:first-child { display: none; }
+}
+@media (max-width: 620px) {
+  .fifa-wallets > div { display: none; }
+  .fifa-wallets > button { min-width: 88px; }
+}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatGameDateTime, humanTimeUntil } from './calendar'
 import { tournamentForId } from './events'
 import type { GameState } from './game'
@@ -86,6 +87,7 @@ export function TournamentHub({
   state: GameState
   onAdvance: () => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   const run = state.activeTournament
   if (!run) return null
   const event = tournamentForId(run.eventId)
@@ -97,79 +99,98 @@ export function TournamentHub({
   const waiting = !next && !['eliminated', 'champion', 'complete'].includes(run.status)
 
   return (
-    <section className="tournament-hub">
-      <div className="tournament-hero">
-        <div>
-          <span>{event.format} · TIER {event.circuitTier} · {event.region.toUpperCase()}</span>
-          <h1>{event.name}</h1>
-          <p>{formatGameDateTime(run.startsAt)} — {formatGameDateTime(run.endsAt)} · {event.structure.replaceAll('_', ' ').toUpperCase()}</p>
-        </div>
-        <div className="tournament-status">
-          <small>STATUS</small>
-          <strong>{run.status.replaceAll('_', ' ').toUpperCase()}</strong>
-          <span>{run.placement ?? 'LIVE BRACKET'}</span>
-        </div>
-      </div>
-
-      {run.structure !== 'single_elim' && (
-        <>
-          <div className="tournament-groups">
-            <GroupTable run={run} group="A" />
-            <GroupTable run={run} group="B" />
+    <>
+      <section className="tournament-hub tournament-hub-compact">
+        <div className="tournament-hero">
+          <div>
+            <span>{event.format} · TIER {event.circuitTier} · {event.region.toUpperCase()}</span>
+            <h1>{event.name}</h1>
+            <p>{formatGameDateTime(run.startsAt)} — {formatGameDateTime(run.endsAt)} · {event.structure.replaceAll('_', ' ').toUpperCase()}</p>
           </div>
-          <div className="tournament-group-fixtures">
-            <span>YOUR GROUP FIXTURES</span>
-            <div>
-              {run.matches
-                .filter((match) => match.stage === 'group' && (match.teamAId === PLAYER_TEAM_ID || match.teamBId === PLAYER_TEAM_ID))
-                .map((match) => (
-                  <article key={match.id} className={match.status === 'complete' ? 'complete' : ''}>
-                    <small>{formatGameDateTime(match.scheduledAt)}</small>
-                    <strong>
-                      <span>{teamName(run, match.teamAId)}</span>
-                      <i>{scoreLabel(match)}</i>
-                      <span>{teamName(run, match.teamBId)}</span>
-                    </strong>
-                    <b>{match.status === 'complete' ? (match.winnerId === PLAYER_TEAM_ID ? 'WIN' : 'LOSS') : match.label}</b>
-                  </article>
-                ))}
-            </div>
+          <div className="tournament-status">
+            <small>STATUS</small>
+            <strong>{run.status.replaceAll('_', ' ').toUpperCase()}</strong>
+            <span>{run.placement ?? 'LIVE BRACKET'}</span>
           </div>
-        </>
-      )}
+        </div>
 
-      <div className="tournament-bracket">
-        {columns.map((column) => (
-          <section key={column.label} className="bracket-column">
-            <header>{column.label}</header>
-            <div>
-              {column.matches.map((match) => <MatchCard key={match.id} run={run} match={match} />)}
+        <div className="tournament-next-match">
+          <div>
+            <span>NEXT CLUB MATCH</span>
+            {next ? (
+              <>
+                <strong>{teamName(run, next.teamAId)} <i>VS</i> {teamName(run, next.teamBId)}</strong>
+                <small>{next.label} · {formatGameDateTime(next.scheduledAt)} · {humanTimeUntil(state.now, next.scheduledAt)}</small>
+              </>
+            ) : (
+              <>
+                <strong>{waiting ? 'BRACKET PROCESSING' : run.placement ?? run.status.toUpperCase()}</strong>
+                <small>{waiting ? 'Ожидаются результаты остальных матчей.' : 'Турнирный маршрут завершён.'}</small>
+              </>
+            )}
+          </div>
+          <div className="tournament-hub-actions">
+            <button className="secondary" onClick={() => setExpanded(true)}>VIEW BRACKET</button>
+            {(canAdvance || waiting) && (
+              <button className="fifa-primary-cta" onClick={onAdvance}>
+                ADVANCE TO NEXT MATCH <span>→</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {expanded && (
+        <div className="tournament-bracket-backdrop" role="dialog" aria-modal="true" aria-label={event.name + ' bracket'}>
+          <section className="tournament-bracket-modal">
+            <header className="tournament-bracket-modal-head">
+              <div>
+                <span>{event.format} · TIER {event.circuitTier}</span>
+                <h2>{event.name}</h2>
+              </div>
+              <button onClick={() => setExpanded(false)} aria-label="Закрыть сетку">×</button>
+            </header>
+
+            {run.structure !== 'single_elim' && (
+              <>
+                <div className="tournament-groups">
+                  <GroupTable run={run} group="A" />
+                  <GroupTable run={run} group="B" />
+                </div>
+                <div className="tournament-group-fixtures">
+                  <span>YOUR GROUP FIXTURES</span>
+                  <div>
+                    {run.matches
+                      .filter((match) => match.stage === 'group' && (match.teamAId === PLAYER_TEAM_ID || match.teamBId === PLAYER_TEAM_ID))
+                      .map((match) => (
+                        <article key={match.id} className={match.status === 'complete' ? 'complete' : ''}>
+                          <small>{formatGameDateTime(match.scheduledAt)}</small>
+                          <strong>
+                            <span>{teamName(run, match.teamAId)}</span>
+                            <i>{scoreLabel(match)}</i>
+                            <span>{teamName(run, match.teamBId)}</span>
+                          </strong>
+                          <b>{match.status === 'complete' ? (match.winnerId === PLAYER_TEAM_ID ? 'WIN' : 'LOSS') : match.label}</b>
+                        </article>
+                      ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="tournament-bracket">
+              {columns.map((column) => (
+                <section key={column.label} className="bracket-column">
+                  <header>{column.label}</header>
+                  <div>
+                    {column.matches.map((match) => <MatchCard key={match.id} run={run} match={match} />)}
+                  </div>
+                </section>
+              ))}
             </div>
           </section>
-        ))}
-      </div>
-
-      <div className="tournament-next-match">
-        <div>
-          <span>NEXT CLUB MATCH</span>
-          {next ? (
-            <>
-              <strong>{teamName(run, next.teamAId)} <i>VS</i> {teamName(run, next.teamBId)}</strong>
-              <small>{next.label} · {formatGameDateTime(next.scheduledAt)} · {humanTimeUntil(state.now, next.scheduledAt)}</small>
-            </>
-          ) : (
-            <>
-              <strong>{waiting ? 'BRACKET PROCESSING' : run.placement ?? run.status.toUpperCase()}</strong>
-              <small>{waiting ? 'Ожидаются результаты остальных матчей.' : 'Турнирный маршрут завершён.'}</small>
-            </>
-          )}
         </div>
-        {(canAdvance || waiting) && (
-          <button className="fifa-primary-cta" onClick={onAdvance}>
-            ADVANCE TO NEXT MATCH <span>→</span>
-          </button>
-        )}
-      </div>
-    </section>
+      )}
+    </>
   )
 }

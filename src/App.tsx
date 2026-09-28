@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   canPlayMatch,
   chemistry,
@@ -17,6 +17,7 @@ import {
   weeklyPayroll,
   type GameState,
   type MatchMode,
+  type MatchResult,
   type Player,
   type TacticalPlan,
 } from './game'
@@ -28,6 +29,7 @@ import {
 import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
+import { MatchRadar } from './MatchRadar'
 import { RosterBoard } from './RosterBoard'
 import { tournamentForId, tournamentMode } from './events'
 import { ScoutMarket } from './ScoutMarket'
@@ -284,6 +286,7 @@ function App() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
+  const [pendingMatch, setPendingMatch] = useState<{ nextState: GameState; result: MatchResult } | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
   const rating = useMemo(
@@ -324,11 +327,22 @@ function App() {
     setTransition({ target: next, title: TAB_LABELS[next] })
   }
 
+  const finishPendingMatch = useCallback(() => {
+    setPendingMatch((current) => {
+      if (!current) return null
+      setState(current.nextState)
+      setTab('HQ')
+      return null
+    })
+  }, [])
+
   const play = (mode: MatchMode) => {
     const gate = canPlayMatch(state, mode)
-    if (!gate.ok) return
-    setState((current) => executeGameCommand(current, { type: 'PLAY_MATCH', mode, tactic }).state)
-    setTab('HQ')
+    if (!gate.ok || pendingMatch) return
+    const result = executeGameCommand(state, { type: 'PLAY_MATCH', mode, tactic })
+    const match = result.state.history[0]
+    if (result.state === state || !match) return
+    setPendingMatch({ nextState: result.state, result: match })
   }
 
   const reset = () => {
@@ -469,6 +483,11 @@ function App() {
 
 
       <main>
+        {tab !== 'HQ' && !pendingMatch && (
+          <button className="screen-back-button" onClick={() => openTab('HQ')} aria-label="Назад">
+            <span>←</span> НАЗАД
+          </button>
+        )}
         {tab === 'HQ' && (
           <>
             {state.seasonEnded && state.seasonSummary && (
@@ -598,6 +617,15 @@ function App() {
           </section>
         )}
       </main>
+
+      {pendingMatch && (
+        <MatchRadar
+          result={pendingMatch.result}
+          starters={starters}
+          onComplete={finishPendingMatch}
+          onSkip={finishPendingMatch}
+        />
+      )}
     </div>
   )
 }

@@ -80,7 +80,7 @@ describe('P0 career flow', () => {
       ready.roster.every((player) => !player.playerKey || !team.rosterKeys.includes(player.playerKey)),
     )).toBe(true)
     expect(ready.packs.inventory).toHaveLength(5)
-    expect(canPlayMatch(ready, 'scrim').ok).toBe(true)
+    expect(canPlayMatch(ready, 'practice').ok).toBe(true)
     expect(executeGameCommand(initial, { type: 'OPEN_WELCOME_PACK', cards: cardsA }).events[0].type).toBe('WelcomePackOpened')
   })
 
@@ -189,7 +189,7 @@ describe('P0 career flow', () => {
   it('builds deterministic frame-based tactical playback for every map', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    const next = playMatch(ready, 'scrim', 'structured')
+    const next = playMatch(ready, 'practice', 'structured')
     const result = next.history[0]
     const playbackA = generateMatchPlayback(result, ready.roster, 'structured')
     const playbackB = generateMatchPlayback(result, ready.roster, 'structured')
@@ -228,7 +228,7 @@ describe('P0 career flow', () => {
     const final = advanceCareerTo(continued, '2026-10-20T09:00:00')
     expect(final.seasonEnded).toBe(true)
     expect(final.seasonSummary?.season).toBe(1)
-    expect(canPlayMatch(final, 'scrim').ok).toBe(false)
+    expect(canPlayMatch(final, 'practice').ok).toBe(false)
     const next = startNextSeason(final)
     expect(next.season).toBe(2)
     expect(next.week).toBe(1)
@@ -314,7 +314,7 @@ describe('P0 career flow', () => {
   it('keeps pracc non-ranked and non-paid while nudging lineup continuity', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    const played = playMatch(ready, 'scrim', 'balanced')
+    const played = playMatch(ready, 'practice', 'balanced')
 
     expect(played.credits).toBe(ready.credits)
     expect(played.clubVrsPoints).toBe(ready.clubVrsPoints)
@@ -332,12 +332,12 @@ describe('P0 career flow', () => {
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
     const played = playMatch(ready, 'showmatch', 'balanced')
     expect(played.pendingDecision).toBeTruthy()
-    expect(canPlayMatch(played, 'scrim').ok).toBe(false)
+    expect(canPlayMatch(played, 'practice').ok).toBe(false)
     expect(canBookTournament(played, 'helsinki').ok).toBe(false)
 
     const resolved = resolveClubDecision(played, 'a')
     expect(resolved.pendingDecision).toBeNull()
-    expect(canPlayMatch(resolved, 'scrim').ok).toBe(true)
+    expect(canPlayMatch(resolved, 'practice').ok).toBe(true)
   })
 
   it('keeps registration open until exactly 72 hours before tournament start', () => {
@@ -352,16 +352,21 @@ describe('P0 career flow', () => {
     expect(canBookTournament(afterCutoff, event.id).ok).toBe(false)
   })
 
-  it('keeps online tournaments free and scheduled in real calendar time', () => {
+  it('keeps online tournaments free and separates practice from the official T3 fixture', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
     const booked = bookTournament(ready, 'nordic-online')
     expect(booked.credits).toBe(ready.credits)
     expect(booked.activeTournament?.startsAt).toContain('2026-10-10')
-    expect(canPlayMatch(booked, 'scrim').ok).toBe(true)
+    expect(canPlayMatch(booked, 'practice').ok).toBe(true)
+    expect(canPlayMatch(booked, 'scrim').ok).toBe(false)
 
     const atMatch = advanceToNextTournamentMatch(booked)
-    expect(canPlayMatch(atMatch, 'scrim').ok).toBe(false)
+    expect(canPlayMatch(atMatch, 'practice').ok).toBe(false)
+    expect(canPlayMatch(atMatch, 'scrim').ok).toBe(true)
+    const official = playMatch(atMatch, 'scrim', 'balanced')
+    expect(official.history[0].tournamentId).toBe('nordic-online')
+    expect(official.history[0].vrsDelta).toBeGreaterThanOrEqual(0)
     expect(atMatch.activeTournament?.matches.some((match) => match.status === 'ready' && [match.teamAId, match.teamBId].includes('club'))).toBe(true)
   })
 

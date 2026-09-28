@@ -1,15 +1,16 @@
-import { applyWelcomePack, bookTournament, playMatch, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
+import { applyWelcomePack, bookTournament, playMatch, resolveClubDecision, startNextSeason, type GameState, type MatchMode, type TacticalPlan } from './game'
 import { collectPackWinner, type PackCard, type PackRoll } from './packState'
 
 export type GameCommand =
   | { type: 'OPEN_WELCOME_PACK'; cards: PackCard[] }
   | { type: 'PLAY_MATCH'; mode: MatchMode; tactic: TacticalPlan }
   | { type: 'BOOK_EVENT'; eventId: string }
+  | { type: 'RESOLVE_DECISION'; choice: 'a' | 'b' }
   | { type: 'OPEN_PACK'; roll: PackRoll }
   | { type: 'START_NEXT_SEASON' }
 
 export interface GameEvent {
-  type: 'WelcomePackOpened' | 'MatchPlayed' | 'EventBooked' | 'PackOpened' | 'SeasonStarted'
+  type: 'WelcomePackOpened' | 'MatchPlayed' | 'EventBooked' | 'DecisionResolved' | 'PackOpened' | 'SeasonStarted'
   id: string
 }
 
@@ -31,6 +32,11 @@ export const executeGameCommand = (state: GameState, command: GameCommand): Comm
     case 'BOOK_EVENT': {
       const next = bookTournament(state, command.eventId)
       return { state: next, events: next === state ? [] : [{ type: 'EventBooked', id: command.eventId }] }
+    }
+    case 'RESOLVE_DECISION': {
+      const decisionId = state.pendingDecision?.id ?? 'decision'
+      const next = resolveClubDecision(state, command.choice)
+      return { state: next, events: next === state ? [] : [{ type: 'DecisionResolved', id: decisionId }] }
     }
     case 'OPEN_PACK': {
       const { roll } = command

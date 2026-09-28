@@ -392,12 +392,13 @@ export const playerFromPackCard = (card: PackCard, index: number): Player => {
 
 export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState => {
   if (state.welcomeComplete || state.roster.length > 0 || cards.length !== 5) return state
-  const roster = cards.map(playerFromPackCard)
+  const roster = cards.map(playerFromPackCard).map((player) => ({ ...player, team: 'YOUR CLUB' }))
   const aliases = roster.map((player) => player.alias).join(' · ')
   return {
     ...state,
     welcomeComplete: true,
     roster,
+    world: reconcileWorldWithClubRoster(state.world, roster, state.now, state.seed),
     startingFive: roster.map((player) => player.id),
     lineupSlots: inferLineupSlots(roster, roster.map((player) => player.id)),
     lineupContinuity: 50,
@@ -696,6 +697,7 @@ export const migrateState = (raw: unknown): GameState => {
       now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
       activeTournament: null,
       tournamentHistory: [],
+      world: normalizedWorld(parsed.world, roster, addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9), typeof parsed.seed === 'number' ? parsed.seed : 271828),
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,

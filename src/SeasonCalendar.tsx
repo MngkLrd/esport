@@ -6,9 +6,9 @@ import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournam
 const dayLabel = (value: string) => {
   const date = parseGameDate(value)
   return {
-    dow: new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(date).toUpperCase(),
-    day: String(date.getDate()).padStart(2, '0'),
-    month: new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(date).toUpperCase(),
+    dow: new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' }).format(date).toUpperCase(),
+    day: String(date.getUTCDate()).padStart(2, '0'),
+    month: new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' }).format(date).toUpperCase(),
   }
 }
 

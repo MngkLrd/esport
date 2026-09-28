@@ -1956,3 +1956,207 @@ body::before{
   .sim-profile-body{grid-template-columns:1fr}.sim-profile-overview{border-right:0;border-bottom:1px solid var(--sim-line)}.sim-profile-stats{grid-template-columns:repeat(2,1fr)}
   .sim-inbox-body{grid-template-columns:1fr}.sim-inbox-season{margin-bottom:8px}
 }
+
+
+/* PLAYER POOL: collectible-card layout ---------------------------------- */
+.sim-player-pool-head{
+  grid-template-columns:minmax(150px,auto) minmax(0,1fr);
+  gap:12px;
+}
+.sim-pool-filters{
+  grid-template-columns:minmax(155px,1fr) 108px 112px 118px;
+  gap:5px;
+}
+.sim-pool-filters input,
+.sim-pool-filters select{
+  min-height:29px;
+  padding-inline:8px;
+  font-size:7px;
+}
+
+.sim-player-pool-body{
+  grid-template-columns:minmax(0,1fr) 252px;
+  gap:9px;
+}
+.sim-player-pool-grid{
+  grid-template-columns:repeat(auto-fill,minmax(124px,138px));
+  grid-auto-rows:max-content;
+  justify-content:start;
+  align-content:start;
+  gap:9px;
+  overflow-y:auto;
+  overflow-x:visible;
+  padding:3px 6px 8px 1px;
+}
+
+.sim-pool-card-shell{
+  position:relative;
+  width:100%;
+  max-width:138px;
+  min-width:0;
+  aspect-ratio:5/7;
+  z-index:1;
+  transition:transform .14s ease,filter .14s ease,opacity .14s ease;
+}
+.sim-pool-card-shell .visual-player-card{
+  width:100%;
+  max-width:none;
+  min-width:0;
+  min-height:0!important;
+  height:auto!important;
+  aspect-ratio:5/7;
+  padding:0;
+  border-radius:8px;
+  transform:none;
+  transition:border-color .14s ease,box-shadow .14s ease,filter .14s ease;
+}
+.sim-pool-card-shell .visual-player-card.is-starter{transform:none}
+.sim-pool-card-shell:hover{
+  z-index:12;
+  transform:translateY(-3px) scale(1.035);
+}
+.sim-pool-card-shell:hover .visual-player-card{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.18),
+    0 16px 30px rgba(0,0,0,.38);
+}
+.sim-pool-card-shell.is-selected{
+  z-index:11;
+  transform:translateY(-2px);
+}
+.sim-pool-card-shell.is-selected .visual-player-card{
+  border-color:var(--sim-cyan);
+  box-shadow:
+    0 0 0 1px var(--sim-cyan),
+    0 0 24px rgba(41,231,255,.20),
+    0 14px 28px rgba(0,0,0,.34);
+}
+.sim-pool-card-shell.is-in-squad:not(.is-selected):not(:hover){
+  opacity:.58;
+  filter:saturate(.72);
+}
+.sim-pool-card-shell .starter-star{display:none}
+
+.sim-pool-source-badge{
+  position:absolute;
+  z-index:8;
+  top:6px;
+  right:6px;
+  max-width:72px;
+  padding:4px 5px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(3,7,18,.76);
+  color:#eaf2ff;
+  box-shadow:0 2px 8px rgba(0,0,0,.22);
+  font:900 5px/1 Arial,sans-serif;
+  letter-spacing:.09em;
+  pointer-events:none;
+}
+.sim-pool-card-shell.is-collection .sim-pool-source-badge{
+  border-color:rgba(41,231,255,.30);
+  color:var(--sim-cyan);
+}
+.sim-pool-card-shell.is-in-squad .sim-pool-source-badge{
+  border-color:rgba(88,255,210,.30);
+  color:var(--sim-mint);
+}
+
+/* Pool cards use the same card geometry as the active five. */
+.sim-pool-card-shell .visual-card-top{top:6%;left:7%;right:7%}
+.sim-pool-card-shell .visual-card-top strong{font-size:21px}
+.sim-pool-card-shell .visual-card-top span{margin-top:2px;font-size:7px}
+.sim-pool-card-shell .visual-country{top:20%;left:7%;font-size:10px}
+.sim-pool-card-shell .visual-country span{font-size:6px}
+.sim-pool-card-shell .visual-photo{
+  top:16%;
+  left:2%;
+  right:2%;
+  height:61%;
+  display:grid;
+  place-items:end center;
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+}
+.sim-pool-card-shell .visual-photo img{
+  position:absolute;
+  inset:auto auto -9% -7%;
+  width:114%;
+  height:114%;
+  object-fit:contain;
+  object-position:center bottom;
+  mix-blend-mode:normal;
+  opacity:1;
+}
+.sim-pool-card-shell .visual-monogram{display:none}
+.sim-pool-card-shell .visual-identity{
+  left:6%;
+  right:6%;
+  bottom:20%;
+  padding:5px 3px;
+  background:linear-gradient(90deg,transparent,rgba(3,7,18,.76) 18%,rgba(3,7,18,.76) 82%,transparent);
+}
+.sim-pool-card-shell .visual-identity strong{font-size:10px}
+.sim-pool-card-shell .visual-identity span{margin-top:2px;font-size:6px}
+.sim-pool-card-shell .visual-stats{
+  left:7%;
+  right:7%;
+  bottom:5%;
+  gap:2px;
+}
+.sim-pool-card-shell .visual-stats span{font-size:5px}
+.sim-pool-card-shell .visual-stats b{font-size:8px}
+.sim-pool-card-shell .visual-live-state,
+.sim-pool-card-shell .visual-rarity{display:none}
+
+/* Inspector stays useful but no longer consumes card-gallery space. */
+.sim-player-inspector{font-size:92%}
+.sim-inspector-hero{flex-basis:76px}
+.sim-inspector-hero img,
+.sim-inspector-hero .player-portrait-fallback{
+  width:126px;
+  height:100px;
+  bottom:-12px;
+}
+.sim-inspector-hero>div{left:10px;top:9px}
+.sim-inspector-hero>div strong{font-size:27px}
+.sim-inspector-name{padding:7px 10px 6px}
+.sim-inspector-name h2{font-size:16px}
+.sim-inspector-stats span,
+.sim-inspector-state span{padding:5px 2px}
+.sim-inspector-primary-actions{padding:6px 8px 0}
+.sim-inspector-primary-actions button,
+.sim-inspector-club-actions button{min-height:27px}
+.sim-inspector-club-actions{
+  grid-template-columns:repeat(2,1fr);
+  gap:4px;
+  padding:6px 8px 8px;
+}
+
+@media (min-width:901px) and (max-width:1320px){
+  .sim-player-pool-body{grid-template-columns:minmax(0,1fr) 236px}
+  .sim-player-pool-grid{grid-template-columns:repeat(auto-fill,minmax(116px,130px));gap:8px}
+  .sim-pool-card-shell{max-width:130px}
+  .sim-pool-filters{grid-template-columns:minmax(140px,1fr) 100px 104px 108px}
+}
+
+@media (min-width:901px) and (max-height:820px){
+  .sim-player-pool-grid{grid-auto-rows:max-content}
+  .sim-pool-card-shell{max-width:126px}
+  .sim-player-pool-grid{grid-template-columns:repeat(auto-fill,minmax(114px,126px));gap:7px}
+  .sim-inspector-hero{flex-basis:68px}
+  .sim-inspector-name{padding-block:5px}
+}
+
+@media (max-width:900px){
+  .sim-player-pool-grid{
+    grid-template-columns:repeat(auto-fill,minmax(126px,142px));
+    grid-auto-rows:max-content;
+    justify-content:center;
+  }
+  .sim-pool-card-shell{max-width:142px}
+  .sim-player-inspector{min-height:330px}
+}

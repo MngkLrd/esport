@@ -1,0 +1,234 @@
+/* Dense game-screen shell + stronger panel hierarchy.
+   Imported last so it can normalize older per-screen layouts without
+   rewriting every feature stylesheet. */
+
+:root{
+  --game-line:rgba(126,151,226,.34);
+  --game-line-soft:rgba(126,151,226,.20);
+  --game-panel:rgba(8,14,35,.90);
+  --game-panel-raised:rgba(14,22,50,.92);
+  --game-cyan:var(--sim-cyan,#29e7ff);
+  --game-violet:var(--sim-violet,#745cff);
+  --game-mint:var(--sim-mint,#58ffd2);
+  --game-warn:var(--sim-warn,#ffb766);
+}
+
+.fifa-screen-title{gap:9px}
+.fifa-screen-back-mark{
+  color:var(--game-cyan);
+  font:1000 18px/1 Arial,sans-serif;
+  transform:translateY(-1px);
+  opacity:.78;
+}
+.fifa-screen-title:hover .fifa-screen-back-mark{opacity:1}
+
+.sim-world-map,
+.sim-event-dossier,
+.sim-month,
+.sim-schedule,
+.sim-event-banner,
+.sim-match-stage,
+.sim-practice-squad,
+.sim-practice-console,
+.sim-squad-stage,
+.sim-player-inspector,
+.sim-market-body,
+.sim-pack-selector,
+.sim-profile-body,
+.sim-profile-stats,
+.sim-inbox-season,
+.sim-feed{
+  border-color:var(--game-line)!important;
+}
+
+.sim-world-map,
+.sim-month,
+.sim-schedule,
+.sim-match-stage,
+.sim-practice-squad,
+.sim-squad-stage,
+.sim-market-body,
+.sim-profile-body,
+.sim-feed{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 16px 34px rgba(0,0,0,.16);
+}
+
+.sim-event-dossier,
+.sim-practice-console,
+.sim-player-inspector,
+.sim-pack-selector,
+.sim-inbox-season{
+  box-shadow:
+    inset 3px 0 0 rgba(41,231,255,.42),
+    0 16px 34px rgba(0,0,0,.16);
+}
+.sim-market-brief{box-shadow:inset 3px 0 0 rgba(116,92,255,.46)}
+.sim-profile-overview{box-shadow:inset 3px 0 0 rgba(116,92,255,.48)}
+
+.sim-segmented,
+.sim-world-filters,
+.sim-subnav{
+  border-color:var(--game-line-soft)!important;
+  background:linear-gradient(180deg,rgba(20,29,62,.78),rgba(8,14,35,.80));
+}
+.sim-subnav{
+  border:1px solid var(--game-line-soft);
+  padding:0 4px;
+}
+.sim-subnav button.active{background:rgba(41,231,255,.055)}
+
+.sim-event-stats>div,
+.sim-event-details>div,
+.sim-practice-rules span,
+.sim-pack-odds div,
+.sim-milestones article,
+.sim-squad-kpis>div{
+  border-color:var(--game-line-soft)!important;
+  background-color:rgba(15,23,52,.70);
+}
+.sim-event-stats>div{box-shadow:inset 0 2px 0 rgba(41,231,255,.34)}
+.sim-event-details>div{box-shadow:inset 0 1px 0 rgba(116,92,255,.32)}
+.sim-practice-rules span:nth-child(1){box-shadow:inset 0 2px 0 rgba(41,231,255,.52)}
+.sim-practice-rules span:nth-child(2){box-shadow:inset 0 2px 0 rgba(116,92,255,.58)}
+.sim-practice-rules span:nth-child(3){box-shadow:inset 0 2px 0 rgba(88,255,210,.52)}
+.sim-practice-rules span:nth-child(4){box-shadow:inset 0 2px 0 rgba(255,183,102,.55)}
+.sim-pack-odds div{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--pack-accent) 68%,transparent)}
+.sim-milestones article.complete{box-shadow:inset 3px 0 0 rgba(41,231,255,.48)}
+
+.sim-squad-kpis>div:nth-child(1){box-shadow:inset 0 2px 0 rgba(41,231,255,.52)}
+.sim-squad-kpis>div:nth-child(2){box-shadow:inset 0 2px 0 rgba(116,92,255,.58)}
+.sim-squad-kpis>div:nth-child(3){box-shadow:inset 0 2px 0 rgba(88,255,210,.48)}
+.sim-squad-kpis>div:nth-child(4){box-shadow:inset 0 2px 0 rgba(255,183,102,.50)}
+.sim-squad-kpis>div:nth-child(5){box-shadow:inset 0 2px 0 rgba(255,104,126,.44)}
+
+.sim-profile-stats>div{position:relative}
+.sim-profile-stats>div::before{
+  content:'';
+  position:absolute;
+  left:10px;
+  right:10px;
+  top:0;
+  height:2px;
+  background:rgba(41,231,255,.34);
+}
+.sim-profile-stats>div:nth-child(even)::before{background:rgba(116,92,255,.42)}
+
+.sim-feed>article{
+  border-left:2px solid rgba(41,231,255,.22);
+  border-bottom-color:var(--game-line-soft)!important;
+  transition:background .14s ease,border-color .14s ease;
+}
+.sim-feed>article:hover{
+  border-left-color:var(--game-cyan);
+  background:rgba(41,231,255,.035);
+}
+.sim-event-row{border-bottom-color:var(--game-line-soft)!important}
+.sim-market .market-candidate{
+  border-color:var(--game-line-soft)!important;
+  box-shadow:inset 0 2px 0 rgba(41,231,255,.28);
+}
+.sim-market .market-candidate.tier-silver{box-shadow:inset 0 2px 0 rgba(199,206,215,.46)}
+.sim-market .market-candidate.tier-rare{box-shadow:inset 0 2px 0 rgba(41,231,255,.55)}
+.sim-market .market-candidate.tier-elite{box-shadow:inset 0 2px 0 rgba(190,82,255,.58)}
+.sim-market .market-candidate.tier-gold{box-shadow:inset 0 2px 0 rgba(239,195,79,.62)}
+
+.sim-practice-squad-head,
+.sim-squad-stage-head,
+.sim-player-pool-head,
+.sim-market-results-head,
+.sim-pack-selector-head,
+.sim-schedule-head{
+  border-bottom-color:var(--game-line-soft)!important;
+}
+
+@media (min-width:901px){
+  .app-main > .screen-back-button{display:none!important}
+  .app-main:not(.app-main-hq) > .sim-screen{
+    padding:8px 18px 10px!important;
+  }
+  .sim-matchday{padding:8px 18px 8px!important}
+
+  .sim-screen-head{
+    min-height:36px!important;
+    height:36px;
+    padding:0 10px 0 11px;
+    border:1px solid var(--game-line-soft)!important;
+    border-left:3px solid rgba(41,231,255,.62)!important;
+    background:linear-gradient(90deg,rgba(16,28,58,.86),rgba(8,14,35,.66));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  }
+  .sim-screen-head>div:first-child{
+    min-width:0;
+    display:flex!important;
+    align-items:center;
+    gap:8px!important;
+  }
+  .sim-screen-head>div:first-child>span,
+  .sim-screen-head .eyebrow{
+    font-size:8px!important;
+    line-height:1!important;
+    letter-spacing:.11em!important;
+  }
+  .sim-head-stat{
+    min-width:auto;
+    display:flex;
+    align-items:baseline;
+    justify-content:flex-end;
+    gap:7px;
+  }
+  .sim-head-stat small,
+  .sim-head-stat>span{font-size:7px!important}
+  .sim-head-stat b{font-size:14px!important;line-height:1!important}
+  .sim-head-metrics{align-items:center;gap:10px}
+  .sim-head-metrics .sim-head-stat{
+    padding-left:10px;
+    border-left:1px solid var(--game-line-soft);
+  }
+
+  .sim-world{grid-template-rows:36px 44px 76px minmax(0,1fr)!important}
+  .sim-world-vrs{grid-template-rows:36px 44px minmax(0,1fr)!important}
+  .sim-calendar{grid-template-rows:36px 40px minmax(0,1fr)!important;gap:7px}
+  .sim-practice{grid-template-rows:36px minmax(0,1fr)!important;gap:7px}
+  .sim-roster-v2{grid-template-rows:36px 54px minmax(300px,.98fr) minmax(220px,.78fr)!important;gap:7px}
+  .sim-market{grid-template-rows:36px minmax(0,1fr)!important;gap:7px}
+  .sim-packs{grid-template-rows:36px 36px minmax(0,1fr)!important;gap:6px}
+  .sim-profile{grid-template-rows:36px minmax(0,1fr) 60px!important;gap:7px}
+  .sim-inbox{grid-template-rows:36px auto minmax(0,1fr) 34px!important;gap:7px}
+
+  .sim-world-toolbar{padding:3px 0}
+  .sim-event-carousel{padding:5px 0 7px;gap:8px}
+  .sim-event-carousel button{
+    flex-basis:238px;
+    height:64px;
+    padding:8px 11px;
+    gap:3px 8px;
+    border-color:var(--game-line-soft);
+  }
+  .sim-event-carousel b{font-size:13px}
+  .sim-event-carousel span{font-size:9px}
+  .sim-event-carousel em{font-size:8px}
+
+  .sim-calendar-now{min-width:auto}
+  .sim-calendar-now b{font-size:14px!important}
+  .sim-practice-continuity{
+    min-width:250px;
+    display:grid;
+    grid-template-columns:auto auto 100px;
+    grid-template-rows:1fr;
+    align-items:center;
+    gap:7px;
+  }
+  .sim-practice-continuity small{font-size:7px}
+  .sim-practice-continuity b{font-size:14px}
+  .sim-practice-continuity i{grid-column:3;grid-row:1;width:100px;height:5px}
+  .sim-roster-market-action{min-height:28px;height:28px;min-width:164px}
+  .sim-profile-level{width:27px;height:27px;font-size:14px}
+  .sim-market-budget{gap:7px}
+  .sim-market-budget small{font-size:7px}
+}
+
+@media (max-width:900px){
+  .fifa-screen-back-mark{font-size:15px}
+}

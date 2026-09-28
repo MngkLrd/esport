@@ -6,6 +6,7 @@ import './simUI.css'
 import './siteBackground.css'
 import './worldMapBackground.css'
 import './menuArtwork.css'
+import './visualHierarchy.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

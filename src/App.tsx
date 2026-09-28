@@ -518,7 +518,12 @@ function App() {
         </div>
       )}
       <header className="fifa-topbar">
-        <button className="fifa-brand fifa-screen-title" onClick={() => openTab('HQ')} aria-label="Вернуться на главную">
+        <button
+          className="fifa-brand fifa-screen-title"
+          onClick={() => openTab('HQ')}
+          aria-label={tab === 'HQ' ? 'Home' : 'Вернуться на главную'}
+        >
+          {tab !== 'HQ' && <span className="fifa-screen-back-mark" aria-hidden="true">←</span>}
           <strong>{SCREEN_TITLES[tab]}</strong>
         </button>
         {currentFixtureDue ? (

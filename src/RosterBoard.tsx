@@ -19,7 +19,7 @@ import {
 import { cardTier, countryFlag } from './playerVisuals'
 import { PlayerPortrait } from './PlayerPortrait'
 import type { PackCard } from './packState'
-import { CollectiblePlayerCard } from './CollectiblePlayerCard'
+import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 
 const ROLE_LABELS: Record<LineupSlot, string> = {
   Entry: 'ENTRY',
@@ -66,7 +66,7 @@ function GameCard({
   return (
     <CollectiblePlayerCard
       rating={overall(player)}
-      tier={cardTier(overall(player))}
+      tier={player.cardRarity ? tierForPackRarity(player.cardRarity) : cardTier(overall(player))}
       role={player.role}
       alias={player.alias}
       team={player.team}

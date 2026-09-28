@@ -597,95 +597,95 @@ function App() {
         )}
 
         {tab === 'Play' && (
-          <section className="screen tactical-screen">
+          <section className="sim-screen sim-matchday">
             {state.activeTournament && <TournamentHub state={state} onAdvance={advanceToTournamentMatch} />}
-            <div className="tactical-heading"><div><span className="eyebrow">{activeEvent ? activeEvent.city.toUpperCase() + ' · TIER ' + activeEvent.circuitTier + ' · ' + activeEvent.format : 'TACTICAL DESK · WEEK ' + state.week}</span><h1>{activeEvent ? activeEvent.name : 'Решение до серии.'}</h1></div><div className="tactical-budget"><span>{activeEvent ? 'PRIZE POOL' : 'ЗАРПЛАТА'}</span><b>{activeEvent ? activeEvent.prize.toLocaleString('ru-RU') : payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
-            <div className="tactical-board">
-              <section className="tactical-team tactical-team-home"><div className="tactical-team-label">YOUR CLUB</div><div className="tactical-team-name">STARTING FIVE</div><div className="tactical-team-meta"><span>{rating} OVR</span><span>{chem} CHEM</span><span>{state.lineupContinuity} CONTINUITY</span></div><div className="tactical-mini-roster">{starters.map((player) => <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>EDIT FIVE</button></section>
-              <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
-              <section className="tactical-opponent"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'SERIES'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? bracketOpponent.rating + ' OVR' : modeInfo[activeEventMode ?? 'scrim'].description}</p>{bracketRoster.length > 0 && <div className="tactical-opponent-roster">{bracketRoster.map((player) => <OpponentVisualCard key={player.playerKey} player={player} />)}</div>}</section>
+            <div className="sim-match-head"><div><span className="eyebrow">{activeEvent ? activeEvent.city.toUpperCase() + ' · TIER ' + activeEvent.circuitTier + ' · ' + activeEvent.format : 'TACTICAL DESK · WEEK ' + state.week}</span><h1>{activeEvent ? activeEvent.name : 'Решение до серии.'}</h1></div><div className="sim-match-prize"><span>{activeEvent ? 'PRIZE POOL' : 'ЗАРПЛАТА'}</span><b>{activeEvent ? activeEvent.prize.toLocaleString('ru-RU') : payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
+            <div className="sim-match-stage">
+              <section className="sim-team-deck sim-team-home"><div className="sim-team-kicker">YOUR CLUB</div><div className="sim-team-name">STARTING FIVE</div><div className="sim-team-meta"><span>{rating} OVR</span><span>{chem} CHEM</span><span>{state.lineupContinuity} CONTINUITY</span></div><div className="sim-match-roster">{starters.map((player) => <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />)}</div><button className="sim-ghost-action sim-team-edit" onClick={() => openTab('Roster')}>EDIT FIVE</button></section>
+              <div className="sim-match-versus"><span>BO3</span><strong>VS</strong></div>
+              <section className="sim-team-deck sim-team-away"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'SERIES'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? bracketOpponent.rating + ' OVR' : modeInfo[activeEventMode ?? 'scrim'].description}</p>{bracketRoster.length > 0 && <div className="sim-match-roster sim-opponent-roster">{bracketRoster.map((player) => <OpponentVisualCard key={player.playerKey} player={player} />)}</div>}</section>
             </div>
-            <div className="tactical-control tactical-control-compact">
-              <div className="tactical-modes">
+            <div className="sim-match-actions">
+              <div className="sim-match-format-wrap">
                 <div className="control-label">EVENT FORMAT</div>
                 {activeEventMode && activeEvent ? (
-                  <div className="tactical-event-lock">
+                  <div className="sim-match-format">
                     <span>OFFICIAL · TIER {activeEvent.circuitTier} · {activeEvent.format}</span>
                     <small>{bracketMatch?.label ?? activeEvent.label} · VRS ENABLED</small>
                   </div>
                 ) : (
-                  <div className="tactical-event-lock muted-lock">
+                  <div className="sim-match-format is-muted">
                     <span>NO OFFICIAL FIXTURE</span>
                     <small>Выбери турнир на World Map. Пракки находятся в Training.</small>
                   </div>
                 )}
               </div>
-              <div className="tactical-launch tactical-launch-compact">
+              <div className="sim-match-launch">
                 <span className="control-label">MATCH ACTION</span>
                 {activeEvent && canAdvanceTournamentClock
-                  ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button>
+                  ? <button className="sim-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button>
                   : activeEventMode
-                    ? <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode)}>ИГРАТЬ МАТЧ <span>→</span></button>
-                    : <button className="hq-primary-action" onClick={() => openTab('World')}>ВЫБРАТЬ ТУРНИР <span>→</span></button>}
+                    ? <button className="sim-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode)}>ИГРАТЬ МАТЧ <span>→</span></button>
+                    : <button className="sim-primary-action" onClick={() => openTab('World')}>ВЫБРАТЬ ТУРНИР <span>→</span></button>}
                 {activeEventMode && !currentPlayGate.ok && !canAdvanceTournamentClock
                   ? <small>{currentPlayGate.reason}</small>
                   : warnings.length > 0 && <small>{warnings[0]}</small>}
               </div>
             </div>
-            {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
+            {last && <div className="sim-match-recap"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
           </section>
         )}
 
 
         {tab === 'Training' && (
-          <section className="screen practice-room-screen">
-            <div className="fifa-screen-header practice-room-header">
+          <section className="sim-screen sim-practice">
+            <div className="sim-screen-head sim-practice-head">
               <div>
                 <span>TRAINING GROUND · NO VRS · NO CASH</span>
                 <h1>PRACTICE</h1>
               </div>
-              <div className="practice-continuity">
+              <div className="sim-practice-continuity">
                 <small>LINEUP CONTINUITY</small>
                 <b>{state.lineupContinuity}</b>
                 <i><em style={{ width: state.lineupContinuity + '%' }} /></i>
               </div>
             </div>
 
-            <div className="practice-room-layout">
-              <section className="practice-squad-panel">
-                <div className="practice-panel-head">
+            <div className="sim-practice-body">
+              <section className="sim-practice-squad">
+                <div className="sim-practice-squad-head">
                   <div>
                     <span>ACTIVE FIVE · {rating} OVR</span>
                     <strong>{starters.map((player) => player.alias).join(' · ')}</strong>
                   </div>
                   <button className="secondary" onClick={() => openTab('Roster')}>EDIT FIVE</button>
                 </div>
-                <div className="practice-card-row">
+                <div className="sim-practice-cards">
                   {starters.map((player) => (
                     <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />
                   ))}
                 </div>
               </section>
 
-              <aside className="practice-console">
+              <aside className="sim-practice-console">
                 <span className="control-label">SESSION RULES</span>
                 <h2>BO3 PRACTICE</h2>
-                <div className="practice-rules">
+                <div className="sim-practice-rules">
                   <span><b>0</b>CASH</span>
                   <span><b>0</b>VRS</span>
                   <span><b>+1</b>CONTINUITY</span>
                   <span><b>+4</b>FATIGUE</span>
                 </div>
-                <div className="practice-mode-note">
+                <div className="sim-practice-note">
                   <span>STANDARD PRACTICE</span>
                   <small>Тактические планы временно отключены. Пракк проходит в стандартном режиме.</small>
                 </div>
-                <button className="fifa-primary-cta practice-start" disabled={!practiceGate.ok} onClick={() => play('practice')}>
+                <button className="sim-primary-action sim-practice-start" disabled={!practiceGate.ok} onClick={() => play('practice')}>
                   PLAY PRACC <span>→</span>
                 </button>
-                {!practiceGate.ok && <p className="practice-block-reason">{practiceGate.reason}</p>}
+                {!practiceGate.ok && <p className="sim-practice-block">{practiceGate.reason}</p>}
                 {state.activeTournament && !currentFixtureDue && bracketMatch && (
-                  <p className="practice-next-official">NEXT OFFICIAL · {formatGameDate(bracketMatch.scheduledAt)} · {formatGameTime(bracketMatch.scheduledAt)}</p>
+                  <p className="sim-practice-next">NEXT OFFICIAL · {formatGameDate(bracketMatch.scheduledAt)} · {formatGameTime(bracketMatch.scheduledAt)}</p>
                 )}
               </aside>
             </div>
@@ -732,16 +732,16 @@ function App() {
         {tab === 'Profile' && <ManagerProfile state={state} />}
 
         {tab === 'Inbox' && (
-          <section className="screen newsroom-screen">
-            <div className="fifa-screen-header">
+          <section className="sim-screen sim-inbox">
+            <div className="sim-screen-head">
               <div>
                 <span>CLUB FEED · WEEK {state.week}</span>
                 <h1>INBOX</h1>
               </div>
-              <div className="fifa-screen-rank"><small>EVENTS</small><b>{state.news.length + (state.pendingDecision ? 1 : 0)}</b></div>
+              <div className="sim-head-stat"><small>EVENTS</small><b>{state.news.length + (state.pendingDecision ? 1 : 0)}</b></div>
             </div>
             {state.pendingDecision && (
-              <article className={'club-decision-card decision-' + state.pendingDecision.kind}>
+              <article className={'sim-decision-card decision-' + state.pendingDecision.kind}>
                 <span>DECISION REQUIRED</span>
                 <h2>{state.pendingDecision.title}</h2>
                 <p>{state.pendingDecision.body}</p>
@@ -751,9 +751,9 @@ function App() {
                 </div>
               </article>
             )}
-            <div className="newsroom-layout">
-              <div className="newsroom-season-mark"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
-              <div className="timeline">
+            <div className="sim-inbox-body">
+              <div className="sim-inbox-season"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
+              <div className="sim-feed">
                 {state.news.map((item) => {
                   const target: Tab | null =
                     item.kind === 'contract' || item.kind === 'lineup' ? 'Roster' :
@@ -763,19 +763,19 @@ function App() {
                     item.kind === 'finance' ? 'Profile' : null
                   return (
                     <article key={item.id}>
-                      <div className="timeline-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
+                      <div className="sim-feed-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
                       <div>
                         <span>Неделя {item.week} · {NEWS_KIND_LABELS[item.kind]}</span>
                         <h2>{item.title}</h2>
                         <p>{item.body}</p>
-                        {target && <button className="news-action" onClick={() => openTab(target)}>ОТКРЫТЬ <b>→</b></button>}
+                        {target && <button className="sim-feed-action" onClick={() => openTab(target)}>ОТКРЫТЬ <b>→</b></button>}
                       </div>
                     </article>
                   )
                 })}
               </div>
             </div>
-            <button className="danger-button save-reset" onClick={reset}>Сбросить сохранение</button>
+            <button className="sim-danger-action sim-reset" onClick={reset}>Сбросить сохранение</button>
           </section>
         )}
       </main>

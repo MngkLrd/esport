@@ -700,7 +700,7 @@ const opponentNames = [
   'Zero Hour', 'Nightshift', 'Kinetic', 'Blackbird',
 ] as const
 
-const mapPool = ['Foundry', 'Harbor', 'Citadel', 'Metro', 'Rift', 'Archive'] as const
+const mapPool = ['Dust II', 'Mirage', 'Inferno', 'Nuke', 'Ancient', 'Anubis'] as const
 
 const modeTuning: Record<MatchMode, { difficulty: number; baseReward: number; fans: number; label: string }> = {
   scrim: { difficulty: -5, baseReward: 700, fans: 25, label: 'Тренировочный контур' },

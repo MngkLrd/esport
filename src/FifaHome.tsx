@@ -4,6 +4,7 @@ import { tournamentForId } from './events'
 import { PlayerPortrait } from './PlayerPortrait'
 import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
 import { nextPlayerMatch, opponentForPlayerMatch } from './tournamentEngine'
+import worldMapBackground from './assets/ui/world-map-background.webp'
 
 type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Inbox' | 'Training'
 
@@ -105,7 +106,17 @@ export function FifaHome({
           <b className="fifa-mode-arrow">→</b>
         </button>
 
-        <button {...tileProps(1)} className="fifa-mode-tile fifa-world-tile" onClick={() => onOpen('World')}>
+        <button
+          {...tileProps(1)}
+          className="fifa-mode-tile fifa-world-tile"
+          style={{
+            backgroundImage: `url(${worldMapBackground})`,
+            backgroundPosition: 'center center',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+          }}
+          onClick={() => onOpen('World')}
+        >
           <div className="fifa-tile-kicker">GLOBAL CIRCUIT</div>
           <h2>WORLD MAP</h2>
           <div className="fifa-mini-map">

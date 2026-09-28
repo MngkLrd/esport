@@ -308,7 +308,10 @@ export function PacksView({
           <span>STORE · PLAYER PACKS</span>
           <h1>{section === 'store' ? 'PACK STORE' : 'MY CLUB'}</h1>
         </div>
-        <div className="fifa-currency-large"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
+        <div className="packs-header-metrics">
+          <div className="pack-collection-summary-inline"><small>COLLECTION</small><b>{stats.unique}</b><span>{stats.legendary} LEGENDARY</span></div>
+          <div className="fifa-currency-large"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
+        </div>
       </div>
 
       <div className="pack-section-tabs">
@@ -340,11 +343,6 @@ export function PacksView({
                 </button>
               </article>
             ))}
-          </div>
-          <div className="pack-store-summary">
-            <span>COLLECTION</span>
-            <b>{stats.unique}</b>
-            <small>unique · {stats.legendary} legendary</small>
           </div>
         </div>
       ) : (

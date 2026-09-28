@@ -12,26 +12,26 @@ export function ManagerProfile({ state }: { state: GameState }) {
   const nextMilestone = MILESTONES.find((item) => item.level > progress.level) ?? null
 
   return (
-    <section className="screen manager-profile-screen">
-      <div className="fifa-screen-header">
+    <section className="sim-screen sim-profile">
+      <div className="sim-screen-head sim-profile-head">
         <div>
           <span>CAREER PROGRESSION</span>
           <h1>MANAGER LEVEL</h1>
         </div>
-        <div className="manager-level-badge">{progress.level}</div>
+        <div className="sim-profile-level">{progress.level}</div>
       </div>
 
-      <div className="manager-progress-hero">
-        <div className="manager-progress-copy">
+      <div className="sim-profile-body">
+        <div className="sim-profile-overview">
           <span>CURRENT LEVEL</span>
           <strong>{String(progress.level).padStart(2, '0')}</strong>
           <h2>{nextMilestone ? nextMilestone.title : 'ALL CIRCUITS UNLOCKED'}</h2>
           <p>{nextMilestone ? 'NEXT · LVL ' + nextMilestone.level + ' · ' + nextMilestone.body : 'Все Tier 1–3 ивенты и максимальная глубина scouting доступны.'}</p>
         </div>
-        <div className="manager-progress-track">
-          <div className="manager-progress-line"><i style={{ width: progress.percent + '%' }} /></div>
-          <div className="manager-progress-labels"><span>{progress.current} XP</span><span>{progress.required} XP</span></div>
-          <div className="manager-milestones">
+        <div className="sim-profile-track">
+          <div className="sim-xp-line"><i style={{ width: progress.percent + '%' }} /></div>
+          <div className="sim-xp-labels"><span>{progress.current} XP</span><span>{progress.required} XP</span></div>
+          <div className="sim-milestones">
             {MILESTONES.map((item) => (
               <article key={item.level} className={progress.level >= item.level ? 'complete' : ''}>
                 <b>{progress.level >= item.level ? 'UNLOCKED' : 'LVL ' + item.level}</b>
@@ -43,7 +43,7 @@ export function ManagerProfile({ state }: { state: GameState }) {
         </div>
       </div>
 
-      <div className="manager-stat-strip">
+      <div className="sim-profile-stats">
         <div><span>SEASON</span><b>{state.season}</b></div>
         <div><span>RECORD</span><b>{state.wins}-{state.losses}</b></div>
         <div><span>REPUTATION</span><b>{state.reputation}</b></div>

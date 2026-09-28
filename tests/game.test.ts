@@ -214,6 +214,15 @@ describe('P0 career flow', () => {
     expect(farFuture.now).toBe(fixture?.scheduledAt)
   })
 
+  it('freezes the career clock once a scheduled club fixture is due', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const booked = bookTournament(ready, 'eu-open-1')
+    const atMatch = advanceToNextTournamentMatch(booked)
+    const attemptedSkip = advanceCareerTo(atMatch, '2026-10-10T09:00:00')
+    expect(attemptedSkip.now).toBe(atMatch.now)
+  })
+
   it('charges payroll when calendar weeks pass instead of after every match', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))

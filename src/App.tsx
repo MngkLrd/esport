@@ -310,6 +310,7 @@ function App() {
   const activeEventMode = activeEvent ? tournamentMode(activeEvent) : null
   const bracketMatch = activeTournamentMatch(state)
   const bracketOpponent = opponentForPlayerMatch(state.activeTournament)
+  const bracketRoster = bracketOpponent?.roster ?? []
   const currentPlayGate = canPlayMatch(state, activeEventMode ?? 'scrim')
   const canAdvanceTournamentClock = Boolean(
     state.activeTournament &&
@@ -553,7 +554,7 @@ function App() {
             <div className="tactical-board">
               <section className="tactical-team tactical-team-home"><div className="tactical-team-label">НАШ КЛУБ · {rating} OVR</div><div className="tactical-team-name">{starters.map((player) => player.alias).join(' · ')}</div><div className="tactical-team-meta"><span>{chem} химия</span><span>{state.lineupContinuity} стабильность</span></div><div className="tactical-mini-roster">{starters.map((player) => <button key={player.id} onClick={() => setSelectedPlayer(player)}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><b>{player.alias}</b><small>{ROLE_LABELS[player.role]}</small></button>)}</div><button className="secondary tactical-edit" onClick={() => openTab('Roster')}>Изменить пятёрку</button></section>
               <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
-              <section className="tactical-opponent"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'СЕРИЯ'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? 'RATING ' + bracketOpponent.rating + ' · ' + (bracketMatch?.label ?? '') : modeInfo[activeEventMode ?? 'scrim'].description}</p><div className="opponent-line"><b>{bracketOpponent?.rating ?? '?'}</b><span>{bracketOpponent ? bracketOpponent.name.toUpperCase() : 'СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН'}</span></div></section>
+              <section className="tactical-opponent"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'СЕРИЯ'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? 'RATING ' + bracketOpponent.rating + ' · ' + (bracketMatch?.label ?? '') : modeInfo[activeEventMode ?? 'scrim'].description}</p>{bracketRoster.length > 0 && <div className="tactical-opponent-roster">{bracketRoster.map((player) => <div key={player.playerKey}><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /><span><b>{player.alias}</b><small>{player.role ?? 'RIFLER'} · {player.rating}</small></span></div>)}</div>}<div className="opponent-line"><b>{bracketOpponent?.rating ?? '?'}</b><span>{bracketOpponent ? bracketOpponent.name.toUpperCase() : 'СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН'}</span></div></section>
             </div>
             <div className="tactical-control">
               <div className="tactical-plans"><div className="control-label">ПЛАН ИГРЫ</div>{(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}><span>{tacticInfo[plan].name}</span><small>{tacticInfo[plan].description}</small></button>)}</div>

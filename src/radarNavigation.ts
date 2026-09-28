@@ -34,6 +34,47 @@ const pointForCell = (grid: RadarNavigationGrid, index: number): Point => {
   }
 }
 
+interface OpenNode {
+  index: number
+  f: number
+}
+
+const heapPush = (heap: OpenNode[], node: OpenNode) => {
+  heap.push(node)
+  let index = heap.length - 1
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2)
+    if (heap[parent].f <= node.f) break
+    heap[index] = heap[parent]
+    index = parent
+  }
+  heap[index] = node
+}
+
+const heapPop = (heap: OpenNode[]) => {
+  if (!heap.length) return null
+  const root = heap[0]
+  const tail = heap.pop()!
+  if (!heap.length) return root
+
+  let index = 0
+  while (true) {
+    const left = index * 2 + 1
+    const right = left + 1
+    if (left >= heap.length) break
+
+    let child = left
+    if (right < heap.length && heap[right].f < heap[left].f) child = right
+    if (heap[child].f >= tail.f) break
+
+    heap[index] = heap[child]
+    index = child
+  }
+
+  heap[index] = tail
+  return root
+}
+
 const walkableAt = (grid: RadarNavigationGrid, col: number, row: number) =>
   col >= 0 &&
   row >= 0 &&
@@ -181,19 +222,18 @@ const findPath = (
   const cameFrom = new Int32Array(total)
   cameFrom.fill(-1)
   const closed = new Uint8Array(total)
-  const open: Array<{ index: number; f: number }> = []
+  const open: OpenNode[] = []
 
   const goalPoint = pointForCell(grid, goal)
   g[start] = 0
-  open.push({ index: start, f: distance(pointForCell(grid, start), goalPoint) })
+  heapPush(open, { index: start, f: distance(pointForCell(grid, start), goalPoint) })
 
-  while (open.length) {
-    let bestPosition = 0
-    for (let index = 1; index < open.length; index += 1) {
-      if (open[index].f < open[bestPosition].f) bestPosition = index
-    }
-
-    const current = open.splice(bestPosition, 1)[0].index
+  let expansions = 0
+  while (open.length && expansions < total) {
+    const currentNode = heapPop(open)
+    if (!currentNode) break
+    const current = currentNode.index
+    expansions += 1
     if (closed[current]) continue
     if (current === goal) {
       const path: number[] = []
@@ -230,7 +270,7 @@ const findPath = (
       cameFrom[next] = current
       g[next] = tentative
       const heuristic = distance(pointForCell(grid, next), goalPoint) / grid.cellSize
-      open.push({ index: next, f: tentative + heuristic })
+      heapPush(open, { index: next, f: tentative + heuristic })
     }
   }
 

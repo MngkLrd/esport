@@ -87,7 +87,7 @@ export function SeasonCalendar({
   const renderEventGroup = (label: string, rows: typeof activeRows) => {
     if (!rows.length) return null
     return (
-      <section className="calendar-event-group">
+      <section className="sim-event-group">
         <header>
           <span>{label}</span>
           <b>{rows.length}</b>
@@ -98,15 +98,15 @@ export function SeasonCalendar({
           const status = statusFor(event.id, start, end)
           const canRegister = !active && gate.ok && compareGameTime(state.now, addGameHours(start, -72)) <= 0
           return (
-            <article key={event.id} className={'calendar-event-card tier-' + event.circuitTier + (active ? ' active' : '')}>
-              <div className="calendar-event-badge">T{event.circuitTier}</div>
-              <div className="calendar-event-main">
+            <article key={event.id} className={'sim-event-row tier-' + event.circuitTier + (active ? ' active' : '')}>
+              <div className="sim-event-badge">T{event.circuitTier}</div>
+              <div className="sim-event-main">
                 <small>{formatGameDate(start)} — {formatGameDate(end)}</small>
                 <strong>{event.name}</strong>
                 <span>{event.format} · {event.city} · {event.prize.toLocaleString('ru-RU')} кр.</span>
                 <i>REG CLOSES {formatGameDateTime(addGameHours(start, -72))}</i>
               </div>
-              <div className="calendar-event-actions">
+              <div className="sim-event-actions">
                 <b>{status}</b>
                 <button onClick={() => onOpenWorld(event.id)}>DETAILS</button>
                 {canRegister && <button className="register" onClick={() => onBook(event.id)}>REGISTER</button>}
@@ -119,24 +119,24 @@ export function SeasonCalendar({
   }
 
   return (
-    <section className="screen season-calendar-screen calendar-manager-screen">
-      <div className="fifa-screen-header calendar-screen-header">
+    <section className="sim-screen sim-calendar">
+      <div className="sim-screen-head sim-calendar-head">
         <div>
           <span>TOURNAMENTS CALENDAR · SEASON {state.season}</span>
           <h1>CALENDAR</h1>
         </div>
-        <div className="calendar-now">
+        <div className="sim-head-stat sim-calendar-now">
           <small>{formatGameDate(state.now)}</small>
           <b>{formatGameTime(state.now)}</b>
         </div>
       </div>
 
-      <div className="calendar-controls calendar-skip-controls">
+      <div className="sim-calendar-controls">
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameHours(state.now, 6))}>+6 HOURS</button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>+1 DAY</button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 3, 9))}>+3 DAYS</button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 7, 9))}>+7 DAYS</button>
-        {state.pendingDecision && <span className="calendar-blocked">DECISION REQUIRED · INBOX</span>}
+        {state.pendingDecision && <span className="sim-calendar-blocked">DECISION REQUIRED · INBOX</span>}
         {state.activeTournament && (
           fixtureDue
             ? <button className="primary" onClick={onOpenMatch}>CURRENT MATCH <span>→</span></button>
@@ -146,19 +146,19 @@ export function SeasonCalendar({
         )}
       </div>
 
-      <div className="calendar-layout calendar-manager-layout">
-        <section className="calendar-board calendar-month-board">
-          <div className="calendar-board-title calendar-month-nav">
+      <div className="sim-calendar-body">
+        <section className="sim-month">
+          <div className="sim-month-head">
             <button onClick={() => setMonthOffset((value) => value - 1)} aria-label="Previous month">‹</button>
             <b>{monthTitle(monthStart)}</b>
             <button onClick={() => setMonthOffset((value) => value + 1)} aria-label="Next month">›</button>
           </div>
-          <div className="calendar-weekdays">
+          <div className="sim-weekdays">
             {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
           </div>
-          <div className="calendar-month-grid" style={{ gridTemplateRows: 'repeat(' + weekRows + ', minmax(0, 1fr))' }}>
+          <div className="sim-month-grid" style={{ gridTemplateRows: 'repeat(' + weekRows + ', minmax(0, 1fr))' }}>
             {calendarCells.map((day, index) => {
-              if (!day) return <div key={'blank-' + index} className="calendar-empty-day" aria-hidden="true" />
+              if (!day) return <div key={'blank-' + index} className="sim-calendar-empty" aria-hidden="true" />
 
               const label = dayLabel(day)
               const dayKey = gameDayKey(day)
@@ -179,22 +179,22 @@ export function SeasonCalendar({
               if (!markers.length && live) markers.push({ item: live, label: 'LIVE' })
 
               return (
-                <article key={dayKey} className={current ? 'is-today' : ''}>
+                <article key={dayKey} className={current ? 'sim-day is-today' : 'sim-day'}>
                   <header>
                     <span>{label.dow}</span>
                     <b>{label.day}</b>
                     <small>{label.month}</small>
                   </header>
-                  <div className="calendar-day-events">
+                  <div className="sim-day-events">
                     {clubMatchToday && (
-                      <button className="calendar-phase club-match" onClick={onOpenMatch}>
+                      <button className="sim-day-event club-match" onClick={onOpenMatch}>
                         MATCH · {formatGameTime(nextClubMatch.scheduledAt)}
                       </button>
                     )}
                     {markers.map(({ item, label: marker }) => (
                       <button
                         key={item.event.id + '-' + marker}
-                        className={'calendar-phase t' + item.event.circuitTier + ' ' + marker.toLowerCase()}
+                        className={'sim-day-event t' + item.event.circuitTier + ' ' + marker.toLowerCase()}
                         onClick={() => onOpenWorld(item.event.id)}
                         title={item.event.name}
                       >
@@ -208,12 +208,12 @@ export function SeasonCalendar({
           </div>
         </section>
 
-        <aside className="calendar-upcoming calendar-circuit-list">
-          <div className="calendar-upcoming-title">
+        <aside className="sim-schedule">
+          <div className="sim-schedule-head">
             <span>CIRCUIT</span>
             <button onClick={() => onOpenWorld()}>WORLD MAP <b>→</b></button>
           </div>
-          <div className="calendar-upcoming-scroll">
+          <div className="sim-schedule-scroll">
             {renderEventGroup('ONGOING', ongoing)}
             {renderEventGroup('UPCOMING', upcoming)}
           </div>

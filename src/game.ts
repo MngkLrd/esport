@@ -949,18 +949,27 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
 }
 
 export const advanceCareerTo = (state: GameState, target: string): GameState => {
-  if (compareGameTime(target, state.now) <= 0 || state.seasonEnded) return state
+  if (state.pendingDecision || compareGameTime(target, state.now) <= 0 || state.seasonEnded) return state
+
+  const preparedTournament = state.activeTournament
+    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+    : null
+  const mandatoryMatch = nextPlayerMatch(preparedTournament)
+  const effectiveTarget = mandatoryMatch && compareGameTime(target, mandatoryMatch.scheduledAt) > 0
+    ? mandatoryMatch.scheduledAt
+    : target
 
   const previousWeek = gameWeekForDate(state.seasonStart, state.now)
-  const nextWeekRaw = gameWeekForDate(state.seasonStart, target)
+  const nextWeekRaw = gameWeekForDate(state.seasonStart, effectiveTarget)
   const payrollCycles = Math.max(0, nextWeekRaw - previousWeek)
   const payrollPerWeek = weeklyPayroll(state)
   const payrollCost = payrollPerWeek * payrollCycles
-  const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, target) / 24))
+  const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, effectiveTarget) / 24))
 
   let next: GameState = {
     ...state,
-    now: target,
+    activeTournament: preparedTournament,
+    now: effectiveTarget,
     week: Math.min(state.seasonLength, nextWeekRaw),
     credits: Math.max(0, state.credits - payrollCost),
     staffEnergy: payrollCycles > 0 ? 3 : state.staffEnergy,
@@ -977,7 +986,7 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
     next = {
       ...next,
       news: [{
-        id: 'payroll-' + target,
+        id: 'payroll-' + effectiveTarget,
         week: next.week,
         kind: 'finance' as const,
         title: 'Недельный расчёт клуба',

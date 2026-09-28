@@ -187,7 +187,7 @@ export function ScoutMarket({
         </div>
       </div>
 
-      <div className="market-layout">
+      <div className={'market-layout ' + (rankedProspects.length > 0 ? 'has-results' : 'awaiting-results')}>
         <aside className="market-brief">
           <div className="market-brief-title">
             <span>SCOUT BRIEF</span>

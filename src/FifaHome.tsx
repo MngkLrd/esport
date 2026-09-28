@@ -38,7 +38,7 @@ export function FifaHome({
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const moveFocus = (delta: number) => {
-    const next = (focusIndex + delta + 7) % 7
+    const next = (focusIndex + delta + 6) % 6
     setFocusIndex(next)
     tileRefs.current[next]?.focus()
   }
@@ -126,13 +126,7 @@ export function FifaHome({
           <strong>{state.packTokens.toLocaleString('ru-RU')} <small>PACK TOKENS</small></strong>
         </button>
 
-        <button {...tileProps(5)} className="fifa-mode-tile fifa-calendar-tile" onClick={() => onOpen('Calendar')}>
-          <div className="fifa-tile-kicker">SEASON SCHEDULE</div>
-          <h2>CALENDAR</h2>
-          <strong>{formatGameDate(state.now)} <small>{formatGameTime(state.now)}</small></strong>
-        </button>
-
-        <button {...tileProps(6)} className="fifa-mode-tile fifa-inbox-tile" onClick={() => onOpen('Inbox')}>
+        <button {...tileProps(5)} className="fifa-mode-tile fifa-inbox-tile" onClick={() => onOpen('Inbox')}>
           <div className="fifa-tile-kicker">CLUB FEED {unread > 0 ? '· ' + unread + ' NEW' : ''}</div>
           <h2>INBOX</h2>
           <p>{pendingDecision ? pendingDecision.title : latestNews?.title ?? 'No pending club events'}</p>

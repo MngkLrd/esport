@@ -66,6 +66,16 @@ const CURATED_REAL_PLAYERS: readonly RealPlayerSeed[] = [
 ] as const
 
 
+const CURATED_REAL_PLAYERS_WITH_PROFILES: readonly RealPlayerSeed[] = CURATED_REAL_PLAYERS.map((player) => {
+  const snapshot = HLTV_CARD_SNAPSHOTS[player.alias.toLocaleLowerCase('en-US')]
+  return {
+    ...player,
+    source: 'curated-profile' as const,
+    profileUrl: snapshot?.profileUrl ?? null,
+  }
+})
+
+
 const curatedAliases = new Set(CURATED_REAL_PLAYERS.map((player) => player.alias.toLocaleLowerCase('en-US')))
 
 const VRS_ONLY_PLAYERS: readonly RealPlayerSeed[] = VRS_PLAYERS
@@ -90,7 +100,7 @@ const VRS_ONLY_PLAYERS: readonly RealPlayerSeed[] = VRS_PLAYERS
   })
 
 export const REAL_PLAYERS: readonly RealPlayerSeed[] = [
-  ...CURATED_REAL_PLAYERS,
+  ...CURATED_REAL_PLAYERS_WITH_PROFILES,
   ...VRS_ONLY_PLAYERS,
 ]
 

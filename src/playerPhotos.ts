@@ -314,6 +314,7 @@ export const PLAYER_PORTRAITS: Readonly<Record<string, PlayerPortrait>> = {
   "xantares": { url: "https://img-cdn.hltv.org/playerbodyshot/aEgLOOfzRrsHvRrKpL47rE.png?ixlib=java-2.1.0&w=400&s=4053033e80f7fe40dc18c5aa5524fcd1", source: "jLidak/cs2_players_tracker · Aug 2026" },
   "xerolte": { url: "https://img-cdn.hltv.org/playerbodyshot/DailvlXht6sLKJwwU_ITfW.png?ixlib=java-2.1.0&w=400&s=282e3a60a585ef48503319cbd36f592e", source: "PHSix/guess_cspro · Jan 2026" },
   "xertion": { url: "https://img-cdn.hltv.org/playerbodyshot/f3k06p19e8890q9hq0S9Gi.png?ixlib=java-2.1.0&w=400&s=cf4a1e48e9991ba2fd1f3e41dadcda83", source: "jLidak/cs2_players_tracker · Aug 2026" },
+  "xelex": { url: "https://img-cdn.hltv.org/playerbodyshot/EA2EJPIjte0zKwqxN2IZk2.png?ixlib=java-2.1.0&s=780792677ecbfe5b2fecb6808e8d70fe&w=400", source: "HLTV player page · Sep 2026" },
   "xfl0ud": { url: "https://img-cdn.hltv.org/playerbodyshot/s1hUQwIQts5tZPFiLjddgo.png?ixlib=java-2.1.0&w=400&s=2b787fe62ff34df5f74cbe6d2536a1c0", source: "Sopenfi/skindle · Spring 2026" },
   "xielo": { url: "https://img-cdn.hltv.org/playerbodyshot/12rQpFRvYZuulGxqh4Bp8V.png?ixlib=java-2.1.0&w=400&s=de89c478f6304f225b228c4aef018629", source: "jLidak/cs2_players_tracker · Aug 2026" },
   "xkacpersky": { url: "https://img-cdn.hltv.org/playerbodyshot/4ICjUyvBowN1B8nI2ipn1_.png?ixlib=java-2.1.0&w=400&s=84ca08e91c4000525b16f22d93b321ed", source: "Sopenfi/skindle · Spring 2026" },
@@ -332,14 +333,15 @@ export const PLAYER_PORTRAITS: Readonly<Record<string, PlayerPortrait>> = {
 } as const
 
 export const PLAYER_PORTRAIT_STATS = {
-  coveredPlayers: 318,
+  coveredPlayers: 319,
   playerUniverse: 1634,
   coveragePercent: 19.5,
   sourceCounts: {
     "jLidak/cs2_players_tracker · Aug 2026": 105,
     "Sopenfi/skindle · Spring 2026": 94,
     "PHSix/guess_cspro · Jan 2026": 115,
-    "danilofuchs/hltv-top20-evolution · archive": 3
+    "danilofuchs/hltv-top20-evolution · archive": 3,
+    "HLTV player page · Sep 2026": 1
   },
 } as const
 

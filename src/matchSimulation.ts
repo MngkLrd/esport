@@ -109,8 +109,9 @@ const profile = (
   }
 }
 
-// Spawn/site anchors come from CS2 overview metadata and are projected directly
-// into the 1024×1024 radar texture used by the Canvas renderer.
+// Spawn/site anchors are projected directly into the 1024×1024 radar texture.
+// CS2 overview metadata provides spawn/site coordinates where available; Anubis
+// bomb-site anchors are calibrated against the extracted tactical radar.
 const radarPoint = (x: number, y: number): Point => [x * 1024, y * 1024]
 
 const MAPS: Record<string, MapProfile> = {

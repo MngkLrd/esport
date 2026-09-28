@@ -7576,3 +7576,108 @@ button.primary:hover,
     grid-template-columns: repeat(5, minmax(0, 132px));
   }
 }
+
+
+/* RARITY CARD ARTWORK BINDING */
+.visual-player-card.tier-silver {
+  --rarity-front: url('./assets/cards/common_front.webp');
+  --rarity-back: url('./assets/cards/common_back.webp');
+  --card-text: #f7fbff;
+}
+.visual-player-card.tier-rare {
+  --rarity-front: url('./assets/cards/uncommon_front.webp');
+  --rarity-back: url('./assets/cards/uncommon_back.webp');
+  --card-text: #f7fbff;
+}
+.visual-player-card.tier-elite {
+  --rarity-front: url('./assets/cards/epic_front.webp');
+  --rarity-back: url('./assets/cards/epic_back.webp');
+  --card-text: #ffffff;
+}
+.visual-player-card.tier-gold {
+  --rarity-front: url('./assets/cards/legend_front.png');
+  --rarity-back: url('./assets/cards/legend_back.png');
+  --card-text: #ffffff;
+}
+
+.visual-player-card.tier-silver,
+.visual-player-card.tier-rare,
+.visual-player-card.tier-elite,
+.visual-player-card.tier-gold {
+  background-color: #07101f;
+  background-image:
+    linear-gradient(180deg, rgba(3,7,16,.02) 0%, rgba(3,7,16,.04) 46%, rgba(3,7,16,.34) 100%),
+    var(--rarity-front);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-color: rgba(255,255,255,.28);
+  color: var(--card-text);
+}
+
+.visual-player-card.tier-silver::after,
+.visual-player-card.tier-rare::after,
+.visual-player-card.tier-elite::after,
+.visual-player-card.tier-gold::after {
+  background: none;
+}
+
+.visual-player-card.tier-silver::before,
+.visual-player-card.tier-rare::before,
+.visual-player-card.tier-elite::before,
+.visual-player-card.tier-gold::before {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: inset 0 0 22px rgba(0,0,0,.16);
+}
+
+.visual-player-card.tier-silver .visual-photo img,
+.visual-player-card.tier-rare .visual-photo img,
+.visual-player-card.tier-elite .visual-photo img,
+.visual-player-card.tier-gold .visual-photo img {
+  mix-blend-mode: normal;
+  opacity: 1;
+  filter: saturate(.96) contrast(1.04) drop-shadow(0 10px 12px rgba(0,0,0,.28));
+}
+
+.visual-player-card.tier-silver .visual-card-top,
+.visual-player-card.tier-rare .visual-card-top,
+.visual-player-card.tier-elite .visual-card-top,
+.visual-player-card.tier-gold .visual-card-top,
+.visual-player-card.tier-silver .visual-country,
+.visual-player-card.tier-rare .visual-country,
+.visual-player-card.tier-elite .visual-country,
+.visual-player-card.tier-gold .visual-country,
+.visual-player-card.tier-silver .visual-identity,
+.visual-player-card.tier-rare .visual-identity,
+.visual-player-card.tier-elite .visual-identity,
+.visual-player-card.tier-gold .visual-identity,
+.visual-player-card.tier-silver .visual-stats,
+.visual-player-card.tier-rare .visual-stats,
+.visual-player-card.tier-elite .visual-stats,
+.visual-player-card.tier-gold .visual-stats {
+  text-shadow: 0 1px 3px rgba(0,0,0,.88);
+}
+
+.visual-player-card.tier-silver .visual-identity,
+.visual-player-card.tier-rare .visual-identity,
+.visual-player-card.tier-elite .visual-identity,
+.visual-player-card.tier-gold .visual-identity {
+  border-color: rgba(255,255,255,.24);
+  background: linear-gradient(90deg, transparent, rgba(2,5,12,.62) 17%, rgba(2,5,12,.62) 83%, transparent);
+}
+
+.visual-player-card.tier-silver .visual-rarity,
+.visual-player-card.tier-rare .visual-rarity,
+.visual-player-card.tier-elite .visual-rarity,
+.visual-player-card.tier-gold .visual-rarity {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.88);
+}
+
+/* Back artwork is pre-wired for card-flip/reveal surfaces. */
+.visual-player-card.show-back {
+  background-image: var(--rarity-back);
+}
+.visual-player-card.show-back > * {
+  visibility: hidden;
+}

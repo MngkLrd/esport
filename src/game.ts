@@ -599,7 +599,7 @@ const normalizedWorld = (
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if ((parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 11 || parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
@@ -607,29 +607,40 @@ export const migrateState = (raw: unknown): GameState => {
     const now = typeof parsed.now === 'string'
       ? parsed.now
       : addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9)
+    const seed = typeof parsed.seed === 'number' ? parsed.seed : 271828
+    const world = normalizedWorld(parsed.world, roster, now, seed)
     const activeEventId = typeof parsed.activeEventId === 'string' ? parsed.activeEventId : null
     const legacyEvent = tournamentForId(activeEventId)
-    const activeTournament = parsed.activeTournament && typeof parsed.activeTournament === 'object'
-      ? parsed.activeTournament as TournamentRun
+    const clubSeed = tournamentPlayerSeedFromRoster(
+      roster,
+      startingFive,
+      typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 50,
+    )
+    const clubKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
+    const activeTournament = parsed.version === 11 && parsed.activeTournament && typeof parsed.activeTournament === 'object'
+      ? refreshTournamentTeamsFromWorld(parsed.activeTournament as TournamentRun, world, clubKeys)
       : legacyEvent
         ? createTournamentRun(
             legacyEvent,
             seasonStart,
             now,
-            (typeof parsed.seed === 'number' ? parsed.seed : 271828) + (typeof parsed.season === 'number' ? parsed.season : 1) * 100 + legacyEvent.startDay,
+            seed + (typeof parsed.season === 'number' ? parsed.season : 1) * 100 + legacyEvent.startDay,
+            world,
+            clubSeed,
           )
         : null
     return {
       ...(parsed as unknown as GameState),
-      version: 10,
+      version: 11,
       seasonStart,
       now,
+      world,
       activeTournament,
       tournamentHistory: Array.isArray(parsed.tournamentHistory) ? parsed.tournamentHistory as TournamentRun[] : [],
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
-      seasonLength: parsed.version === 10 && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
+      seasonLength: parsed.version === 11 && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
@@ -650,7 +661,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'packTokens' | 'managerXp'>),
-      version: 10,
+      version: 11,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -658,6 +669,7 @@ export const migrateState = (raw: unknown): GameState => {
       now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
       activeTournament: null,
       tournamentHistory: [],
+      world: normalizedWorld(parsed.world, roster, addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9), typeof parsed.seed === 'number' ? parsed.seed : 271828),
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: 2600,
@@ -676,7 +688,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 10,
+      version: 11,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -702,7 +714,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 10,
+      version: 11,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -755,7 +767,7 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 10,
+      version: 11,
       saveId: createSaveId(),
       welcomeComplete: true,
       season: 1,
@@ -763,6 +775,7 @@ export const migrateState = (raw: unknown): GameState => {
       now: INITIAL_SEASON_START,
       activeTournament: null,
       tournamentHistory: [],
+      world: normalizedWorld(parsed.world, roster, INITIAL_SEASON_START, typeof parsed.seed === 'number' ? parsed.seed : 271828),
       seasonEnded: false,
       seasonSummary: null,
       seasonLength: 16,

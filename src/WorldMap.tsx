@@ -277,9 +277,9 @@ export function WorldMap({
           </div>
 
           <div className="world-budget-preview">
-            <span>EVENT WEEK</span>
+            <span>{selected.format === 'ONLINE' ? 'CLUB PAYROLL' : 'EVENT WEEK'}</span>
             <strong>{weeklyOps.toLocaleString('ru-RU')} CASH</strong>
-            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'online entry is free' : 'payroll + travel + service'}</small>
+            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'ENTRY FEE · 0 CASH' : 'payroll + travel + service'}</small>
           </div>
 
           {booked ? (

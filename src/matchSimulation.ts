@@ -262,15 +262,20 @@ const positionOnPath = (path: Point[], progress: number, delay: number) => {
   }
 }
 
-const weaponFor = (player: Player | null, side: SimSide, index: number) => {
-  if (player?.role === 'AWP') return 'AWP'
+const weaponForRole = (role: Player['role'] | null | undefined, side: SimSide, index: number) => {
+  if (role === 'AWP') return 'AWP'
   if (index === 0 && side === 'T') return 'AK-47'
   return side === 'CT' ? (index % 2 === 0 ? 'M4A1-S' : 'M4A4') : 'AK-47'
 }
 
-const awayNames = (opponent: string) => {
-  const stem = opponent.replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase() || 'RIVAL'
-  return Array.from({ length: 5 }, (_, index) => stem + '-' + (index + 1))
+const weaponFor = (player: Player | null, side: SimSide, index: number) =>
+  weaponForRole(player?.role, side, index)
+
+const awayNames = (result: MatchResult) => {
+  const live = result.opponentRoster?.slice(0, 5).map((player) => player.alias) ?? []
+  if (live.length >= 5) return live
+  const stem = result.opponent.replace(/[^a-z0-9]/gi, '').slice(0, 5).toUpperCase() || 'RIVAL'
+  return [...live, ...Array.from({ length: 5 - live.length }, (_, index) => stem + '-' + (live.length + index + 1))]
 }
 
 const performanceBias = (result: MatchResult, starters: Player[]) =>
@@ -292,7 +297,7 @@ const buildCombatEvents = (
   const homeIds = starters.slice(0, 5).map((player) => player.id)
   const rankedHomeIds = rankedHome.map((player) => player.id)
   const homeNames = new Map(starters.map((player) => [player.id, player.alias]))
-  const rivalNames = awayNames(result.opponent)
+  const rivalNames = awayNames(result)
   const awayIds = rivalNames.map((_, index) => 'away-' + index)
   const winningIds = roundWinner === 'HOME' ? rankedHomeIds : awayIds
   const losingIds = roundWinner === 'HOME' ? awayIds : [...rankedHomeIds].reverse()
@@ -437,7 +442,7 @@ const makeRound = (
   const awayRoutes = homeSide === 'T' ? ctRoutes : tRoutes
   const duration = 9200
   const events = buildCombatEvents(result, starters, homeSide, winner, site, rng)
-  const away = awayNames(result.opponent)
+  const away = awayNames(result)
   const bombHome = homeSide === 'T'
 
   const utility: SimEvent[] = [
@@ -523,7 +528,7 @@ const makeRound = (
         yaw: pos.yaw,
         hp: status.hp,
         alive: status.alive,
-        weapon: weaponFor(null, side, index),
+        weapon: weaponForRole(result.opponentRoster?.[index]?.role, side, index),
         hasBomb: !bombHome && id === bombCarrierId && !allEvents.some((event) => event.type === 'plant' && event.time <= time),
       })
     })

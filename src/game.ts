@@ -971,6 +971,7 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
     ? advanceTournamentTo(state.activeTournament, target, state.seed + state.season)
     : null
   const mandatoryMatch = nextPlayerMatch(projectedTournament)
+  if (mandatoryMatch && compareGameTime(mandatoryMatch.scheduledAt, state.now) <= 0) return state
   const effectiveTarget = mandatoryMatch && compareGameTime(target, mandatoryMatch.scheduledAt) > 0
     ? mandatoryMatch.scheduledAt
     : target

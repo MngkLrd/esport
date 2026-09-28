@@ -1,5 +1,7 @@
 import { addGameDays, addGameHours, compareGameTime } from './calendar'
 import { tournamentForId, type TournamentEvent, type TournamentStructure } from './events'
+import { worldLineup, worldTeamRating, type WorldState } from './world'
+import type { RealPlayerRole } from './players'
 
 export const PLAYER_TEAM_ID = 'club'
 
@@ -14,12 +16,28 @@ export type TournamentStatus =
 export type TournamentStage = 'group' | 'quarterfinal' | 'semifinal' | 'upper' | 'lower' | 'final'
 export type TournamentMatchStatus = 'scheduled' | 'ready' | 'complete'
 
+export interface TournamentRosterPlayer {
+  playerKey: string
+  alias: string
+  role: RealPlayerRole | null
+  rating: number
+  profileId: number | null
+  country: string | null
+}
+
+export interface TournamentPlayerTeamSeed {
+  rating: number
+  roster: TournamentRosterPlayer[]
+}
+
 export interface TournamentTeam {
   id: string
+  worldTeamId: string | null
   name: string
   rating: number
   seed: number
   isPlayer: boolean
+  roster: TournamentRosterPlayer[]
 }
 
 export interface TournamentMatchSource {
@@ -117,30 +135,108 @@ export const tournamentEndsAt = (event: TournamentEvent, seasonStart: string) =>
 const baseRatingForEvent = (event: TournamentEvent) =>
   event.circuitTier === 1 ? 78 : event.circuitTier === 2 ? 69 : 59
 
-const buildTeams = (event: TournamentEvent, seed: number): TournamentTeam[] => {
+const tournamentRosterFromWorld = (world: WorldState, teamId: string): TournamentRosterPlayer[] =>
+  worldLineup(world, teamId).map((player) => ({
+    playerKey: player.key,
+    alias: player.alias,
+    role: player.role,
+    rating: player.currentRating,
+    profileId: player.profileId,
+    country: player.country,
+  }))
+
+const eligibleWorldTeams = (world: WorldState, event: TournamentEvent) => {
+  const primary = world.teams.filter((team) => {
+    if (team.rosterKeys.length < 5) return false
+    if (event.circuitTier === 1) return team.vrsRank <= 30
+    if (event.circuitTier === 2) return team.vrsRank >= 8 && team.vrsRank <= 85
+    return team.vrsRank >= 25
+  })
+  if (primary.length >= 7) return primary
+  return world.teams.filter((team) => team.rosterKeys.length >= 5)
+}
+
+const buildTeams = (
+  event: TournamentEvent,
+  seed: number,
+  world?: WorldState,
+  playerTeam?: TournamentPlayerTeamSeed,
+): TournamentTeam[] => {
   const rng = mulberry32(hashSeed(event.id + ':' + seed))
-  const names = shuffled(TEAM_NAMES, rng).slice(0, 7)
   const base = baseRatingForEvent(event)
   const teams: TournamentTeam[] = [{
     id: PLAYER_TEAM_ID,
+    worldTeamId: null,
     name: 'YOUR CLUB',
-    rating: base,
+    rating: playerTeam?.rating ?? base,
     seed: 1,
     isPlayer: true,
+    roster: playerTeam?.roster ?? [],
   }]
 
+  if (world) {
+    const pool = shuffled(eligibleWorldTeams(world, event), rng)
+      .sort((a, b) => {
+        const target = event.circuitTier === 1 ? 14 : event.circuitTier === 2 ? 45 : 95
+        const da = Math.abs(a.vrsRank - target)
+        const db = Math.abs(b.vrsRank - target)
+        const jitterA = hashSeed(event.id + ':' + a.id + ':' + seed) % 17
+        const jitterB = hashSeed(event.id + ':' + b.id + ':' + seed) % 17
+        return da - db || jitterA - jitterB
+      })
+      .slice(0, 7)
+
+    pool.forEach((team, index) => {
+      teams.push({
+        id: team.id,
+        worldTeamId: team.id,
+        name: team.name,
+        rating: worldTeamRating(world, team),
+        seed: index + 2,
+        isPlayer: false,
+        roster: tournamentRosterFromWorld(world, team.id),
+      })
+    })
+
+    if (teams.length === 8) return teams
+  }
+
+  const names = shuffled(TEAM_NAMES, rng).slice(0, 7)
   names.forEach((name, index) => {
     teams.push({
       id: event.id + '-ai-' + (index + 1),
+      worldTeamId: null,
       name,
       rating: Math.round(base - 5 + rng() * 11),
       seed: index + 2,
       isPlayer: false,
+      roster: [],
     })
   })
 
-  return teams
+  return teams.slice(0, 8)
 }
+
+export const refreshTournamentTeamsFromWorld = (
+  source: TournamentRun,
+  world: WorldState,
+  clubPlayerKeys: ReadonlySet<string>,
+): TournamentRun => ({
+  ...source,
+  teams: source.teams.map((team) => {
+    if (team.isPlayer || !team.worldTeamId) return team
+    const worldTeam = world.teams.find((candidate) => candidate.id === team.worldTeamId)
+    if (!worldTeam) return team
+    const roster = tournamentRosterFromWorld(world, worldTeam.id)
+      .filter((player) => !clubPlayerKeys.has(player.playerKey))
+      .slice(0, 5)
+    return {
+      ...team,
+      rating: worldTeamRating(world, worldTeam),
+      roster,
+    }
+  }),
+})
 
 const direct = (teamId: string): TournamentMatchSource => ({ type: 'team', value: teamId })
 const winner = (matchId: string): TournamentMatchSource => ({ type: 'winner', value: matchId })
@@ -262,9 +358,11 @@ export const createTournamentRun = (
   seasonStart: string,
   registeredAt: string,
   seed: number,
+  world?: WorldState,
+  playerTeam?: TournamentPlayerTeamSeed,
 ): TournamentRun => {
   const startsAt = tournamentStartsAt(event, seasonStart)
-  const teams = buildTeams(event, seed)
+  const teams = buildTeams(event, seed, world, playerTeam)
   const matches = event.structure === 'single_elim'
     ? singleElimMatches(teams, startsAt)
     : groupedMatches(teams, startsAt, event.structure)

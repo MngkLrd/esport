@@ -133,11 +133,22 @@ const isPackReadyPlayer = (player: RealPlayerSeed) =>
 
 const PACK_READY_PLAYERS = REAL_PLAYERS.filter(isPackReadyPlayer)
 
-const rankedPool = PACK_READY_PLAYERS
+const rarityRankedPool = REAL_PLAYERS
+  .filter((player) => Boolean(player.country && player.role && cardStatsForAlias(player.alias, player.role)))
   .map((player) => ({ player, power: playerPower(player) }))
   .sort((a, b) => b.power - a.power || a.player.alias.localeCompare(b.player.alias, 'en-US'))
 
 const rarityByAlias = new Map<string, PackRarity>()
+rarityRankedPool.forEach(({ player }, index) => {
+  rarityByAlias.set(
+    player.alias.toLocaleLowerCase('en-US'),
+    rarityForPercentile(index, rarityRankedPool.length),
+  )
+})
+
+export const rarityForPlayer = (player: RealPlayerSeed): PackRarity =>
+  rarityByAlias.get(player.alias.toLocaleLowerCase('en-US')) ?? 'common'
+
 const playerByAlias = new Map<string, RealPlayerSeed>()
 const pools: Record<PackRarity, RealPlayerSeed[]> = {
   common: [],
@@ -147,16 +158,12 @@ const pools: Record<PackRarity, RealPlayerSeed[]> = {
   legendary: [],
 }
 
-rankedPool.forEach(({ player }, index) => {
+PACK_READY_PLAYERS.forEach((player) => {
   const key = player.alias.toLocaleLowerCase('en-US')
-  const rarity = rarityForPercentile(index, rankedPool.length)
+  const rarity = rarityForPlayer(player)
   playerByAlias.set(key, player)
-  rarityByAlias.set(key, rarity)
   pools[rarity].push(player)
 })
-
-const rarityForPlayer = (player: RealPlayerSeed): PackRarity =>
-  rarityByAlias.get(player.alias.toLocaleLowerCase('en-US')) ?? 'common'
 
 const pickRarity = (weights: Record<PackRarity, number>, rng: () => number) => {
   const rarities = Object.keys(weights) as PackRarity[]

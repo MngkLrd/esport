@@ -1,20 +1,59 @@
+import { useEffect, useRef, useState } from 'react'
 import { managerLevelProgress, type GameState, type Player } from './game'
+import { tournamentForId } from './events'
 import { PlayerPortrait } from './PlayerPortrait'
 
-type ModeKey = 'Play' | 'World' | 'Roster' | 'Scout' | 'Packs' | 'Profile'
+type ModeKey = 'Play' | 'World' | 'Roster' | 'Scout' | 'Packs' | 'Inbox'
 
 export function FifaHome({
   state,
   starters,
+  unread,
   onOpen,
 }: {
   state: GameState
   starters: Player[]
+  unread: number
   onOpen: (mode: ModeKey) => void
 }) {
   const level = managerLevelProgress(state.managerXp)
   const hero = starters[0]
-  const last = state.history[0]
+  const activeEvent = tournamentForId(state.activeEventId)
+  const latestNews = state.news[0]
+  const [focusIndex, setFocusIndex] = useState(0)
+  const tileRefs = useRef<Array<HTMLButtonElement | null>>([])
+
+  const moveFocus = (delta: number) => {
+    const next = (focusIndex + delta + 6) % 6
+    setFocusIndex(next)
+    tileRefs.current[next]?.focus()
+  }
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        moveFocus(1)
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        moveFocus(-1)
+      } else if (event.key === 'Enter') {
+        const active = tileRefs.current[focusIndex]
+        if (active && document.activeElement !== active) {
+          event.preventDefault()
+          active.click()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focusIndex])
+
+  const tileProps = (index: number) => ({
+    ref: (node: HTMLButtonElement | null) => { tileRefs.current[index] = node },
+    tabIndex: focusIndex === index ? 0 : -1,
+    onFocus: () => setFocusIndex(index),
+  })
 
   return (
     <section className="fifa-home-screen">
@@ -31,19 +70,23 @@ export function FifaHome({
       </div>
 
       <div className="fifa-mode-grid">
-        <button className="fifa-mode-tile fifa-mode-hero" onClick={() => onOpen('Play')}>
+        <button
+          {...tileProps(0)}
+          className="fifa-mode-tile fifa-mode-hero"
+          onClick={() => onOpen(activeEvent ? 'Play' : 'World')}
+        >
           <div className="fifa-mode-art">
             {hero && <PlayerPortrait alias={hero.alias} playerId={hero.profileId} alt={hero.alias} loading="eager" />}
           </div>
           <div className="fifa-mode-copy">
-            <span>NEXT MATCH</span>
-            <h1>MATCHDAY</h1>
-            {last && <p>{'Последняя серия: ' + (last.won ? 'победа' : 'поражение') + ' против ' + last.opponent}</p>}
+            <span>{activeEvent ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase() : 'GLOBAL CIRCUIT'}</span>
+            <h1>{activeEvent ? activeEvent.name : 'SELECT EVENT'}</h1>
+            {activeEvent && <p>{activeEvent.label} · {activeEvent.prize.toLocaleString('ru-RU')} PRIZE</p>}
           </div>
           <b className="fifa-mode-arrow">→</b>
         </button>
 
-        <button className="fifa-mode-tile fifa-world-tile" onClick={() => onOpen('World')}>
+        <button {...tileProps(1)} className="fifa-mode-tile fifa-world-tile" onClick={() => onOpen('World')}>
           <div className="fifa-tile-kicker">GLOBAL CIRCUIT</div>
           <h2>WORLD MAP</h2>
           <div className="fifa-mini-map">
@@ -51,7 +94,7 @@ export function FifaHome({
           </div>
         </button>
 
-        <button className="fifa-mode-tile fifa-squad-tile" onClick={() => onOpen('Roster')}>
+        <button {...tileProps(2)} className="fifa-mode-tile fifa-squad-tile" onClick={() => onOpen('Roster')}>
           <div className="fifa-tile-kicker">CLUB</div>
           <h2>SQUAD</h2>
           <div className="fifa-mini-lineup">
@@ -63,30 +106,28 @@ export function FifaHome({
           </div>
         </button>
 
-        <button className="fifa-mode-tile fifa-transfer-tile" onClick={() => onOpen('Scout')}>
+        <button {...tileProps(3)} className="fifa-mode-tile fifa-transfer-tile" onClick={() => onOpen('Scout')}>
           <div className="fifa-tile-kicker">MARKET</div>
           <h2>TRANSFERS</h2>
           <strong>{state.credits.toLocaleString('ru-RU')} <small>CLUB CASH</small></strong>
         </button>
 
-        <button className="fifa-mode-tile fifa-packs-tile" onClick={() => onOpen('Packs')}>
+        <button {...tileProps(4)} className="fifa-mode-tile fifa-packs-tile" onClick={() => onOpen('Packs')}>
           <div className="fifa-tile-kicker">COLLECTION</div>
           <h2>PACKS</h2>
           <strong>{state.packTokens.toLocaleString('ru-RU')} <small>PACK TOKENS</small></strong>
         </button>
 
-        <button className="fifa-mode-tile fifa-profile-tile" onClick={() => onOpen('Profile')}>
-          <div className="fifa-tile-kicker">PROGRESSION</div>
-          <h2>MANAGER</h2>
-          <strong>LVL {level.level}</strong>
-          <div className="fifa-profile-progress"><i style={{ width: level.percent + '%' }} /></div>
+        <button {...tileProps(5)} className="fifa-mode-tile fifa-inbox-tile" onClick={() => onOpen('Inbox')}>
+          <div className="fifa-tile-kicker">CLUB FEED {unread > 0 ? '· ' + unread + ' NEW' : ''}</div>
+          <h2>INBOX</h2>
+          {latestNews && <p>{latestNews.title}</p>}
         </button>
       </div>
 
       <div className="fifa-home-hints">
+        <span><b>← → ↑ ↓</b> НАВИГАЦИЯ</span>
         <span><b>ENTER</b> ВЫБРАТЬ</span>
-        <span><b>ESC</b> НАЗАД</span>
-        <span><b>← →</b> НАВИГАЦИЯ</span>
       </div>
     </section>
   )

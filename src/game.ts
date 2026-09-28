@@ -724,6 +724,7 @@ export const migrateState = (raw: unknown): GameState => {
       now: addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9),
       activeTournament: null,
       tournamentHistory: [],
+      world: normalizedWorld(parsed.world, roster, addGameDays(INITIAL_SEASON_START, Math.max(0, ((typeof parsed.week === 'number' ? parsed.week : 1) - 1) * 7), 9), typeof parsed.seed === 'number' ? parsed.seed : 271828),
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       roster,

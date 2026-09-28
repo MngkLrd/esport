@@ -5,6 +5,7 @@ import './styles.css'
 import './simUI.css'
 import './siteBackground.css'
 import './worldMapBackground.css'
+import './menuArtwork.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

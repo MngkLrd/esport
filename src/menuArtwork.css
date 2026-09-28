@@ -1,0 +1,17 @@
+/* Fast artwork pass: home hero + packs screen */
+
+.app-main-hq .fifa-mode-hero{
+  background-color:#070d18;
+  background-image:url('./assets/ui/home-hero-arena.webp');
+  background-position:center center;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+
+.sim-screen.sim-packs{
+  background-color:#070d18;
+  background-image:url('./assets/ui/packs-arena.webp');
+  background-position:right center;
+  background-size:auto 100%;
+  background-repeat:no-repeat;
+}

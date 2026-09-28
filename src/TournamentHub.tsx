@@ -101,21 +101,21 @@ export function TournamentHub({
 
   return (
     <>
-      <section className="tournament-hub tournament-hub-compact">
-        <div className="tournament-hero">
+      <section className="sim-event-banner">
+        <div className="sim-event-banner-main">
           <div>
             <span>{event.format} · TIER {event.circuitTier} · {event.region.toUpperCase()}</span>
             <h1>{event.name}</h1>
             <p>{formatGameDateTime(run.startsAt)} — {formatGameDateTime(run.endsAt)} · {event.structure.replaceAll('_', ' ').toUpperCase()}</p>
           </div>
-          <div className="tournament-status">
+          <div className="sim-event-banner-status">
             <small>STATUS</small>
             <strong>{run.status.replaceAll('_', ' ').toUpperCase()}</strong>
             <span>{run.placement ?? 'LIVE BRACKET'}</span>
           </div>
         </div>
 
-        <div className="tournament-next-match">
+        <div className="sim-event-banner-match">
           <div>
             <span>{currentMatch ? 'CURRENT CLUB MATCH' : 'NEXT CLUB MATCH'}</span>
             {next ? (
@@ -130,10 +130,10 @@ export function TournamentHub({
               </>
             )}
           </div>
-          <div className="tournament-hub-actions">
+          <div className="sim-event-banner-actions">
             <button className="secondary" onClick={() => setExpanded(true)}>VIEW BRACKET</button>
             {(canAdvance || waiting) && (
-              <button className="fifa-primary-cta" onClick={onAdvance}>
+              <button className="sim-primary-action" onClick={onAdvance}>
                 ADVANCE TO NEXT MATCH <span>→</span>
               </button>
             )}

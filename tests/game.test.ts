@@ -174,13 +174,16 @@ describe('P0 career flow', () => {
     }
 
     const constrained = constrainRoundToNavigation(round, grid)
-    const kill = constrained.events.find((event) => event.type === 'kill')!
-    const frame = constrained.frames.reduce((best, current) =>
-      Math.abs(current.time - kill.time) < Math.abs(best.time - kill.time) ? current : best,
-    )
-    const actor = frame.players.find((player) => player.id === 'a')!
-    const target = frame.players.find((player) => player.id === 'b')!
-    expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
+    const combatEvents = constrained.events.filter((event) => event.type === 'kill')
+    for (const kill of combatEvents) {
+      const frame = constrained.frames.reduce((best, current) =>
+        Math.abs(current.time - kill.time) < Math.abs(best.time - kill.time) ? current : best,
+      )
+      const actor = frame.players.find((player) => player.id === kill.actorId)!
+      const target = frame.players.find((player) => player.id === kill.targetId)!
+      expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
+    }
+    expect(combatEvents).toHaveLength(0)
   })
 
   it('builds deterministic frame-based tactical playback for every map', () => {

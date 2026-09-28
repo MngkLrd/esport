@@ -378,6 +378,7 @@ export const constrainRoundToNavigation = (
   // duel to a frame where both players have actual line of sight, then rebuild
   // HP/alive state from those corrected events.
   const clearCombatTimeByPair = new Map<string, number>()
+  const blockedCombatPairs = new Set<string>()
   const pairKey = (actorId?: string, targetId?: string) => actorId && targetId ? actorId + '>' + targetId : ''
 
   for (const event of round.events) {
@@ -394,10 +395,16 @@ export const constrainRoundToNavigation = (
         { x: target.x, y: target.y },
       ))
     })
-    if (clearFrame) clearCombatTimeByPair.set(pairKey(event.actorId, event.targetId), clearFrame.time)
+    const key = pairKey(event.actorId, event.targetId)
+    if (clearFrame) clearCombatTimeByPair.set(key, clearFrame.time)
+    else blockedCombatPairs.add(key)
   }
 
   const navigatedEvents = round.events
+    .filter((event) => {
+      if (event.type !== 'shot' && event.type !== 'damage' && event.type !== 'kill') return true
+      return !blockedCombatPairs.has(pairKey(event.actorId, event.targetId))
+    })
     .map((event) => {
       if ((event.type === 'shot' || event.type === 'damage' || event.type === 'kill') && event.actorId && event.targetId) {
         const clearKillTime = clearCombatTimeByPair.get(pairKey(event.actorId, event.targetId))

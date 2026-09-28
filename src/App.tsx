@@ -577,7 +577,7 @@ function App() {
                   const target: Tab | null =
                     item.kind === 'contract' || item.kind === 'lineup' ? 'Roster' :
                     item.kind === 'scout' ? 'Scout' :
-                    item.kind === 'match' ? 'Play' :
+                    item.kind === 'match' ? 'World' :
                     item.kind === 'media' ? 'World' :
                     item.kind === 'finance' ? 'Profile' : null
                   return (

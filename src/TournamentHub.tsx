@@ -1,0 +1,155 @@
+import { formatGameDateTime, humanTimeUntil } from './calendar'
+import { tournamentForId } from './events'
+import type { GameState } from './game'
+import {
+  PLAYER_TEAM_ID,
+  groupStandings,
+  nextPlayerMatch,
+  tournamentTeam,
+  type TournamentMatch,
+  type TournamentRun,
+} from './tournamentEngine'
+
+const scoreLabel = (match: TournamentMatch) =>
+  match.status === 'complete' && match.scoreA != null && match.scoreB != null
+    ? match.scoreA + ':' + match.scoreB
+    : '—'
+
+const teamName = (run: TournamentRun, teamId: string | null) =>
+  teamId ? tournamentTeam(run, teamId)?.name ?? 'TBD' : 'TBD'
+
+function MatchCard({ run, match }: { run: TournamentRun; match: TournamentMatch }) {
+  const playerMatch = match.teamAId === PLAYER_TEAM_ID || match.teamBId === PLAYER_TEAM_ID
+  const complete = match.status === 'complete'
+  return (
+    <article className={'bracket-match' + (playerMatch ? ' is-player' : '') + (complete ? ' is-complete' : '')}>
+      <div className="bracket-match-meta">
+        <span>{match.label}</span>
+        <small>{formatGameDateTime(match.scheduledAt)}</small>
+      </div>
+      <div className={(match.winnerId === match.teamAId ? ' winner' : '')}>
+        <span>{teamName(run, match.teamAId)}</span>
+        <b>{complete ? match.scoreA : '—'}</b>
+      </div>
+      <div className={(match.winnerId === match.teamBId ? ' winner' : '')}>
+        <span>{teamName(run, match.teamBId)}</span>
+        <b>{complete ? match.scoreB : '—'}</b>
+      </div>
+    </article>
+  )
+}
+
+function GroupTable({ run, group }: { run: TournamentRun; group: 'A' | 'B' }) {
+  const table = groupStandings(run, group)
+  return (
+    <section className="tournament-group">
+      <header><span>GROUP {group}</span><b>W-L</b></header>
+      {table.map((row, index) => (
+        <div key={row.teamId} className={row.teamId === PLAYER_TEAM_ID ? 'is-player' : ''}>
+          <i>{index + 1}</i>
+          <span>{teamName(run, row.teamId)}</span>
+          <b>{row.wins}-{row.losses}</b>
+          <small>{row.mapDiff >= 0 ? '+' : ''}{row.mapDiff}</small>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+const playoffColumns = (run: TournamentRun) => {
+  if (run.structure === 'single_elim') {
+    return [
+      { label: 'QUARTERFINALS', matches: run.matches.filter((match) => match.stage === 'quarterfinal') },
+      { label: 'SEMIFINALS', matches: run.matches.filter((match) => match.stage === 'semifinal') },
+      { label: 'FINAL', matches: run.matches.filter((match) => match.stage === 'final') },
+    ]
+  }
+
+  if (run.structure === 'groups_single') {
+    return [
+      { label: 'SEMIFINALS', matches: run.matches.filter((match) => match.stage === 'semifinal') },
+      { label: 'FINAL', matches: run.matches.filter((match) => match.stage === 'final') },
+    ]
+  }
+
+  return [
+    { label: 'UPPER', matches: run.matches.filter((match) => match.stage === 'upper') },
+    { label: 'LOWER', matches: run.matches.filter((match) => match.stage === 'lower') },
+    { label: 'FINAL', matches: run.matches.filter((match) => match.stage === 'final') },
+  ]
+}
+
+export function TournamentHub({
+  state,
+  onAdvance,
+}: {
+  state: GameState
+  onAdvance: () => void
+}) {
+  const run = state.activeTournament
+  if (!run) return null
+  const event = tournamentForId(run.eventId)
+  if (!event) return null
+
+  const next = nextPlayerMatch(run)
+  const columns = playoffColumns(run)
+  const canAdvance = Boolean(next && state.now < next.scheduledAt)
+  const waiting = !next && !['eliminated', 'champion', 'complete'].includes(run.status)
+
+  return (
+    <section className="tournament-hub">
+      <div className="tournament-hero">
+        <div>
+          <span>{event.format} · TIER {event.circuitTier} · {event.region.toUpperCase()}</span>
+          <h1>{event.name}</h1>
+          <p>{formatGameDateTime(run.startsAt)} — {formatGameDateTime(run.endsAt)} · {event.structure.replaceAll('_', ' ').toUpperCase()}</p>
+        </div>
+        <div className="tournament-status">
+          <small>STATUS</small>
+          <strong>{run.status.replaceAll('_', ' ').toUpperCase()}</strong>
+          <span>{run.placement ?? 'LIVE BRACKET'}</span>
+        </div>
+      </div>
+
+      {run.structure !== 'single_elim' && (
+        <div className="tournament-groups">
+          <GroupTable run={run} group="A" />
+          <GroupTable run={run} group="B" />
+        </div>
+      )}
+
+      <div className="tournament-bracket">
+        {columns.map((column) => (
+          <section key={column.label} className="bracket-column">
+            <header>{column.label}</header>
+            <div>
+              {column.matches.map((match) => <MatchCard key={match.id} run={run} match={match} />)}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="tournament-next-match">
+        <div>
+          <span>NEXT CLUB MATCH</span>
+          {next ? (
+            <>
+              <strong>{teamName(run, next.teamAId)} <i>VS</i> {teamName(run, next.teamBId)}</strong>
+              <small>{next.label} · {formatGameDateTime(next.scheduledAt)} · {humanTimeUntil(state.now, next.scheduledAt)}</small>
+            </>
+          ) : (
+            <>
+              <strong>{waiting ? 'BRACKET PROCESSING' : run.placement ?? run.status.toUpperCase()}</strong>
+              <small>{waiting ? 'Ожидаются результаты остальных матчей.' : 'Турнирный маршрут завершён.'}</small>
+            </>
+          )}
+        </div>
+        {(canAdvance || waiting) && (
+          <button className="fifa-primary-cta" onClick={onAdvance}>
+            ADVANCE TO NEXT MATCH <span>→</span>
+          </button>
+        )}
+      </div>
+    </section>
+  )
+}

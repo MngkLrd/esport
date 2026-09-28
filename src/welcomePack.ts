@@ -1,4 +1,4 @@
-import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
+import { REAL_PLAYERS, type RealPlayerRole } from './players'
 import type { PackCard } from './packState'
 import { playerPower, rarityForPlayer } from './packs'
 

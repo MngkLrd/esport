@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps'
+import { geoEqualEarth, geoPath } from 'd3-geo'
+import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
 import {
@@ -14,6 +15,18 @@ import {
 const REGIONS: Array<'All' | TournamentRegion> = ['All', 'Europe', 'Americas', 'Asia', 'CIS']
 const CIRCUITS: Array<'All' | CircuitTier> = ['All', 1, 2, 3]
 const FORMATS: Array<'All' | EventFormat> = ['All', 'LAN', 'ONLINE']
+
+const MAP_WIDTH = 1000
+const MAP_HEIGHT = 520
+const worldFeature = feature(
+  worldMap as unknown as Parameters<typeof feature>[0],
+  (worldMap as unknown as { objects: { countries: Parameters<typeof feature>[1] } }).objects.countries,
+) as unknown as { features: Array<{ type: 'Feature'; geometry: unknown; properties?: Record<string, unknown> }> }
+
+const projection = geoEqualEarth()
+  .fitExtent([[20, 20], [MAP_WIDTH - 20, MAP_HEIGHT - 20]], worldFeature as never)
+const worldPath = geoPath(projection)
+
 
 export function WorldMap({
   state,
@@ -88,64 +101,57 @@ export function WorldMap({
 
       <div className="world-map-layout world-map-layout-v2">
         <div className="world-map-stage world-map-stage-v2">
-          <ComposableMap
-            projection="geoEqualEarth"
-            projectionConfig={{ scale: 150 }}
-            width={1000}
-            height={520}
+          <svg
+            viewBox={'0 0 ' + MAP_WIDTH + ' ' + MAP_HEIGHT}
             className="world-geo-map"
+            role="img"
+            aria-label="Мировая карта турнирного circuit"
           >
-            <ZoomableGroup center={[8, 18]} zoom={1}>
-              <Geographies geography={worldMap}>
-                {({ geographies }) =>
-                  geographies.map((geo) => (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      fill="#22294b"
-                      stroke="#4a5279"
-                      strokeWidth={0.45}
-                      style={{
-                        default: { outline: 'none' },
-                        hover: { fill: '#2c3562', outline: 'none' },
-                        pressed: { outline: 'none' },
-                      }}
-                    />
-                  ))
-                }
-              </Geographies>
+            <g className="world-country-layer">
+              {worldFeature.features.map((geo, index) => (
+                <path
+                  key={index}
+                  d={worldPath(geo as never) ?? ''}
+                  className="world-country"
+                />
+              ))}
+            </g>
 
-              {visible.map((event) => {
-                const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
-                const isSelected = selected.id === event.id
-                const isBooked = state.activeEventId === event.id
-                return (
-                  <Marker key={event.id} coordinates={[event.longitude, event.latitude]}>
-                    <g
-                      className={
-                        'world-marker ' +
-                        'tier-' + event.circuitTier +
-                        (event.format === 'ONLINE' ? ' online' : ' lan') +
-                        (isSelected ? ' selected' : '') +
-                        (isBooked ? ' booked' : '') +
-                        (locked ? ' locked' : '')
-                      }
-                      onClick={() => setSelectedId(event.id)}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={event.name}
-                    >
-                      <circle r={isSelected ? 8 : 6} />
-                      <circle className="world-marker-pulse" r={isSelected ? 14 : 11} />
-                      <text textAnchor="middle" y={-13}>
-                        {event.format === 'ONLINE' ? '● ' : ''}{event.circuitTier === 1 ? event.city : event.name}
-                      </text>
-                    </g>
-                  </Marker>
-                )
-              })}
-            </ZoomableGroup>
-          </ComposableMap>
+            {visible.map((event) => {
+              const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
+              const isSelected = selected.id === event.id
+              const isBooked = state.activeEventId === event.id
+              const point = projection([event.longitude, event.latitude])
+              if (!point) return null
+              return (
+                <g
+                  key={event.id}
+                  transform={'translate(' + point[0] + ' ' + point[1] + ')'}
+                  className={
+                    'world-marker ' +
+                    'tier-' + event.circuitTier +
+                    (event.format === 'ONLINE' ? ' online' : ' lan') +
+                    (isSelected ? ' selected' : '') +
+                    (isBooked ? ' booked' : '') +
+                    (locked ? ' locked' : '')
+                  }
+                  onClick={() => setSelectedId(event.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={event.name}
+                  onKeyDown={(eventKey) => {
+                    if (eventKey.key === 'Enter' || eventKey.key === ' ') setSelectedId(event.id)
+                  }}
+                >
+                  <circle r={isSelected ? 8 : 6} />
+                  <circle className="world-marker-pulse" r={isSelected ? 14 : 11} />
+                  <text textAnchor="middle" y={-13}>
+                    {event.format === 'ONLINE' ? '● ' : ''}{event.circuitTier === 1 ? event.city : event.name}
+                  </text>
+                </g>
+              )
+            })}
+          </svg>
 
           <div className="world-map-legend">
             <span><i className="tier1" /> T1 LAN</span>

@@ -2,7 +2,8 @@ import { REAL_PLAYERS } from './players'
 import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
-import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentRun } from './tournamentEngine'
+import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
+import { advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -99,6 +100,8 @@ export interface MatchResult {
   playedAt?: string
   tournamentId?: string | null
   tournamentMatchId?: string | null
+  opponentTeamId?: string | null
+  opponentRoster?: TournamentRosterPlayer[]
 }
 
 export interface SeasonSummary {
@@ -134,7 +137,7 @@ export interface ClubDecision {
 }
 
 export interface GameState {
-  version: 10
+  version: 11
   saveId: string
   seed: number
   season: number
@@ -157,6 +160,7 @@ export interface GameState {
   activeEventId: string | null
   activeTournament: TournamentRun | null
   tournamentHistory: TournamentRun[]
+  world: WorldState
   pendingDecision: ClubDecision | null
   welcomeComplete: boolean
   roster: Player[]
@@ -454,7 +458,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 10,
+  version: 11,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -477,6 +481,7 @@ export const createInitialState = (): GameState => ({
   activeEventId: null,
   activeTournament: null,
   tournamentHistory: [],
+  world: createWorldState(),
   pendingDecision: null,
   welcomeComplete: false,
   roster: [],

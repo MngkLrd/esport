@@ -1,4 +1,5 @@
 import { REAL_PLAYERS } from './players'
+import { rarityForPlayer } from './packs'
 import { collectPackCards, createPackState, type PackCard, type PackRarity, type PackState } from './packState'
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
@@ -521,11 +522,12 @@ const normalizePlayers = (players: Player[], packs: PackState): Player[] => play
     : undefined) ?? packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
   const identity = REAL_PLAYERS.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
   const profileMatch = identity?.profileUrl?.match(/\/player\/(\d+)/)
+  const semanticCardRarity = identity && card ? rarityForPlayer(identity) : card?.rarity ?? null
   return {
     ...player,
     playerKey: player.playerKey ?? (profileMatch ? 'hltv:' + profileMatch[1] : 'alias:' + aliasKey),
     acquiredCardId: player.acquiredCardId ?? card?.id ?? null,
-    cardRarity: player.cardRarity ?? card?.rarity ?? null,
+    cardRarity: player.cardRarity ?? semanticCardRarity,
     profileId: player.profileId ?? card?.profileId ?? (profileMatch ? Number(profileMatch[1]) : null),
     realName: player.realName && player.realName !== player.alias ? player.realName : identity?.realName ?? player.realName,
     firstName: player.firstName && player.firstName !== player.alias ? player.firstName : identity?.realName ?? player.firstName,

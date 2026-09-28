@@ -1,4 +1,4 @@
-import { addGameDays, addGameHours, formatGameDate, formatGameDateTime, formatGameTime, gameDayKey, parseGameDate } from './calendar'
+import { addGameDays, addGameHours, compareGameTime, formatGameDate, formatGameDateTime, formatGameTime, gameDayKey, parseGameDate } from './calendar'
 import { TOURNAMENTS } from './events'
 import { canBookTournament, type GameState } from './game'
 import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
@@ -16,15 +16,19 @@ export function SeasonCalendar({
   state,
   onAdvance,
   onAdvanceToMatch,
+  onOpenMatch,
   onOpenWorld,
 }: {
   state: GameState
   onAdvance: (target: string) => void
   onAdvanceToMatch: () => void
+  onOpenMatch: () => void
   onOpenWorld: () => void
 }) {
   const days = Array.from({ length: 28 }, (_, index) => addGameDays(state.now, index, 9))
   const nextClubMatch = nextPlayerMatch(state.activeTournament)
+  const fixtureDue = Boolean(nextClubMatch && compareGameTime(nextClubMatch.scheduledAt, state.now) <= 0)
+  const timeBlocked = Boolean(state.pendingDecision || fixtureDue)
 
   const upcoming = TOURNAMENTS
     .map((event) => ({
@@ -50,12 +54,15 @@ export function SeasonCalendar({
       </div>
 
       <div className="calendar-controls">
-        <button onClick={() => onAdvance(addGameHours(state.now, 6))}>+6 HOURS</button>
-        <button onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>NEXT DAY</button>
+        <button disabled={timeBlocked} onClick={() => onAdvance(addGameHours(state.now, 6))}>+6 HOURS</button>
+        <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>NEXT DAY</button>
+        {state.pendingDecision && <span className="calendar-blocked">DECISION REQUIRED · INBOX</span>}
         {state.activeTournament && (
-          <button className="primary" onClick={onAdvanceToMatch}>
-            {nextClubMatch ? 'ADVANCE TO MATCH' : 'ADVANCE BRACKET'} <span>→</span>
-          </button>
+          fixtureDue
+            ? <button className="primary" onClick={onOpenMatch}>GO TO MATCHDAY <span>→</span></button>
+            : <button className="primary" onClick={onAdvanceToMatch}>
+                {nextClubMatch ? 'ADVANCE TO MATCH' : 'ADVANCE BRACKET'} <span>→</span>
+              </button>
         )}
       </div>
 

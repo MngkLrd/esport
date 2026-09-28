@@ -780,3 +780,32 @@
     margin: 0 auto;
   }
 }
+
+
+/* SHARED COLLECTIBLE CARDS IN TRANSFER MARKET --------------------------- */
+.market-shared-card{
+  position:relative;
+  width:100%;
+}
+.market-shared-card .market-card-shared{
+  width:100%;
+  max-width:none;
+}
+.market-shared-card .collectible-card-badge{
+  color:#fff;
+}
+.market-shared-card .collectible-card-badge b{
+  color:var(--orange-2);
+  font-size:11px;
+}
+.market-candidate.tier-gold .market-shared-card .collectible-card-badge b,
+.market-candidate.tier-silver .market-shared-card .collectible-card-badge b{
+  color:#fff;
+}
+.market-candidate{
+  background:rgba(8,13,29,.72);
+  border-color:rgba(145,159,255,.16);
+}
+.market-candidate:hover{
+  border-color:rgba(41,231,255,.30);
+}

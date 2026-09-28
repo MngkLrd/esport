@@ -11,7 +11,6 @@ import {
   releasePlayer,
   renewContract,
   restPlayer,
-  tacticInfo,
   teamRating,
   toggleStarter,
   trainPlayer,
@@ -315,7 +314,7 @@ function RosterRow({ player, starter, state, onOpen, onTrain, onRest, onRenew, o
 function App() {
   const [state, setState] = useState<GameState>(() => saveRepository.load())
   const [tab, setTab] = useState<Tab>('HQ')
-  const [tactic, setTactic] = useState<TacticalPlan>('balanced')
+  const tactic: TacticalPlan = 'balanced'
   const [seenNewsId, setSeenNewsId] = useState<string | null>(null)
   const [welcomeStep, setWelcomeStep] = useState<'intro' | 'reveal' | 'complete'>('intro')
   const [welcomeRevealed, setWelcomeRevealed] = useState(0)
@@ -606,8 +605,7 @@ function App() {
               <div className="tactical-vs"><span>BO3</span><strong>VS</strong></div>
               <section className="tactical-opponent"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'СЕРИЯ'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? 'RATING ' + bracketOpponent.rating + ' · ' + (bracketMatch?.label ?? '') : modeInfo[activeEventMode ?? 'scrim'].description}</p>{bracketRoster.length > 0 && <div className="tactical-opponent-roster">{bracketRoster.map((player) => <OpponentVisualCard key={player.playerKey} player={player} />)}</div>}<div className="opponent-line"><b>{bracketOpponent?.rating ?? '?'}</b><span>{bracketOpponent ? bracketOpponent.name.toUpperCase() : 'СОПЕРНИК БУДЕТ ОПРЕДЕЛЁН'}</span></div></section>
             </div>
-            <div className="tactical-control">
-              <div className="tactical-plans"><div className="control-label">ПЛАН ИГРЫ</div>{(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}><span>{tacticInfo[plan].name}</span><small>{tacticInfo[plan].description}</small></button>)}</div>
+            <div className="tactical-control tactical-control-compact">
               <div className="tactical-modes">
                 <div className="control-label">EVENT FORMAT</div>
                 {activeEventMode && activeEvent ? (
@@ -622,7 +620,17 @@ function App() {
                   </div>
                 )}
               </div>
-              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong>{activeEvent && canAdvanceTournamentClock ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button> : activeEventMode ? <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode)}>ИГРАТЬ МАТЧ <span>→</span></button> : <button className="hq-primary-action" onClick={() => openTab('World')}>ВЫБРАТЬ ТУРНИР <span>→</span></button>}{activeEventMode && !currentPlayGate.ok && !canAdvanceTournamentClock ? <small>{currentPlayGate.reason}</small> : warnings.length > 0 && <small>{warnings[0]}</small>}</div>
+              <div className="tactical-launch tactical-launch-compact">
+                <span className="control-label">MATCH ACTION</span>
+                {activeEvent && canAdvanceTournamentClock
+                  ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button>
+                  : activeEventMode
+                    ? <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode)}>ИГРАТЬ МАТЧ <span>→</span></button>
+                    : <button className="hq-primary-action" onClick={() => openTab('World')}>ВЫБРАТЬ ТУРНИР <span>→</span></button>}
+                {activeEventMode && !currentPlayGate.ok && !canAdvanceTournamentClock
+                  ? <small>{currentPlayGate.reason}</small>
+                  : warnings.length > 0 && <small>{warnings[0]}</small>}
+              </div>
             </div>
             {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
           </section>
@@ -668,14 +676,9 @@ function App() {
                   <span><b>+1</b>CONTINUITY</span>
                   <span><b>+4</b>FATIGUE</span>
                 </div>
-                <div className="practice-tactics">
-                  <span className="control-label">PLAN</span>
-                  {(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => (
-                    <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}>
-                      <span>{tacticInfo[plan].name}</span>
-                      <small>{tacticInfo[plan].description}</small>
-                    </button>
-                  ))}
+                <div className="practice-mode-note">
+                  <span>STANDARD PRACTICE</span>
+                  <small>Тактические планы временно отключены. Пракк проходит в стандартном режиме.</small>
                 </div>
                 <button className="fifa-primary-cta practice-start" disabled={!practiceGate.ok} onClick={() => play('practice')}>
                   PLAY PRACC <span>→</span>

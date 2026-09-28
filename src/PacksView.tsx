@@ -149,6 +149,7 @@ export function PacksView({
   onOpenBatch: (packId: Exclude<PackId, 'welcome'>, quantity: number) => PackRoll[] | null
   onClear: () => void
 }) {
+  const [section, setSection] = useState<'store' | 'collection'>('store')
   const [selectedPackId, setSelectedPackId] = useState<Exclude<PackId, 'welcome'> | null>(null)
   const [quantity, setQuantity] = useState<(typeof QUANTITIES)[number]>(1)
   const [queue, setQueue] = useState<PackRoll[]>([])
@@ -302,90 +303,94 @@ export function PacksView({
 
   return (
     <section className="screen packs-screen fifa-packs-screen">
-      <div className="fifa-screen-header">
+      <div className="fifa-screen-header packs-screen-header">
         <div>
-          <span>STORE &gt; PLAYER PACKS</span>
-          <h1>PACK STORE</h1>
+          <span>STORE · PLAYER PACKS</span>
+          <h1>{section === 'store' ? 'PACK STORE' : 'MY CLUB'}</h1>
         </div>
         <div className="fifa-currency-large"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
       </div>
 
-      <div className="pack-stats pack-stats-v2">
-        <div><span>ОТКРЫТО</span><b>{stats.total}</b></div>
-        <div><span>УНИКАЛЬНЫХ</span><b>{stats.unique}</b></div>
-        <div><span>ДУБЛЕЙ</span><b>{stats.duplicates}</b></div>
-        <div><span>ЛЕГЕНДАРНЫХ</span><b>{stats.legendary}</b></div>
-        <div><span>ЛУЧШАЯ СИЛА</span><b>{stats.bestPower || '—'}</b></div>
+      <div className="pack-section-tabs">
+        <button className={section === 'store' ? 'active' : ''} onClick={() => setSection('store')}>PACKS</button>
+        <button className={section === 'collection' ? 'active' : ''} onClick={() => setSection('collection')}>
+          COLLECTION <span>{stats.unique}</span>
+        </button>
       </div>
 
-      <div className="pack-shelf fifa-pack-shelf">
-        {PACKS.map((pack) => (
-          <article className={'pack-box pack-' + pack.id} key={pack.id} style={{ '--pack-accent': pack.accent } as React.CSSProperties}>
-            <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
-            <div className="pack-box-glow" />
-            <span>{pack.eyebrow}</span>
-            <h2>{pack.name}</h2>
-            <p>{pack.description}</p>
-            <div className="pack-odds">
-              <span><i style={{ background: RARITY_COLOR.rare }} /> Редкая {pack.weights.rare}%</span>
-              <span><i style={{ background: RARITY_COLOR.epic }} /> Эпическая {pack.weights.epic}%</span>
-              <span><i style={{ background: RARITY_COLOR.legendary }} /> Легендарная {pack.weights.legendary}%</span>
-            </div>
-            <button className="fifa-primary-cta" onClick={() => openPurchase(pack.id as Exclude<PackId, 'welcome'>)}>
-              КУПИТЬ ПАК <span>→</span>
-            </button>
-            <small className="pack-box-price">{pack.price} TOKENS</small>
-          </article>
-        ))}
-      </div>
-
-      <div className="collection-head fifa-collection-head">
-        <div>
-          <div className="eyebrow">MY CLUB · {stats.total}</div>
-          <h2>PLAYER COLLECTION</h2>
-        </div>
-        {stats.total > 0 && <button className="text-button release" onClick={resetCollection}>Очистить коллекцию</button>}
-      </div>
-
-      {viewState.inventory.length > 0 && (
-        <div className="collection-tools">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Ник, имя, команда или страна"
-            aria-label="Поиск по коллекции"
-          />
-          <div className="collection-filters">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                className={rarityFilter === filter.value ? 'active' : ''}
-                onClick={() => setRarityFilter(filter.value)}
-              >
-                {filter.label}
-              </button>
+      {section === 'store' ? (
+        <div className="pack-store-frame">
+          <div className="pack-shelf fifa-pack-shelf">
+            {PACKS.map((pack) => (
+              <article className={'pack-box pack-' + pack.id} key={pack.id} style={{ '--pack-accent': pack.accent } as React.CSSProperties}>
+                <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
+                <div className="pack-box-glow" />
+                <span>{pack.eyebrow}</span>
+                <h2>{pack.name}</h2>
+                <div className="pack-box-footer">
+                  <div className="pack-rarity-pips" aria-label="Pack rarity chances">
+                    <i style={{ opacity: Math.max(.18, pack.weights.rare / 40) }} />
+                    <i style={{ opacity: Math.max(.18, pack.weights.epic / 22) }} />
+                    <i style={{ opacity: Math.max(.18, pack.weights.legendary / 10) }} />
+                  </div>
+                  <strong>{pack.price.toLocaleString('ru-RU')} <small>TOKENS</small></strong>
+                </div>
+                <button className="fifa-primary-cta" onClick={() => openPurchase(pack.id as Exclude<PackId, 'welcome'>)}>
+                  OPEN <span>→</span>
+                </button>
+              </article>
             ))}
           </div>
-        </div>
-      )}
-
-      {viewState.inventory.length ? (
-        collection.length ? (
-          <div className="collection-grid">
-            {collection.map((card) => (
-              <CollectionCard
-                card={card}
-                count={aliasCounts.get(cardKey(card)) ?? 1}
-                onOpen={() => setSelectedCard(card)}
-                key={cardKey(card)}
-              />
-            ))}
+          <div className="pack-store-summary">
+            <span>COLLECTION</span>
+            <b>{stats.unique}</b>
+            <small>unique · {stats.legendary} legendary</small>
           </div>
-        ) : (
-          <div className="empty-state pack-empty"><span>НИЧЕГО НЕ НАЙДЕНО</span><h2>Попробуй другой фильтр.</h2></div>
-        )
+        </div>
       ) : (
-        <div className="empty-state pack-empty"><span>ПОКА НЕТ КАРТ</span><h2>Твой первый набор уже ждёт.</h2></div>
+        <div className="pack-collection-frame">
+          <div className="collection-tools">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ник, команда или страна"
+              aria-label="Поиск по коллекции"
+            />
+            <div className="collection-filters">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  className={rarityFilter === filter.value ? 'active' : ''}
+                  onClick={() => setRarityFilter(filter.value)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+            {stats.total > 0 && <button className="text-button release pack-clear" onClick={resetCollection}>Очистить</button>}
+          </div>
+
+          <div className="pack-collection-scroll">
+            {viewState.inventory.length ? (
+              collection.length ? (
+                <div className="collection-grid">
+                  {collection.map((card) => (
+                    <CollectionCard
+                      card={card}
+                      count={aliasCounts.get(cardKey(card)) ?? 1}
+                      onOpen={() => setSelectedCard(card)}
+                      key={cardKey(card)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state pack-empty"><span>НИЧЕГО НЕ НАЙДЕНО</span><h2>Смени фильтр.</h2></div>
+              )
+            ) : (
+              <div className="empty-state pack-empty"><span>ПОКА НЕТ КАРТ</span><h2>Открой первый пак.</h2></div>
+            )}
+          </div>
+        </div>
       )}
 
       {selectedPack && (

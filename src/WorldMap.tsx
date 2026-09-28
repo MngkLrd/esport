@@ -3,8 +3,8 @@ import { geoCentroid, geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
-import { formatGameDateTime } from './calendar'
-import { tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
+import { compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
+import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
 import {
   TOURNAMENTS,
   tournamentEntryCost,
@@ -17,6 +17,12 @@ import {
 const REGIONS: Array<'All' | TournamentRegion> = ['All', 'Europe', 'Americas', 'Asia', 'CIS']
 const CIRCUITS: Array<'All' | CircuitTier> = ['All', 1, 2, 3]
 const FORMATS: Array<'All' | EventFormat> = ['All', 'LAN', 'ONLINE']
+
+const STRUCTURE_LABELS = {
+  single_elim: 'SINGLE ELIMINATION',
+  groups_single: 'GROUPS → SINGLE ELIMINATION',
+  groups_double: 'GROUPS → DOUBLE ELIMINATION',
+} as const
 
 const MAP_WIDTH = 1000
 const MAP_HEIGHT = 520
@@ -50,6 +56,45 @@ const REGION_VIEW: Record<Exclude<'All' | TournamentRegion, 'All'>, { center: [n
   CIS: { center: [58, 51], zoom: 3.5 },
 }
 
+type EventPoint = {
+  event: (typeof TOURNAMENTS)[number]
+  point: [number, number]
+}
+
+type EventCluster = {
+  id: string
+  point: [number, number]
+  items: EventPoint[]
+}
+
+const clusterEventPoints = (items: EventPoint[], zoom: number): EventCluster[] => {
+  const threshold = 34 / Math.max(1, zoom)
+  const clusters: EventCluster[] = []
+
+  for (const item of items) {
+    const target = clusters.find((cluster) =>
+      Math.hypot(cluster.point[0] - item.point[0], cluster.point[1] - item.point[1]) <= threshold,
+    )
+
+    if (!target) {
+      clusters.push({
+        id: item.event.id,
+        point: item.point,
+        items: [item],
+      })
+      continue
+    }
+
+    target.items.push(item)
+    target.id = target.items.map((entry) => entry.event.id).join('+')
+    target.point = [
+      target.items.reduce((sum, entry) => sum + entry.point[0], 0) / target.items.length,
+      target.items.reduce((sum, entry) => sum + entry.point[1], 0) / target.items.length,
+    ]
+  }
+
+  return clusters
+}
 
 export function WorldMap({
   state,
@@ -84,6 +129,17 @@ export function WorldMap({
       : worldFeature.features.filter((geo) => featureRegion(geo as never) === region),
     [region],
   )
+  const eventPoints = useMemo(
+    () => visible.flatMap((event) => {
+      const point = projection([event.longitude, event.latitude])
+      return point ? [{ event, point: point as [number, number] }] : []
+    }),
+    [visible],
+  )
+  const markerClusters = useMemo(
+    () => clusterEventPoints(eventPoints, zoom),
+    [eventPoints, zoom],
+  )
   const selected = tournamentForId(selectedId) ?? visible[0] ?? TOURNAMENTS[0]
   const active = tournamentForId(state.activeEventId)
   const booking = canBookTournament(state, selected.id)
@@ -92,6 +148,16 @@ export function WorldMap({
   const weeklyOps = payroll + eventCost
   const selectedStart = tournamentStartsAt(selected, state.seasonStart)
   const selectedEnd = tournamentEndsAt(selected, state.seasonStart)
+  const selectedRun = state.activeTournament?.eventId === selected.id ? state.activeTournament : null
+  const selectedNextMatch = nextPlayerMatch(selectedRun)
+  const registrationClosed = compareGameTime(state.now, selectedStart) >= 0 && !booked
+  const selectedStatus = booked
+    ? (selectedRun?.status.replaceAll('_', ' ').toUpperCase() ?? 'REGISTERED')
+    : registrationClosed
+      ? 'REGISTRATION CLOSED'
+      : booking.ok
+        ? 'REGISTRATION OPEN'
+        : 'LOCKED'
 
   const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
     setRegion(nextRegion)
@@ -108,6 +174,23 @@ export function WorldMap({
       x: -nextZoom * (point[0] - MAP_WIDTH / 2),
       y: -nextZoom * (point[1] - MAP_HEIGHT / 2),
     })
+  }
+
+  const focusMapPoint = (point: [number, number], targetZoom: number) => {
+    const nextZoom = Math.max(1.8, Math.min(6, targetZoom))
+    setZoom(nextZoom)
+    setPan({
+      x: -nextZoom * (point[0] - MAP_WIDTH / 2),
+      y: -nextZoom * (point[1] - MAP_HEIGHT / 2),
+    })
+  }
+
+  const openCluster = (cluster: EventCluster) => {
+    if (cluster.items.length === 1) {
+      setSelectedId(cluster.items[0].event.id)
+      return
+    }
+    focusMapPoint(cluster.point, Math.min(6, Math.max(zoom * 1.65, 3.2)))
   }
 
   const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
@@ -213,40 +296,75 @@ export function WorldMap({
                 ))}
               </g>
 
-              {visible.map((event) => {
-              const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
-              const isSelected = selected.id === event.id
-              const isBooked = state.activeEventId === event.id
-              const point = projection([event.longitude, event.latitude])
-              if (!point) return null
-              return (
-                <g
-                  key={event.id}
-                  transform={'translate(' + point[0] + ' ' + point[1] + ')'}
-                  className={
-                    'world-marker ' +
-                    'tier-' + event.circuitTier +
-                    (event.format === 'ONLINE' ? ' online' : ' lan') +
-                    (isSelected ? ' selected' : '') +
-                    (isBooked ? ' booked' : '') +
-                    (locked ? ' locked' : '')
-                  }
-                  onClick={() => setSelectedId(event.id)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={event.name}
-                  onKeyDown={(eventKey) => {
-                    if (eventKey.key === 'Enter' || eventKey.key === ' ') setSelectedId(event.id)
-                  }}
-                >
-                  <circle r={isSelected ? 8 : 6} />
-                  <circle className="world-marker-pulse" r={isSelected ? 14 : 11} />
-                  <text textAnchor="middle" y={-13}>
-                    {event.format === 'ONLINE' ? '● ' : ''}{event.circuitTier === 1 ? event.city : event.name}
-                  </text>
-                </g>
-              )
-            })}
+              {markerClusters.map((cluster) => {
+                const clusterSelected = cluster.items.some((item) => item.event.id === selected.id)
+                const inverseScale = 1 / zoom
+
+                if (cluster.items.length > 1) {
+                  return (
+                    <g
+                      key={cluster.id}
+                      transform={'translate(' + cluster.point[0] + ' ' + cluster.point[1] + ')'}
+                      className={'world-cluster' + (clusterSelected ? ' selected' : '')}
+                      onClick={(eventClick) => {
+                        eventClick.stopPropagation()
+                        openCluster(cluster)
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={cluster.items.length + ' tournaments'}
+                      onKeyDown={(eventKey) => {
+                        if (eventKey.key === 'Enter' || eventKey.key === ' ') openCluster(cluster)
+                      }}
+                    >
+                      <g transform={'scale(' + inverseScale + ')'}>
+                        <circle className="world-cluster-ring" r="15" />
+                        <circle className="world-cluster-core" r="10" />
+                        <text textAnchor="middle" y="3">{cluster.items.length}</text>
+                        <title>{cluster.items.map((item) => item.event.name).join(' · ')}</title>
+                      </g>
+                    </g>
+                  )
+                }
+
+                const event = cluster.items[0].event
+                const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
+                const isSelected = selected.id === event.id
+                const isBooked = state.activeEventId === event.id
+
+                return (
+                  <g
+                    key={event.id}
+                    transform={'translate(' + cluster.point[0] + ' ' + cluster.point[1] + ')'}
+                    className={
+                      'world-marker ' +
+                      'tier-' + event.circuitTier +
+                      (event.format === 'ONLINE' ? ' online' : ' lan') +
+                      (isSelected ? ' selected' : '') +
+                      (isBooked ? ' booked' : '') +
+                      (locked ? ' locked' : '')
+                    }
+                    onClick={(eventClick) => {
+                      eventClick.stopPropagation()
+                      setSelectedId(event.id)
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={event.name}
+                    onKeyDown={(eventKey) => {
+                      if (eventKey.key === 'Enter' || eventKey.key === ' ') setSelectedId(event.id)
+                    }}
+                  >
+                    <g className="world-marker-ui" transform={'scale(' + inverseScale + ')'}>
+                      <circle className="world-marker-hit" r="14" />
+                      <circle className="world-marker-dot" r={isSelected ? 6 : 4.5} />
+                      {isSelected && <circle className="world-marker-pulse" r="11" />}
+                      <text textAnchor="middle" y="-12">{event.name}</text>
+                      <title>{event.name} · T{event.circuitTier} · {event.format}</title>
+                    </g>
+                  </g>
+                )
+              })}
             </g>
           </svg>
 
@@ -263,28 +381,45 @@ export function WorldMap({
         </div>
 
         <aside className="world-event-panel world-event-panel-v2">
-          <div className="world-event-tier">TIER {selected.circuitTier} · {selected.format}</div>
-          <span>{selected.region.toUpperCase()} · {selected.city.toUpperCase()}</span>
+          <div className="world-event-panel-head">
+            <div>
+              <div className="world-event-tier">TIER {selected.circuitTier} · {selected.format}</div>
+              <span>{selected.region.toUpperCase()} · {selected.city.toUpperCase()}</span>
+            </div>
+            <b className={'world-event-status' + (booked ? ' booked' : '')}>{selectedStatus}</b>
+          </div>
+
           <h2>{selected.name}</h2>
-          <p>{selected.label}</p>
+          <p>{STRUCTURE_LABELS[selected.structure]}</p>
           <div className="world-event-date">{formatGameDateTime(selectedStart)} — {formatGameDateTime(selectedEnd)}</div>
 
           <div className="world-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>
-            <div><span>{selected.format === 'ONLINE' ? 'ENTRY FEE' : 'TRAVEL + OPS'}</span><b>{selected.format === 'ONLINE' ? 'FREE' : eventCost}</b></div>
+            <div><span>ENTRY</span><b>{selected.format === 'ONLINE' ? 'FREE' : eventCost + ' CR.'}</b></div>
+            <div><span>DURATION</span><b>{selected.durationDays} DAYS</b></div>
             <div><span>FATIGUE</span><b>+{selected.fatigue}</b></div>
-            <div><span>UNLOCK</span><b>LVL {selected.unlockLevel}</b></div>
+          </div>
+
+          <div className="world-event-details">
+            <div><span>FORMAT</span><b>{selected.label}</b></div>
+            <div><span>MANAGER ACCESS</span><b>LVL {selected.unlockLevel}+</b></div>
+            {selectedNextMatch && (
+              <div className="highlight">
+                <span>NEXT CLUB MATCH</span>
+                <b>{formatGameDateTime(selectedNextMatch.scheduledAt)} · {humanTimeUntil(state.now, selectedNextMatch.scheduledAt)}</b>
+              </div>
+            )}
           </div>
 
           <div className="world-budget-preview">
-            <span>{selected.format === 'ONLINE' ? 'CLUB PAYROLL' : 'EVENT WEEK'}</span>
-            <strong>{weeklyOps.toLocaleString('ru-RU')} CASH</strong>
-            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'ENTRY FEE · 0 CASH' : 'payroll + travel + service'}</small>
+            <span>{selected.format === 'ONLINE' ? 'REGISTRATION COST' : 'EVENT COMMITMENT'}</span>
+            <strong>{selected.format === 'ONLINE' ? '0 CASH' : eventCost.toLocaleString('ru-RU') + ' CASH'}</strong>
+            <small>{selected.format === 'ONLINE' ? 'ONLINE ENTRY IS FREE' : 'travel + event operations · payroll stays weekly'}</small>
           </div>
 
           {booked ? (
             <button className="fifa-primary-cta" onClick={onPrepareMatch}>
-              ENTER EVENT <span>→</span>
+              OPEN TOURNAMENT <span>→</span>
             </button>
           ) : (
             <button className="fifa-primary-cta" disabled={!booking.ok} onClick={() => onBook(selected.id)}>

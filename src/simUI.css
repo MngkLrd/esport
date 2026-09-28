@@ -1357,6 +1357,25 @@ body::before{
 }
 
 @media (min-width:901px) and (max-height:820px){
+  .sim-event-dossier{padding:10px 12px 9px}
+  .sim-event-dossier h2{margin:6px 0 3px;font-size:25px}
+  .sim-event-dossier>p{font-size:9px}
+  .sim-event-date{margin-top:5px;font-size:9px}
+  .sim-registration-deadline{margin-top:3px;font-size:8px}
+  .sim-event-stats{margin-top:6px;gap:4px}
+  .sim-event-stats>div{min-height:39px;padding:6px}
+  .sim-event-stats b{font-size:12px}
+  .sim-event-details{margin-top:5px;gap:4px}
+  .sim-event-details>div{padding:6px}
+  .sim-event-details>div:not(.highlight):nth-child(2){display:none}
+  .sim-event-timeline{min-height:74px;margin:4px 0}
+  .sim-event-timeline>div{min-height:24px;padding:2px}
+  .sim-event-timeline>div:not(:last-child)::after{top:18px;bottom:-8px}
+  .sim-event-timeline b{font-size:9px}
+  .sim-event-cost{padding:5px 0}
+  .sim-event-cost strong{font-size:14px}
+  .sim-event-dossier .sim-primary-action{min-height:36px}
+
   .sim-screen{padding-top:41px;padding-bottom:8px}
   .sim-event-banner{flex-basis:72px;min-height:72px}
   .sim-event-banner-main,.sim-event-banner-match{padding:8px 12px}

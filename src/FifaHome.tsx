@@ -50,12 +50,6 @@ export function FifaHome({
       } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault()
         moveFocus(-1)
-      } else if (event.key === 'Enter') {
-        const active = tileRefs.current[focusIndex]
-        if (active && document.activeElement !== active) {
-          event.preventDefault()
-          active.click()
-        }
       }
     }
     window.addEventListener('keydown', onKey)

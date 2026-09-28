@@ -264,6 +264,25 @@ describe('P0 career flow', () => {
     expect(signed.credits).toBe(report.credits - strong.fee)
   })
 
+  it('migrates a legacy selected event into a full tournament run', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const legacy = {
+      ...ready,
+      version: 9,
+      activeEventId: 'eu-open-1',
+      activeTournament: undefined,
+      tournamentHistory: undefined,
+      seasonStart: undefined,
+      now: undefined,
+    }
+    const migrated = migrateState(legacy)
+    expect(migrated.version).toBe(10)
+    expect(migrated.activeEventId).toBe('eu-open-1')
+    expect(migrated.activeTournament?.eventId).toBe('eu-open-1')
+    expect(migrated.activeTournament?.matches.length).toBe(7)
+  })
+
   it('migrates v8 saves into split club cash and pack-token economy', () => {
     const legacy = createInitialState()
     const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }

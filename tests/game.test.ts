@@ -109,11 +109,12 @@ describe('P0 career flow', () => {
   it('turns a world-map booking into a real season event', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    expect(canBookTournament(ready, 'helsinki').ok).toBe(true)
+    const levelTwo = { ...ready, managerXp: 500 }
+    expect(canBookTournament(levelTwo, 'helsinki').ok).toBe(true)
 
-    const booked = bookTournament(ready, 'helsinki')
+    const booked = bookTournament(levelTwo, 'helsinki')
     expect(booked.activeEventId).toBe('helsinki')
-    expect(booked.credits).toBe(ready.credits - 420)
+    expect(booked.credits).toBe(levelTwo.credits - 420)
 
     const played = playMatch(booked, 'scrim', 'balanced')
     expect(played.activeEventId).toBeNull()
@@ -128,8 +129,9 @@ describe('P0 career flow', () => {
     const levelThree = { ...ready, managerXp: 1000 }
     const report = scout(levelThree, { role: 'Any', maxSalary: 170, ageProfile: 'any' })
     expect(report.prospects).toHaveLength(6)
-    expect(canBookTournament(levelThree, 'dallas').ok).toBe(true)
-    expect(canBookTournament(ready, 'dallas').ok).toBe(false)
+    expect(canBookTournament(levelThree, 'lisbon').ok).toBe(true)
+    expect(canBookTournament(ready, 'lisbon').ok).toBe(false)
+    expect(canBookTournament(ready, 'eu-open-1').ok).toBe(true)
   })
 
   it('forces one weekly club decision before the next event loop', () => {

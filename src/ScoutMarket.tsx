@@ -20,6 +20,7 @@ import {
 import { PlayerPortrait } from './PlayerPortrait'
 import { cardTier, countryFlag } from './playerVisuals'
 import './ScoutMarket.css'
+import { CollectiblePlayerCard } from './CollectiblePlayerCard'
 
 const ROLE_LABELS: Record<Role, string> = {
   IGL: 'IGL',
@@ -56,29 +57,30 @@ function CandidateCard({
 }) {
   const ovr = overall(player)
   const tier = cardTier(ovr)
+  const fitLabel = fit >= 78 ? 'TOP' : fit >= 68 ? 'GOOD' : fit >= 58 ? 'OK' : 'RISK'
+
   return (
     <article className={'market-candidate tier-' + tier}>
-      <button type="button" className="market-card-visual" onClick={onOpen} aria-label={'Открыть переговоры с ' + player.alias}>
-        <div className="market-card-top">
-          <div><b>{ovr}</b><span>{ROLE_LABELS[player.role]}</span></div>
-          <div className="market-fit"><b>{fit >= 78 ? 'TOP' : fit >= 68 ? 'GOOD' : fit >= 58 ? 'OK' : 'RISK'}</b><span>FIT</span></div>
-        </div>
-        <div className="market-card-country">{countryFlag(player.country)} <span>{player.country}</span></div>
-        <div className="market-card-photo">
-          <span>{player.alias.slice(0, 3).toUpperCase()}</span>
-          <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} draggable={false} />
-        </div>
-        <div className="market-card-name">
-          <strong>{player.alias}</strong>
-          <span>{player.team}</span>
-        </div>
-        <div className="market-card-stats">
-          <span><b>{player.aim}</b>AIM</span>
-          <span><b>{player.utility}</b>UTL</span>
-          <span><b>{player.gameSense}</b>POS</span>
-          <span><b>{player.clutch}</b>CLU</span>
-        </div>
-      </button>
+      <div className="market-shared-card">
+        <CollectiblePlayerCard
+          rating={ovr}
+          tier={tier}
+          role={player.role}
+          alias={player.alias}
+          team={player.team}
+          country={player.country}
+          profileId={player.profileId}
+          stats={{
+            aim: player.aim,
+            utility: player.utility,
+            positioning: player.gameSense,
+            clutch: player.clutch,
+          }}
+          onOpen={onOpen}
+          className="market-card-shared"
+          badge={<><b>{fitLabel}</b><span>FIT</span></>}
+        />
+      </div>
       <div className="market-card-meta">
         <span>{player.age == null ? 'AGE —' : player.age + ' лет'}</span>
         <span>POT {player.potential}</span>

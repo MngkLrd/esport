@@ -565,6 +565,37 @@ const normalizeLineupSlots = (roster: Player[], startingFive: string[], raw: unk
   return slots
 }
 
+const tournamentPlayerSeedFromRoster = (
+  roster: Player[],
+  startingFive: string[],
+  continuity = 50,
+): TournamentPlayerTeamSeed => {
+  const active = getStartingFive(roster, startingFive)
+  return {
+    rating: active.length === 5 ? teamRating(roster, startingFive, continuity) : 55,
+    roster: active.map((player) => ({
+      playerKey: player.playerKey ?? 'alias:' + player.alias.toLocaleLowerCase('en-US'),
+      alias: player.alias,
+      role: player.role,
+      rating: overall(player),
+      profileId: player.profileId ?? null,
+      country: player.country || null,
+    })),
+  }
+}
+
+const normalizedWorld = (
+  raw: unknown,
+  roster: Player[],
+  now: string,
+  seed: number,
+) => {
+  const source = raw && typeof raw === 'object' && (raw as { version?: number }).version === 1
+    ? raw as WorldState
+    : createWorldState()
+  return reconcileWorldWithClubRoster(source, roster, now, seed)
+}
+
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }

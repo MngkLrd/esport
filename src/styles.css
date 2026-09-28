@@ -5825,3 +5825,51 @@ button.primary:hover,
     grid-template-columns: 1.28fr .92fr .92fr;
   }
 }
+
+
+/* live opponent roster from persistent world state */
+.tactical-opponent-roster {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 10px;
+}
+.tactical-opponent-roster > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid rgba(145,159,255,.12);
+  background: rgba(255,255,255,.025);
+}
+.tactical-opponent-roster img,
+.tactical-opponent-roster .player-portrait-fallback {
+  width: 28px;
+  height: 30px;
+  object-fit: cover;
+  object-position: center top;
+  background: #171d33;
+}
+.tactical-opponent-roster > div > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.tactical-opponent-roster b {
+  overflow: hidden;
+  color: #eef2ff;
+  font: 900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  text-overflow: ellipsis;
+}
+.tactical-opponent-roster small {
+  overflow: hidden;
+  color: #6f7b98;
+  font: 800 6px/1 Arial,sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-main-play .tactical-opponent .opponent-line {
+  margin-top: 7px;
+}

@@ -174,22 +174,22 @@ export function ScoutMarket({
   }
 
   return (
-    <section className="screen scout-market-screen">
-      <div className="market-heading">
+    <section className="sim-screen sim-market">
+      <div className="sim-screen-head sim-market-head">
         <div>
           <span className="eyebrow">TRANSFER WINDOW · SCOUT NETWORK LVL {managerLevel}</span>
           <h1>BUILD YOUR SHORTLIST</h1>
         </div>
-        <div className="market-budget">
+        <div className="sim-head-stat sim-market-budget">
           <span>БЮДЖЕТ КЛУБА</span>
           <b>{state.credits.toLocaleString('ru-RU')} кр.</b>
           <small>отчёт стоит {SCOUT_REPORT_COST} кр.</small>
         </div>
       </div>
 
-      <div className={'market-layout ' + (rankedProspects.length > 0 ? 'has-results' : 'awaiting-results')}>
-        <aside className="market-brief">
-          <div className="market-brief-title">
+      <div className={'sim-market-body ' + (rankedProspects.length > 0 ? 'has-results' : 'awaiting-results')}>
+        <aside className="sim-market-brief">
+          <div className="sim-market-brief-head">
             <span>SCOUT BRIEF</span>
             <b>01</b>
           </div>
@@ -250,8 +250,8 @@ export function ScoutMarket({
 
         </aside>
 
-        <section className="market-report">
-          <div className="market-report-head">
+        <section className="sim-market-results">
+          <div className="sim-market-results-head">
             <div>
               <span>SHORTLIST</span>
               <strong>
@@ -266,12 +266,12 @@ export function ScoutMarket({
           </div>
 
           {rankedProspects.length === 0 ? (
-            <div className="market-empty">
-              <div className="market-empty-mark">+</div>
+            <div className="sim-market-empty">
+              <div className="sim-market-empty-mark">+</div>
               <h2>Сформируй запрос скауту.</h2>
             </div>
           ) : (
-            <div className="market-card-grid">
+            <div className="sim-market-grid">
               {rankedProspects.map((player) => (
                 <CandidateCard
                   key={player.id}

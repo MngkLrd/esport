@@ -21,7 +21,7 @@ import {
   type Player,
   type TacticalPlan,
 } from './game'
-import { CARD_TIER_LABEL, PLAYER_PORTRAIT_STATS, cardTier, countryFlag } from './playerVisuals'
+import { PLAYER_PORTRAIT_STATS, cardTier, countryFlag } from './playerVisuals'
 import {
   clearPackCollection,
   type PackRoll,

@@ -5,6 +5,7 @@ import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
 import { compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
 import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
+import { worldVrsStandings } from './world'
 import {
   TOURNAMENTS,
   tournamentEntryCost,
@@ -105,6 +106,7 @@ export function WorldMap({
   onBook: (eventId: string) => void
   onPrepareMatch: () => void
 }) {
+  const [viewMode, setViewMode] = useState<'map' | 'vrs'>('map')
   const [region, setRegion] = useState<'All' | TournamentRegion>('All')
   const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
   const [format, setFormat] = useState<'All' | EventFormat>('All')
@@ -115,6 +117,11 @@ export function WorldMap({
 
   const payroll = weeklyPayroll(state)
   const level = managerLevelProgress(state.managerXp).level
+  const vrsStandings = useMemo(
+    () => worldVrsStandings(state.world, state.clubVrsPoints, state.roster),
+    [state.world, state.clubVrsPoints, state.roster],
+  )
+  const clubVrs = vrsStandings.find((row) => row.isPlayer)
   const visible = useMemo(
     () => TOURNAMENTS.filter((event) =>
       (region === 'All' || event.region === region) &&
@@ -233,7 +240,7 @@ export function WorldMap({
   }
 
   return (
-    <section className="screen fifa-world-screen">
+    <section className={'screen fifa-world-screen world-view-' + viewMode}>
       <div className="fifa-screen-header">
         <div>
           <span>GLOBAL CIRCUIT · MANAGER LVL {level}</span>
@@ -243,6 +250,12 @@ export function WorldMap({
           <small>AVAILABLE</small>
           <b>{TOURNAMENTS.filter((event) => canBookTournament(state, event.id).ok || event.id === state.activeEventId).length}</b>
         </div>
+      </div>
+
+      <div className="world-view-switch" role="tablist" aria-label="Circuit view">
+        <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>WORLD MAP</button>
+        <button className={viewMode === 'vrs' ? 'active' : ''} onClick={() => setViewMode('vrs')}>VRS RANKING</button>
+        <span>{clubVrs ? '#' + clubVrs.rank + ' · ' + clubVrs.points.toLocaleString('ru-RU') + ' VRS' : state.clubVrsPoints + ' VRS'}</span>
       </div>
 
       <div className="world-filter-strip">
@@ -428,6 +441,38 @@ export function WorldMap({
           )}
         </aside>
       </div>
+
+      <section className="world-vrs-panel" aria-label="VRS ranking">
+        <div className="vrs-table-head">
+          <span>#</span>
+          <span>TEAM</span>
+          <span>LINEUP</span>
+          <span>VRS</span>
+        </div>
+        <div className="vrs-table-scroll">
+          {vrsStandings.map((row) => (
+            <article key={row.teamId} className={'vrs-row' + (row.isPlayer ? ' is-player' : '')}>
+              <b className="vrs-rank">{String(row.rank).padStart(2, '0')}</b>
+              <div className="vrs-team">
+                <strong>{row.name}</strong>
+                <small>{row.isPlayer ? 'YOUR CLUB' : 'GLOBAL RANKING'}</small>
+              </div>
+              <div className="vrs-lineup">
+                {row.roster.length ? row.roster.map((alias) => <span key={alias}>{alias}</span>) : <span>—</span>}
+              </div>
+              <b className="vrs-points">{row.points.toLocaleString('ru-RU')}</b>
+            </article>
+          ))}
+        </div>
+        {clubVrs && (
+          <div className="vrs-club-pin">
+            <span>YOUR CLUB</span>
+            <strong>#{clubVrs.rank}</strong>
+            <b>{clubVrs.points.toLocaleString('ru-RU')} VRS</b>
+            <small>{state.history[0]?.vrsDelta ? 'LAST MATCH +' + state.history[0].vrsDelta : 'PLAY OFFICIAL MATCHES TO CLIMB'}</small>
+          </div>
+        )}
+      </section>
     </section>
   )
 }

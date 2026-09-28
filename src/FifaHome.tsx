@@ -20,6 +20,19 @@ export function FifaHome({
   const hero = starters[0]
   const activeEvent = tournamentForId(state.activeEventId)
   const latestNews = state.news[0]
+  const pendingDecision = state.pendingDecision
+  const heroTarget: ModeKey = pendingDecision ? 'Inbox' : activeEvent ? 'Play' : 'World'
+  const heroKicker = pendingDecision
+    ? 'CLUB DECISION · ACTION REQUIRED'
+    : activeEvent
+      ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase()
+      : 'GLOBAL CIRCUIT'
+  const heroTitle = pendingDecision ? pendingDecision.title : activeEvent ? activeEvent.name : 'SELECT EVENT'
+  const heroMeta = pendingDecision
+    ? pendingDecision.body
+    : activeEvent
+      ? activeEvent.label + ' · ' + activeEvent.prize.toLocaleString('ru-RU') + ' PRIZE'
+      : null
   const [focusIndex, setFocusIndex] = useState(0)
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -73,15 +86,15 @@ export function FifaHome({
         <button
           {...tileProps(0)}
           className="fifa-mode-tile fifa-mode-hero"
-          onClick={() => onOpen(activeEvent ? 'Play' : 'World')}
+          onClick={() => onOpen(heroTarget)}
         >
           <div className="fifa-mode-art">
             {hero && <PlayerPortrait alias={hero.alias} playerId={hero.profileId} alt={hero.alias} loading="eager" />}
           </div>
           <div className="fifa-mode-copy">
-            <span>{activeEvent ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase() : 'GLOBAL CIRCUIT'}</span>
-            <h1>{activeEvent ? activeEvent.name : 'SELECT EVENT'}</h1>
-            {activeEvent && <p>{activeEvent.label} · {activeEvent.prize.toLocaleString('ru-RU')} PRIZE</p>}
+            <span>{heroKicker}</span>
+            <h1>{heroTitle}</h1>
+            {heroMeta && <p>{heroMeta}</p>}
           </div>
           <b className="fifa-mode-arrow">→</b>
         </button>
@@ -121,7 +134,7 @@ export function FifaHome({
         <button {...tileProps(5)} className="fifa-mode-tile fifa-inbox-tile" onClick={() => onOpen('Inbox')}>
           <div className="fifa-tile-kicker">CLUB FEED {unread > 0 ? '· ' + unread + ' NEW' : ''}</div>
           <h2>INBOX</h2>
-          {latestNews && <p>{latestNews.title}</p>}
+          <p>{pendingDecision ? pendingDecision.title : latestNews?.title ?? 'No pending club events'}</p>
         </button>
       </div>
 

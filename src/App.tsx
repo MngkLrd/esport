@@ -369,6 +369,7 @@ function App() {
     const result = executeGameCommand(state, { type: 'RESOLVE_DECISION', choice })
     if (result.state === state) return
     setState(result.state)
+    openTab('HQ')
   }
 
   const welcomeCards = useMemo(() => rollWelcomePack(state.saveId), [state.saveId])

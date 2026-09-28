@@ -249,6 +249,8 @@ describe('P0 career flow', () => {
       bracketOpponent?.roster.map((player) => player.alias),
     )
     expect(played.history[0].opponentRoster).toHaveLength(5)
+    expect(played.clubVrsPoints).toBeGreaterThanOrEqual(ready.clubVrsPoints)
+    expect(played.history[0].vrsDelta).toBeGreaterThanOrEqual(0)
   })
 
   it('uses manager progression to unlock deeper scouting', () => {
@@ -383,6 +385,7 @@ describe('P0 career flow', () => {
     const advanced = advanceCareerTo(initial, '2026-10-19T09:00:00')
     expect(advanced.world.weeksSimulated).toBeGreaterThanOrEqual(3)
     expect(advanced.world.players[sample.key]).toBeTruthy()
+    expect(advanced.world.teams.some((team) => team.vrsPoints !== initial.world.teams.find((base) => base.id === team.id)?.vrsPoints)).toBe(true)
     expect(
       advanced.world.players[sample.key].form !== sample.form ||
       advanced.world.players[sample.key].currentRating !== sample.currentRating ||
@@ -403,7 +406,7 @@ describe('P0 career flow', () => {
       now: undefined,
     }
     const migrated = migrateState(legacy)
-    expect(migrated.version).toBe(11)
+    expect(migrated.version).toBe(12)
     expect(migrated.activeEventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.eventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.matches.length).toBe(7)
@@ -414,7 +417,7 @@ describe('P0 career flow', () => {
     const legacy = createInitialState()
     const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }
     const migrated = migrateState(raw)
-    expect(migrated.version).toBe(11)
+    expect(migrated.version).toBe(12)
     expect(migrated.credits).toBe(legacy.credits)
     expect(migrated.packTokens).toBe(2600)
     expect(migrated.managerXp).toBe(0)
@@ -433,7 +436,7 @@ describe('P0 career flow', () => {
 
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(11)
+    expect(migrated.version).toBe(12)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

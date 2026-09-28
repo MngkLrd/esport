@@ -23,6 +23,14 @@ import { rollWelcomePack } from '../src/welcomePack'
 import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
 import { generateMatchPlayback, simulationFrameAt } from '../src/matchSimulation'
+import { tournamentForId } from '../src/events'
+import {
+  advanceTournamentTo,
+  createTournamentRun,
+  nextPlayerMatch,
+  resolvePlayerTournamentMatch,
+  tournamentIsFinished,
+} from '../src/tournamentEngine'
 
 describe('P0 career flow', () => {
   it('starts empty and creates one deterministic playable five from welcome cards', () => {
@@ -195,6 +203,26 @@ describe('P0 career flow', () => {
     const advanced = advanceCareerTo(ready, '2026-10-05T09:00:00')
     expect(advanced.credits).toBe(Math.max(0, ready.credits - payroll))
     expect(advanced.roster.every((player, index) => player.contractWeeks === Math.max(0, ready.roster[index].contractWeeks - 1))).toBe(true)
+  })
+
+  it('can progress a grouped double-elimination event through the full bracket', () => {
+    const event = tournamentForId('helsinki')!
+    let run = createTournamentRun(event, '2026-09-28T09:00:00', '2026-09-28T09:00:00', 404)
+    let playerMatches = 0
+
+    for (let guard = 0; guard < 16 && !tournamentIsFinished(run); guard += 1) {
+      run = advanceTournamentTo(run, run.endsAt, 404)
+      const match = nextPlayerMatch(run)
+      if (!match) break
+      playerMatches += 1
+      run = resolvePlayerTournamentMatch(run, true, 2, 0)
+    }
+
+    run = advanceTournamentTo(run, run.endsAt, 404)
+    expect(playerMatches).toBeGreaterThanOrEqual(5)
+    expect(run.status).toBe('champion')
+    expect(run.placement).toBe('CHAMPION')
+    expect(run.matches.filter((match) => match.status === 'complete').length).toBe(run.matches.length)
   })
 
   it('targets scouting to a requested role and persists the brief', () => {

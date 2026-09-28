@@ -3,7 +3,7 @@ import { collectPackCards, createPackState, type PackCard, type PackState } from
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
-import { advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role

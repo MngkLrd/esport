@@ -278,36 +278,38 @@ export function WorldMap({
         </div>
       </div>
 
-      <div className="world-view-switch" role="tablist" aria-label="Circuit view">
-        <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>WORLD MAP</button>
-        <button className={viewMode === 'vrs' ? 'active' : ''} onClick={() => setViewMode('vrs')}>VRS RANKING</button>
-        <span>{clubVrs ? '#' + clubVrs.rank + ' · ' + clubVrs.points.toLocaleString('ru-RU') + ' VRS' : state.clubVrsPoints + ' VRS'}</span>
-      </div>
+      <div className="world-toolbar">
+        <div className="world-view-switch" role="tablist" aria-label="Circuit view">
+          <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>WORLD MAP</button>
+          <button className={viewMode === 'vrs' ? 'active' : ''} onClick={() => setViewMode('vrs')}>VRS RANKING</button>
+          <span>{clubVrs ? '#' + clubVrs.rank + ' · ' + clubVrs.points.toLocaleString('ru-RU') + ' VRS' : state.clubVrsPoints + ' VRS'}</span>
+        </div>
 
-      <div className="world-filter-strip">
-        <div>
-          <span>REGION</span>
-          {REGIONS.map((item) => (
-            <button key={item} className={region === item ? 'active' : ''} onClick={() => focusRegion(item)}>
-              {item === 'All' ? 'ALL' : item.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <div>
-          <span>CIRCUIT</span>
-          {CIRCUITS.map((item) => (
-            <button key={item} className={circuit === item ? 'active' : ''} onClick={() => setCircuit(item)}>
-              {item === 'All' ? 'ALL' : 'T' + item}
-            </button>
-          ))}
-        </div>
-        <div>
-          <span>FORMAT</span>
-          {FORMATS.map((item) => (
-            <button key={item} className={format === item ? 'active' : ''} onClick={() => setFormat(item)}>
-              {item}
-            </button>
-          ))}
+        <div className="world-filter-strip">
+          <div>
+            <span>REGION</span>
+            {REGIONS.map((item) => (
+              <button key={item} className={region === item ? 'active' : ''} onClick={() => focusRegion(item)}>
+                {item === 'All' ? 'ALL' : item.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div>
+            <span>CIRCUIT</span>
+            {CIRCUITS.map((item) => (
+              <button key={item} className={circuit === item ? 'active' : ''} onClick={() => setCircuit(item)}>
+                {item === 'All' ? 'ALL' : 'T' + item}
+              </button>
+            ))}
+          </div>
+          <div>
+            <span>FORMAT</span>
+            {FORMATS.map((item) => (
+              <button key={item} className={format === item ? 'active' : ''} onClick={() => setFormat(item)}>
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

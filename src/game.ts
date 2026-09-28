@@ -1069,8 +1069,13 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   const payrollCost = payrollPerWeek * payrollCycles
   const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, effectiveTarget) / 24))
 
+  const advancedWorld = payrollCycles > 0
+    ? advanceWorldWeeks(state.world, payrollCycles, state.seed + previousWeek * 4099 + state.season * 131, effectiveTarget)
+    : state.world
+
   let next: GameState = {
     ...state,
+    world: advancedWorld,
     activeTournament: preparedTournament,
     now: effectiveTarget,
     week: Math.min(state.seasonLength, nextWeekRaw),
@@ -1173,6 +1178,8 @@ export const bookTournament = (state: GameState, eventId: string): GameState => 
     state.seasonStart,
     state.now,
     state.seed + state.season * 100 + event.startDay,
+    state.world,
+    tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity),
   )
 
   return {
@@ -1257,8 +1264,14 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
 
   const event = tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
+  const clubSeed = tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity)
+  const clubPlayerKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
   const preparedRun = state.activeTournament
-    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+    ? advanceTournamentTo(
+        refreshTournamentTeamsFromWorld(state.activeTournament, state.world, clubPlayerKeys),
+        state.now,
+        state.seed + state.season,
+      )
     : null
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null
@@ -1275,7 +1288,12 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   ].join(':')))
 
   const opponent = tournamentOpponent
-    ? { name: tournamentOpponent.name, rating: tournamentOpponent.rating }
+    ? {
+        name: tournamentOpponent.name,
+        rating: tournamentOpponent.rating,
+        teamId: tournamentOpponent.worldTeamId,
+        roster: tournamentOpponent.roster,
+      }
     : generateOpponent(state, effectiveMode, rng)
 
   const active = getStartingFive(state.roster, state.startingFive)
@@ -1381,6 +1399,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     playedAt: state.now,
     tournamentId: event?.id ?? null,
     tournamentMatchId: tournamentMatch?.id ?? null,
+    opponentTeamId: opponent.teamId ?? null,
+    opponentRoster: opponent.roster ?? [],
   }
 
   const contractNews: NewsItem[] = roster.some((player) => player.contractWeeks <= 2)

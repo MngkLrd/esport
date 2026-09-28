@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MatchResult, Player } from './game'
 import {
-  generateMatchPlayback,
   radarAssetUrl,
   simulationFrameAt,
+  type MatchPlayback,
   type SimEvent,
   type SimPlayerFrame,
   type SimRound,
   type SimSide,
 } from './matchSimulation'
+import { buildMatchPlayback } from './simulationClient'
 
 const CANVAS_SIZE = 1024
 const PLAYER_RADIUS = 9
@@ -377,10 +378,7 @@ export function MatchRadar({
   onComplete: () => void
   onSkip: () => void
 }) {
-  const playback = useMemo(
-    () => generateMatchPlayback(result, starters, result.tactic),
-    [result, starters],
-  )
+  const [playback, setPlayback] = useState<MatchPlayback | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const wallMaskRef = useRef<Uint8Array | null>(null)
@@ -393,24 +391,45 @@ export function MatchRadar({
   const [selectedId, setSelectedId] = useState<string | null>(starters[0]?.id ?? null)
   const [imageReady, setImageReady] = useState(false)
 
+  useEffect(() => {
+    let cancelled = false
+    setPlayback(null)
+    elapsedRef.current = 0
+    lastFrameRef.current = null
+    finishedRef.current = false
+    setElapsed(0)
+
+    void buildMatchPlayback(result, starters, result.tactic).then((next) => {
+      if (!cancelled) setPlayback(next)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [result, starters])
+
+  const rounds = playback?.rounds ?? []
   const roundOffsets = useMemo(() => {
     let cursor = 0
-    return playback.rounds.map((round) => {
+    return rounds.map((round) => {
       const start = cursor
       cursor += round.duration
       return { start, end: cursor }
     })
-  }, [playback])
+  }, [rounds])
 
-  const currentRoundIndex = Math.min(
-    playback.rounds.length - 1,
-    Math.max(0, roundOffsets.findIndex((offset) => elapsed < offset.end)),
-  )
-  const round = playback.rounds[currentRoundIndex]
+  const currentRoundIndex = rounds.length
+    ? Math.min(
+        rounds.length - 1,
+        Math.max(0, roundOffsets.findIndex((offset) => elapsed < offset.end)),
+      )
+    : 0
+  const round = rounds[currentRoundIndex]
   const roundOffset = roundOffsets[currentRoundIndex]?.start ?? 0
   const localTime = Math.max(0, elapsed - roundOffset)
   const frame = round ? simulationFrameAt(round, localTime) : null
-  const seriesProgress = playback.totalDuration ? Math.min(1, elapsed / playback.totalDuration) : 1
+  const totalDuration = playback?.totalDuration ?? 0
+  const seriesProgress = totalDuration ? Math.min(1, elapsed / totalDuration) : 0
   const roundProgress = round ? Math.min(1, localTime / round.duration) : 1
   const timer = Math.max(0, 115 - Math.floor(roundProgress * 115))
   const finalPhase = seriesProgress > .965
@@ -429,15 +448,16 @@ export function MatchRadar({
       setImageReady(true)
     })
 
-    const nextRound = playback.rounds[currentRoundIndex + 1]
+    const nextRound = rounds[currentRoundIndex + 1]
     if (nextRound) void loadRadarResource(nextRound.mapKey)
 
     return () => {
       cancelled = true
     }
-  }, [currentRoundIndex, playback.rounds, round?.mapKey])
+  }, [currentRoundIndex, rounds, round?.mapKey])
 
   useEffect(() => {
+    if (!playback || playback.totalDuration <= 0) return
     let raf = 0
     let lastHudUpdate = 0
 
@@ -466,7 +486,7 @@ export function MatchRadar({
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [onComplete, paused, playback.totalDuration, speed])
+  }, [onComplete, paused, playback, speed])
 
   useEffect(() => {
     if (!canvasRef.current || !round) return
@@ -496,7 +516,7 @@ export function MatchRadar({
       <div className="match-radar-shell match-radar-shell-canvas">
         <header className="match-radar-header">
           <div>
-            <span>LIVE TACTICAL SIM · MAP {currentRoundIndex + 1}/{playback.rounds.length}</span>
+            <span>{playback ? 'LIVE TACTICAL SIM · MAP ' + (currentRoundIndex + 1) + '/' + rounds.length : 'PREPARING MATCH SIMULATION'}</span>
             <strong>{round?.map ?? 'TACTICAL MAP'} · {round?.scenarioLabel}</strong>
           </div>
           <div className="match-radar-score">
@@ -510,6 +530,7 @@ export function MatchRadar({
 
         <div className="match-radar-main match-radar-main-canvas">
           <div className="match-radar-map match-radar-canvas-wrap">
+            {!playback && <div className="match-radar-loading"><span>SIMULATION ENGINE</span><strong>BUILDING ROUND DATA…</strong><i /></div>}
             <canvas
               ref={canvasRef}
               width={CANVAS_SIZE}

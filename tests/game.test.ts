@@ -20,6 +20,7 @@ import {
 import { rollWelcomePack } from '../src/welcomePack'
 import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
+import { generateMatchPlayback, simulationFrameAt } from '../src/matchSimulation'
 
 describe('P0 career flow', () => {
   it('starts empty and creates one deterministic playable five from welcome cards', () => {
@@ -44,6 +45,25 @@ describe('P0 career flow', () => {
     expect(ready.packs.inventory).toHaveLength(5)
     expect(canPlayMatch(ready, 'scrim').ok).toBe(true)
     expect(executeGameCommand(initial, { type: 'OPEN_WELCOME_PACK', cards: cardsA }).events[0].type).toBe('WelcomePackOpened')
+  })
+
+  it('builds deterministic frame-based tactical playback for every map', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const next = playMatch(ready, 'scrim', 'structured')
+    const result = next.history[0]
+    const playbackA = generateMatchPlayback(result, ready.roster, 'structured')
+    const playbackB = generateMatchPlayback(result, ready.roster, 'structured')
+
+    expect(playbackA).toEqual(playbackB)
+    expect(playbackA.rounds).toHaveLength(result.maps.length)
+    expect(playbackA.rounds.every((round) => round.frames.length > 80)).toBe(true)
+    expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'kill'))).toBe(true)
+    expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'utility'))).toBe(true)
+
+    const frame = simulationFrameAt(playbackA.rounds[0], 4500)
+    expect(frame?.players).toHaveLength(10)
+    expect(frame?.players.every((player) => Number.isFinite(player.x) && Number.isFinite(player.y))).toBe(true)
   })
 
   it('keeps the welcome result tied to save identity', () => {

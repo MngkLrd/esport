@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   applyWelcomePack,
   assignLineupSlot,
+  bookTournament,
+  canBookTournament,
   canPlayMatch,
   clearLineupSlot,
   createInitialState,
@@ -100,6 +102,32 @@ describe('P0 career flow', () => {
     const awp = ready.roster.find((player) => player.role === 'AWP')!
     const support = ready.roster.find((player) => player.role === 'Support')!
     expect(lineupFitScore(awp, 'AWP')).toBeGreaterThan(lineupFitScore(support, 'AWP'))
+  })
+
+  it('turns a world-map booking into a real season event', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    expect(canBookTournament(ready, 'helsinki').ok).toBe(true)
+
+    const booked = bookTournament(ready, 'helsinki')
+    expect(booked.activeEventId).toBe('helsinki')
+    expect(booked.credits).toBe(ready.credits - 420)
+
+    const played = playMatch(booked, 'scrim', 'balanced')
+    expect(played.activeEventId).toBeNull()
+    expect(played.history[0].mode).toBe('showmatch')
+    expect(played.history[0].reward).toBeGreaterThan(0)
+    expect(played.news.some((item) => item.title.includes('Helsinki') || item.body.includes('Nordic Masters'))).toBe(true)
+  })
+
+  it('uses manager progression to unlock deeper scouting', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const levelThree = { ...ready, managerXp: 1000 }
+    const report = scout(levelThree, { role: 'Any', maxSalary: 170, ageProfile: 'any' })
+    expect(report.prospects).toHaveLength(6)
+    expect(canBookTournament(levelThree, 'dallas').ok).toBe(true)
+    expect(canBookTournament(ready, 'dallas').ok).toBe(false)
   })
 
   it('targets scouting to a requested role and persists the brief', () => {

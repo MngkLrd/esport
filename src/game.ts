@@ -1,5 +1,5 @@
 import { REAL_PLAYERS } from './players'
-import { collectPackCards, createPackState, type PackCard, type PackState } from './packState'
+import { collectPackCards, createPackState, type PackCard, type PackRarity, type PackState } from './packState'
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
@@ -42,6 +42,7 @@ export interface Player {
   id: string
   playerKey?: string
   acquiredCardId?: string | null
+  cardRarity?: PackRarity | null
   profileId?: number | null
   alias: string
   firstName: string
@@ -362,6 +363,7 @@ export const playerFromPackCard = (card: PackCard, index: number): Player => {
     id: 'welcome-' + index + '-' + card.alias.toLocaleLowerCase('en-US'),
     playerKey: card.playerKey,
     acquiredCardId: card.id,
+    cardRarity: card.rarity,
     profileId: card.profileId,
     alias: card.alias,
     firstName: card.realName ?? card.alias,
@@ -521,6 +523,7 @@ const normalizePlayers = (players: Player[], packs: PackState): Player[] => play
     ...player,
     playerKey: player.playerKey ?? (profileMatch ? 'hltv:' + profileMatch[1] : 'alias:' + aliasKey),
     acquiredCardId: player.acquiredCardId ?? card?.id ?? null,
+    cardRarity: player.cardRarity ?? card?.rarity ?? null,
     profileId: player.profileId ?? card?.profileId ?? (profileMatch ? Number(profileMatch[1]) : null),
     realName: player.realName && player.realName !== player.alias ? player.realName : identity?.realName ?? player.realName,
     firstName: player.firstName && player.firstName !== player.alias ? player.firstName : identity?.realName ?? player.firstName,

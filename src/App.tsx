@@ -467,7 +467,7 @@ function App() {
                     <div key={card.id} className={'welcome-card-shell ' + (visible ? 'is-visible' : 'is-hidden')}>
                       <CollectiblePlayerCard
                         rating={card.power}
-                        tier={tierForPackRarity(card.rarity)}
+                        tier={visible ? tierForPackRarity(card.rarity) : 'silver'}
                         role={card.role}
                         alias={card.alias}
                         team={card.team}

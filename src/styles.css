@@ -7882,3 +7882,30 @@ button.primary:hover,
   .card-detail-hero-shared .card-detail-name{text-align:center}
   .card-detail-hero-shared .card-detail-name h2{font-size:36px}
 }
+
+
+/* WELCOME PACK USES THE SAME FRONT/BACK CARDS --------------------------- */
+.welcome-card-grid{
+  grid-template-columns:repeat(5,minmax(128px,160px));
+  justify-content:center;
+  align-items:center;
+}
+.welcome-card-shell{
+  width:100%;
+  max-width:160px;
+  aspect-ratio:5/7;
+  transition:transform .16s ease,filter .16s ease;
+}
+.welcome-card-shell.is-visible:hover{transform:translateY(-4px)}
+.welcome-card-shell .welcome-shared-card{
+  width:100%;
+  max-width:none;
+}
+.welcome-card-shell.is-hidden .welcome-shared-card{
+  cursor:default;
+  filter:saturate(.9) brightness(.82);
+}
+.welcome-card-shell.is-hidden .welcome-shared-card:hover{transform:none}
+@media (max-width:800px){
+  .welcome-card-grid{grid-template-columns:repeat(auto-fit,minmax(122px,145px))}
+}

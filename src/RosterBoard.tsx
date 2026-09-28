@@ -16,9 +16,10 @@ import {
   type LineupSlot,
   type Player,
 } from './game'
-import { CARD_TIER_LABEL, cardTier, countryFlag } from './playerVisuals'
+import { cardTier, countryFlag } from './playerVisuals'
 import { PlayerPortrait } from './PlayerPortrait'
 import type { PackCard } from './packState'
+import { CollectiblePlayerCard } from './CollectiblePlayerCard'
 
 const ROLE_LABELS: Record<LineupSlot, string> = {
   Entry: 'ENTRY',
@@ -62,52 +63,29 @@ function GameCard({
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void
   onDragEnd?: () => void
 }) {
-  const ovr = overall(player)
-  const tier = cardTier(ovr)
-  const role = player.role === 'Rifler' ? 'RIF' : player.role === 'Support' ? 'SUP' : player.role === 'Entry' ? 'ENT' : player.role
-
   return (
-    <button
-      type="button"
-      className={'visual-player-card compact game-roster-card tier-' + tier + (starter ? ' is-starter' : '')}
-      onClick={onOpen}
-      aria-label={'Select ' + player.alias}
+    <CollectiblePlayerCard
+      rating={overall(player)}
+      tier={cardTier(overall(player))}
+      role={player.role}
+      alias={player.alias}
+      team={player.team}
+      country={player.country}
+      profileId={player.profileId}
+      stats={{
+        aim: player.aim,
+        utility: player.utility,
+        positioning: player.gameSense,
+        clutch: player.clutch,
+      }}
+      liveState={{ form: player.form, morale: player.morale, fatigue: player.fatigue }}
+      starter={starter}
       draggable={draggable}
+      onOpen={onOpen}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-    >
-      <div className="visual-card-shine" />
-      <div className="visual-card-top">
-        <div><strong>{ovr}</strong><span>{role}</span></div>
-        {starter && <b className="starter-star">★</b>}
-      </div>
-      <div className="visual-country">{countryFlag(player.country)} <span>{player.country}</span></div>
-      <div className="visual-photo">
-        <div className="visual-monogram">{player.alias.slice(0, 3).toUpperCase()}</div>
-        <PlayerPortrait
-          alias={player.alias}
-          playerId={player.profileId}
-          alt={player.realName + ' (' + player.alias + ')'}
-          draggable={false}
-        />
-      </div>
-      <div className="visual-identity">
-        <strong>{player.alias}</strong>
-        <span>{player.team}</span>
-      </div>
-      <div className="visual-stats">
-        <span><b>{player.aim}</b>AIM</span>
-        <span><b>{player.utility}</b>UTL</span>
-        <span><b>{player.gameSense}</b>POS</span>
-        <span><b>{player.clutch}</b>CLU</span>
-      </div>
-      <div className="visual-live-state">
-        <span><b>{player.form}</b>FORM</span>
-        <span><b>{player.morale}</b>MOR</span>
-        <span className={player.fatigue >= 65 ? 'danger' : ''}><b>{player.fatigue}</b>FAT</span>
-      </div>
-      <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
-    </button>
+      className="game-roster-card"
+    />
   )
 }
 

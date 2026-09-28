@@ -52,6 +52,15 @@ export interface WorldState {
   transferHistory: WorldTransfer[]
 }
 
+export interface VrsStanding {
+  rank: number
+  teamId: string
+  name: string
+  points: number
+  isPlayer: boolean
+  roster: string[]
+}
+
 const normalizeAlias = (value: string) => value.toLocaleLowerCase('en-US')
 
 const slug = (value: string) =>
@@ -244,6 +253,44 @@ export const worldTeamForPlayer = (world: WorldState, playerKey: string | null |
 
 export const worldPlayerByAlias = (world: WorldState, alias: string) =>
   Object.values(world.players).find((player) => normalizeAlias(player.alias) === normalizeAlias(alias)) ?? null
+
+export const awardWorldTeamVrs = (world: WorldState, teamId: string | null | undefined, delta: number): WorldState => {
+  if (!teamId || delta === 0) return world
+  return {
+    ...world,
+    teams: world.teams.map((team) =>
+      team.id === teamId
+        ? { ...team, vrsPoints: Math.max(0, Math.round(team.vrsPoints + delta)) }
+        : team,
+    ),
+  }
+}
+
+export const worldVrsStandings = (
+  world: WorldState,
+  clubPoints: number,
+  clubRoster: ReadonlyArray<{ alias: string }>,
+): VrsStanding[] => {
+  const rows = [
+    ...world.teams.map((team) => ({
+      teamId: team.id,
+      name: team.name,
+      points: Math.max(0, Math.round(team.vrsPoints)),
+      isPlayer: false,
+      roster: worldLineup(world, team.id).map((player) => player.alias),
+    })),
+    {
+      teamId: PLAYER_CLUB_WORLD_ID,
+      name: 'YOUR CLUB',
+      points: Math.max(0, Math.round(clubPoints)),
+      isPlayer: true,
+      roster: clubRoster.slice(0, 5).map((player) => player.alias),
+    },
+  ]
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, 'en-US'))
+
+  return rows.map((row, index) => ({ ...row, rank: index + 1 }))
+}
 
 export const worldLineup = (world: WorldState, teamId: string) => {
   const team = worldTeamById(world, teamId)
@@ -493,9 +540,20 @@ export const advanceWorldWeeks = (
       }
     }
 
+    const teams = world.teams.map((team) => {
+      const rng = mulberry32(hashSeed('vrs:' + team.id + ':' + weekSeed))
+      const formSignal = (team.form - 50) * .06
+      const resultSwing = (rng() - .47) * 14
+      return {
+        ...team,
+        vrsPoints: Math.max(250, Math.round(team.vrsPoints + formSignal + resultSwing)),
+      }
+    })
+
     world = syncTeamRatings({
       ...world,
       players,
+      teams,
       weeksSimulated: world.weeksSimulated + 1,
     })
     world = simulateAiTransfer(world, weekSeed, date)

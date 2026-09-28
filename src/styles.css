@@ -5809,3 +5809,19 @@ button.primary:hover,
     padding: 0 0 0 10px;
   }
 }
+
+
+@supports selector(body:has(.app-main-hq)) {
+  body:has(.app-main-hq),
+  body:has(.app-main-world),
+  body:has(.app-main-play) {
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 701px) {
+  .app-main-hq .fifa-mode-grid {
+    display: grid;
+    grid-template-columns: 1.28fr .92fr .92fr;
+  }
+}

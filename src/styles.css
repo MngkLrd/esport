@@ -4798,3 +4798,408 @@ button.primary:hover,
     width: min(100%, calc(94vh - 120px));
   }
 }
+
+
+/* playable career architecture: calendar + tournament lifecycle */
+.fifa-mode-grid {
+  grid-template-columns: 1.28fr .92fr .92fr;
+  grid-template-rows: repeat(3, minmax(145px, 1fr));
+  min-height: min(720px, calc(100dvh - 205px));
+}
+.fifa-mode-hero { grid-row: span 3; min-height: 520px; }
+.fifa-calendar-tile {
+  background:
+    linear-gradient(135deg, rgba(32,230,255,.11), transparent 45%),
+    linear-gradient(145deg, #173251, #12172f 76%);
+}
+.fifa-clock-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.fifa-clock-button:hover span:last-child { color: var(--fifa-cyan); }
+
+.world-event-date {
+  margin: 9px 0 17px;
+  color: #9ca8c5;
+  font: 800 9px/1.35 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
+  letter-spacing: .04em;
+}
+
+/* Tournament hub */
+.tournament-hub {
+  margin-bottom: 18px;
+  border: 1px solid rgba(145,159,255,.18);
+  background:
+    radial-gradient(circle at 76% 0, rgba(32,230,255,.08), transparent 35%),
+    rgba(8,12,31,.82);
+}
+.tournament-hero {
+  min-height: 116px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(145,159,255,.14);
+}
+.tournament-hero > div:first-child > span {
+  color: var(--fifa-cyan);
+  font: 900 8px/1 Arial, sans-serif;
+  letter-spacing: .13em;
+}
+.tournament-hero h1 {
+  margin: 7px 0 6px;
+  font: 1000 clamp(28px,3.4vw,48px)/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
+}
+.tournament-hero p {
+  margin: 0;
+  color: #818da9;
+  font-size: 9px;
+}
+.tournament-status {
+  min-width: 180px;
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+.tournament-status small {
+  color: #65718f;
+  font: 900 7px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.tournament-status strong {
+  color: #fff;
+  font: 1000 18px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.tournament-status span {
+  color: var(--fifa-cyan);
+  font: 900 8px/1 Arial,sans-serif;
+}
+.tournament-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(145,159,255,.12);
+  border-bottom: 1px solid rgba(145,159,255,.12);
+}
+.tournament-group {
+  background: #0d122b;
+  padding: 14px 16px;
+}
+.tournament-group header,
+.tournament-group > div {
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr) 52px 44px;
+  align-items: center;
+  min-height: 34px;
+}
+.tournament-group header {
+  grid-template-columns: 1fr auto;
+  min-height: 26px;
+  color: #7783a1;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .11em;
+}
+.tournament-group > div {
+  border-top: 1px solid rgba(145,159,255,.08);
+  color: #aab4cf;
+  font-size: 9px;
+}
+.tournament-group > div.is-player {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(32,230,255,.08), transparent);
+}
+.tournament-group i {
+  color: #616d8c;
+  font-style: normal;
+  font-weight: 900;
+}
+.tournament-group > div.is-player i { color: var(--fifa-cyan); }
+.tournament-group > div b,
+.tournament-group > div small { text-align: right; }
+.tournament-group > div small { color: #65718d; }
+
+.tournament-bracket {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(245px, 1fr);
+  gap: 1px;
+  overflow-x: auto;
+  background: rgba(145,159,255,.11);
+  border-bottom: 1px solid rgba(145,159,255,.13);
+}
+.bracket-column {
+  min-width: 245px;
+  padding: 13px;
+  background: #0b1027;
+}
+.bracket-column > header {
+  margin-bottom: 10px;
+  color: #75809c;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.bracket-column > div {
+  display: grid;
+  gap: 10px;
+  align-content: center;
+  min-height: 180px;
+}
+.bracket-match {
+  position: relative;
+  border: 1px solid rgba(145,159,255,.13);
+  background: rgba(20,26,57,.82);
+}
+.bracket-match.is-player {
+  border-color: rgba(32,230,255,.5);
+  box-shadow: inset 3px 0 0 var(--fifa-cyan);
+}
+.bracket-match-meta {
+  display: flex !important;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 0 !important;
+  padding: 7px 9px;
+  background: rgba(255,255,255,.025);
+  color: #677390;
+  font: 800 7px/1 Arial,sans-serif;
+}
+.bracket-match > div:not(.bracket-match-meta) {
+  display: grid;
+  grid-template-columns: 1fr 28px;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border-top: 1px solid rgba(145,159,255,.07);
+  color: #a7b0c9;
+  font: 900 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.bracket-match > div.winner {
+  color: #fff;
+  background: rgba(58,227,199,.05);
+}
+.bracket-match > div.winner b { color: #55ffd2; }
+.bracket-match > div b { text-align: right; }
+
+.tournament-next-match {
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px;
+}
+.tournament-next-match > div {
+  display: grid;
+  gap: 4px;
+}
+.tournament-next-match > div > span {
+  color: var(--fifa-cyan);
+  font: 900 7px/1 Arial,sans-serif;
+  letter-spacing: .12em;
+}
+.tournament-next-match strong {
+  font: 1000 18px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.tournament-next-match strong i {
+  margin: 0 8px;
+  color: #5f6a87;
+  font-style: normal;
+  font-size: 8px;
+}
+.tournament-next-match small {
+  color: #7884a1;
+  font-size: 8px;
+}
+
+/* Career calendar */
+.season-calendar-screen { min-height: calc(100dvh - 74px); }
+.calendar-now {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.calendar-now small {
+  color: #7f8aa7;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .1em;
+}
+.calendar-now b {
+  font: 1000 27px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-controls {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.calendar-controls button {
+  min-height: 37px;
+  padding: 0 13px;
+  border: 1px solid rgba(145,159,255,.17);
+  background: rgba(11,16,42,.85);
+  color: #95a0bc;
+  cursor: pointer;
+  font: 900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-controls button:hover {
+  border-color: var(--fifa-cyan);
+  color: #fff;
+}
+.calendar-controls button.primary {
+  margin-left: auto;
+  border-color: var(--fifa-cyan);
+  background: var(--fifa-cyan);
+  color: #07121c;
+}
+.calendar-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(105px,1fr));
+  border: 1px solid rgba(145,159,255,.15);
+  background: rgba(145,159,255,.08);
+  gap: 1px;
+}
+.calendar-strip > article {
+  min-height: 126px;
+  padding: 9px;
+  overflow: hidden;
+  background: #0c1129;
+}
+.calendar-strip > article.is-today {
+  background:
+    linear-gradient(145deg, rgba(32,230,255,.11), rgba(12,17,41,.96));
+  box-shadow: inset 0 0 0 1px var(--fifa-cyan);
+}
+.calendar-strip header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  margin-bottom: 9px;
+}
+.calendar-strip header span,
+.calendar-strip header small {
+  color: #65708d;
+  font: 800 7px/1 Arial,sans-serif;
+}
+.calendar-strip header b {
+  grid-row: span 2;
+  font: 1000 20px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-strip > article > div {
+  display: grid;
+  gap: 4px;
+}
+.calendar-event {
+  display: block;
+  overflow: hidden;
+  padding: 5px 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-left: 2px solid #7b86a5;
+  background: rgba(255,255,255,.035);
+  color: #a8b2cb;
+  font: 800 7px/1.1 Arial,sans-serif;
+}
+.calendar-event.t1 { border-color: #ff7d48; }
+.calendar-event.t2 { border-color: #a67cff; }
+.calendar-event.t3 { border-color: #21dced; }
+.calendar-event.online::before { content: '● '; color: #fff; }
+.calendar-event.active {
+  background: rgba(32,230,255,.12);
+  color: #fff;
+}
+.calendar-upcoming {
+  margin-top: 14px;
+  border: 1px solid rgba(145,159,255,.15);
+  background: #0b1028;
+}
+.calendar-upcoming-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(145,159,255,.12);
+}
+.calendar-upcoming-title > span {
+  color: #7c88a7;
+  font: 900 8px/1 Arial,sans-serif;
+  letter-spacing: .11em;
+}
+.calendar-upcoming-title button {
+  border: 0;
+  background: transparent;
+  color: var(--fifa-cyan);
+  cursor: pointer;
+  font: 900 8px/1 Arial,sans-serif;
+}
+.calendar-upcoming > article {
+  display: grid;
+  grid-template-columns: 48px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(145,159,255,.08);
+}
+.calendar-upcoming > article.active {
+  background: linear-gradient(90deg, rgba(32,230,255,.08), transparent 60%);
+}
+.calendar-tier {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,.14);
+  color: #fff;
+  font: 1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-tier.tier-1 { border-color: #ff7d48; color: #ff9b70; }
+.calendar-tier.tier-2 { border-color: #a67cff; color: #bd9aff; }
+.calendar-tier.tier-3 { border-color: #21dced; color: #49e9f7; }
+.calendar-event-copy,
+.calendar-event-state {
+  display: grid;
+  gap: 3px;
+}
+.calendar-event-copy span,
+.calendar-event-copy small,
+.calendar-event-state small {
+  color: #687490;
+  font: 800 7px/1 Arial,sans-serif;
+  letter-spacing: .05em;
+}
+.calendar-event-copy strong {
+  font: 900 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.calendar-event-state {
+  justify-items: end;
+}
+.calendar-event-state b {
+  color: #aab4cd;
+  font: 900 8px/1 Arial,sans-serif;
+}
+.calendar-upcoming > article.active .calendar-event-state b { color: var(--fifa-cyan); }
+
+@media (max-width: 1100px) {
+  .fifa-mode-grid {
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: 250px repeat(3, 165px);
+  }
+  .fifa-mode-hero { grid-row: span 2; min-height: 0; }
+  .calendar-strip { grid-template-columns: repeat(4, minmax(120px,1fr)); overflow-x: auto; }
+}
+@media (max-width: 760px) {
+  .tournament-groups { grid-template-columns: 1fr; }
+  .tournament-hero,
+  .tournament-next-match { align-items: flex-start; flex-direction: column; }
+  .tournament-status { justify-items: start; }
+  .calendar-strip { display: flex; overflow-x: auto; }
+  .calendar-strip > article { min-width: 128px; }
+  .calendar-upcoming > article { grid-template-columns: 40px minmax(0,1fr); }
+  .calendar-event-state { grid-column: 2; justify-items: start; }
+}

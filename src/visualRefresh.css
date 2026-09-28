@@ -1,0 +1,1178 @@
+/* Final visual system layer.
+   This file is intentionally imported after styles.css and owns the current
+   game-facing layout. Legacy rules remain as historical implementation detail,
+   but should not be extended for these screens. */
+
+:root {
+  --ui-micro: 10px;
+  --ui-meta: 11px;
+  --ui-body: 13px;
+  --ui-title: clamp(28px, 3vw, 44px);
+  --ui-panel: rgba(10, 15, 39, .94);
+  --ui-panel-soft: rgba(15, 21, 52, .82);
+  --ui-line: rgba(145, 159, 255, .28);
+  --ui-line-strong: rgba(145, 159, 255, .42);
+  --ui-cyan: #20e6ff;
+  --ui-green: #55ffd2;
+  --ui-warning: #ffad66;
+  --ui-danger: #ff657a;
+  --ui-muted: #8f9ab7;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 15% -15%, rgba(111,72,255,.30), transparent 32rem),
+    radial-gradient(circle at 92% 18%, rgba(20,213,255,.12), transparent 30rem),
+    linear-gradient(160deg, #11143a 0%, #080b1c 48%, #07121e 100%);
+}
+
+.app-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-main {
+  position: relative;
+  min-height: 0;
+}
+
+.fifa-topbar {
+  height: 74px;
+  grid-template-columns: minmax(205px,.72fr) minmax(320px,1fr) minmax(390px,.95fr);
+  gap: 16px;
+  padding-inline: 22px;
+}
+
+.fifa-brand strong { font-size: 15px; }
+.fifa-topbar-center { font-size: var(--ui-micro); }
+.fifa-wallets > div,
+.fifa-wallets > button {
+  min-width: 96px;
+  padding: 8px 9px;
+}
+.fifa-wallets span { font-size: var(--ui-micro); }
+.fifa-wallets b { font-size: 14px; }
+
+.fifa-screen-header {
+  min-height: 0;
+  margin: 0;
+}
+.fifa-screen-header > div:first-child { gap: 4px; }
+.fifa-screen-header span,
+.eyebrow,
+.control-label {
+  font-size: var(--ui-micro);
+  letter-spacing: .11em;
+}
+.fifa-screen-header h1 {
+  margin: 5px 0 0;
+  font-size: var(--ui-title);
+  line-height: .92;
+}
+
+@media (min-width: 901px) {
+  .app-main:not(.app-main-hq) {
+    height: calc(100dvh - 74px);
+    overflow: hidden;
+  }
+
+  .app-main:not(.app-main-hq) > .screen-back-button {
+    position: absolute;
+    z-index: 80;
+    top: 9px;
+    left: 18px;
+    margin: 0;
+    min-height: 30px;
+    height: 30px;
+    padding: 0 10px;
+    border-color: var(--ui-line);
+    background: rgba(8,11,31,.92);
+    font-size: var(--ui-micro);
+  }
+
+  .app-main:not(.app-main-hq) > .screen {
+    height: 100%;
+    min-height: 0;
+    max-width: 1600px;
+    padding: 44px 22px 12px;
+  }
+}
+
+/* HOME ------------------------------------------------------------------- */
+
+.app-main-hq {
+  height: calc(100dvh - 74px);
+  overflow: hidden;
+}
+
+.app-main-hq .fifa-home-screen {
+  height: 100%;
+  min-height: 0;
+  padding: 12px 22px 14px;
+  grid-template-rows: 38px minmax(0,1fr) 20px;
+}
+
+.app-main-hq .fifa-home-status span,
+.app-main-hq .fifa-level-strip span,
+.app-main-hq .fifa-level-strip b { font-size: var(--ui-micro); }
+
+.app-main-hq .fifa-home-status strong { font-size: 15px; }
+
+.app-main-hq .fifa-mode-grid {
+  min-height: 0;
+  grid-template-columns: minmax(320px,1.18fr) repeat(3,minmax(190px,.82fr));
+  grid-template-rows: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+
+.app-main-hq .fifa-mode-hero {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  min-height: 0;
+}
+
+.app-main-hq .fifa-practice-tile { grid-column: span 2; }
+
+.app-main-hq .fifa-mode-tile {
+  min-height: 0;
+  border-width: 2px;
+  padding: 18px;
+}
+
+.app-main-hq .fifa-mode-tile h1 { font-size: clamp(38px,4vw,60px); }
+.app-main-hq .fifa-mode-tile h2 { font-size: clamp(23px,2vw,32px); }
+.app-main-hq .fifa-mode-tile p {
+  max-width: 440px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.app-main-hq .fifa-tile-kicker,
+.app-main-hq .fifa-mode-copy > span { font-size: var(--ui-micro); }
+
+/* WORLD ------------------------------------------------------------------ */
+
+.app-main-world .fifa-world-screen {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.app-main-world .fifa-world-screen.world-view-map {
+  grid-template-rows: 54px 52px 68px minmax(0,1fr);
+}
+
+.app-main-world .fifa-world-screen.world-view-vrs {
+  grid-template-rows: 54px 44px minmax(0,1fr);
+}
+
+.app-main-world .fifa-screen-header {
+  height: 54px;
+  align-items: center;
+}
+.app-main-world .fifa-screen-rank small { font-size: var(--ui-micro); }
+.app-main-world .fifa-screen-rank b { font-size: 24px; }
+
+.world-toolbar {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr);
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid rgba(145,159,255,.16);
+}
+
+.world-view-switch {
+  min-height: 0;
+  height: 40px;
+  margin: 0;
+  border: 1px solid var(--ui-line);
+  background: rgba(11,16,42,.78);
+}
+.world-view-switch button {
+  min-width: 112px;
+  padding: 0 12px;
+  font-size: var(--ui-micro);
+}
+.world-view-switch > span {
+  min-width: 118px;
+  padding-inline: 12px;
+  font-size: var(--ui-micro);
+}
+
+.world-filter-strip {
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 4px 6px;
+  gap: 8px;
+  border: 1px solid var(--ui-line);
+  background: rgba(11,16,42,.58);
+}
+.world-filter-strip > div { gap: 3px; }
+.world-filter-strip span { font-size: var(--ui-micro); margin-right: 3px; }
+.world-filter-strip button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: var(--ui-micro);
+}
+
+.world-view-vrs .world-toolbar { grid-template-columns: minmax(0,1fr); }
+.world-view-vrs .world-filter-strip { display: none; }
+
+.world-event-rail {
+  height: 68px;
+  min-height: 68px;
+  gap: 7px;
+  padding: 6px 0 8px;
+}
+.world-event-rail button {
+  flex: 0 0 212px;
+  height: 54px;
+  padding: 7px 10px;
+  border-width: 2px;
+}
+.world-event-rail span,
+.world-event-rail small,
+.world-event-rail em { font-size: var(--ui-micro); }
+.world-event-rail b { font-size: 12px; }
+
+.app-main-world .world-map-layout-v2 {
+  min-height: 0;
+  grid-template-columns: minmax(0,1fr) clamp(310px,23vw,360px);
+  gap: 10px;
+}
+
+.app-main-world .world-map-stage-v2,
+.app-main-world .world-geo-map {
+  min-height: 0;
+  height: 100%;
+}
+
+.world-map-legend span { font-size: var(--ui-micro); }
+
+.world-event-panel-v2 {
+  min-height: 0;
+  padding: 14px 15px 12px;
+  border-width: 2px;
+}
+.world-event-panel-v2 .world-event-tier,
+.world-event-status,
+.world-event-panel-v2 > p,
+.world-event-panel-v2 .world-event-date,
+.world-event-details span,
+.world-event-timeline span,
+.world-event-panel-v2 .world-budget-preview small {
+  font-size: var(--ui-micro);
+}
+.world-event-panel-v2 h2 {
+  margin: 7px 0 5px;
+  font-size: clamp(27px,2.2vw,34px);
+}
+.world-event-panel-v2 .world-event-stats div { min-height: 48px; }
+.world-event-panel-v2 .world-event-stats span { font-size: var(--ui-micro); }
+.world-event-panel-v2 .world-event-stats b { font-size: 15px; }
+.world-event-details b,
+.world-event-timeline b { font-size: 11px; line-height: 1.2; }
+.world-event-timeline {
+  min-height: 118px;
+  margin: 7px 0;
+}
+.world-event-panel-v2 .fifa-primary-cta {
+  min-height: 42px;
+  font-size: 11px;
+}
+
+/* CALENDAR --------------------------------------------------------------- */
+
+.app-main-calendar .season-calendar-screen {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 56px 42px minmax(0,1fr);
+  gap: 8px;
+  overflow: hidden;
+}
+
+.calendar-screen-header { height: 56px; }
+.calendar-now small { font-size: var(--ui-micro); }
+.calendar-now b { font-size: 24px; }
+
+.calendar-controls {
+  min-height: 42px;
+  margin: 0;
+  gap: 5px;
+}
+.calendar-controls button {
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 10px;
+}
+.calendar-blocked { font-size: var(--ui-micro); }
+
+.calendar-manager-layout {
+  min-height: 0;
+  grid-template-columns: minmax(0,2.15fr) minmax(290px,.85fr);
+  gap: 10px;
+}
+
+.calendar-month-board,
+.calendar-circuit-list { border-width: 2px; }
+
+.calendar-month-board {
+  min-height: 0;
+  grid-template-rows: 48px 28px minmax(0,1fr);
+}
+.calendar-month-nav b { font-size: 18px; }
+.calendar-weekdays span { font-size: 10px; }
+
+.calendar-month-grid { gap: 2px; }
+.calendar-month-grid > article {
+  padding: 8px;
+}
+.calendar-month-grid header { margin-bottom: 7px; }
+.calendar-month-grid header b { font-size: clamp(20px,1.8vw,27px); }
+.calendar-month-grid header span,
+.calendar-month-grid header small { font-size: 10px; }
+
+.calendar-phase {
+  min-height: 28px;
+  padding: 5px 6px;
+  gap: 6px;
+}
+.calendar-phase b,
+.calendar-phase span { font-size: 9px; }
+
+.calendar-upcoming-title { min-height: 48px; }
+.calendar-upcoming-title > span,
+.calendar-upcoming-title button,
+.calendar-event-group > header,
+.calendar-event-group > header b { font-size: 10px; }
+
+.calendar-upcoming-scroll { overflow-y: auto; }
+.calendar-event-card {
+  min-height: 84px;
+  grid-template-columns: 44px minmax(0,1fr) 92px;
+  gap: 9px;
+}
+.calendar-event-main strong { font-size: 13px; }
+.calendar-event-main small,
+.calendar-event-main span,
+.calendar-event-main i,
+.calendar-event-actions button { font-size: 9px; }
+
+/* MATCHDAY --------------------------------------------------------------- */
+
+.app-main-play .tactical-screen {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 42px 18px 8px;
+}
+
+.app-main-play .tournament-hub-compact {
+  flex: 0 0 78px;
+  min-height: 78px;
+}
+.app-main-play .tournament-hub-compact .tournament-hero,
+.app-main-play .tournament-next-match {
+  min-height: 78px;
+  padding: 9px 14px;
+}
+.app-main-play .tournament-hero > div > span,
+.app-main-play .tournament-next-match > div > span,
+.app-main-play .tournament-hero p,
+.app-main-play .tournament-next-match small { font-size: 10px; }
+.app-main-play .tournament-hero h1 { font-size: 21px; }
+.app-main-play .tournament-next-match strong { font-size: 18px; }
+
+.app-main-play .tactical-heading {
+  flex: 0 0 48px;
+  min-height: 48px;
+  margin: 5px 0 4px;
+  padding: 0 0 5px;
+}
+.app-main-play .tactical-heading .eyebrow,
+.app-main-play .tactical-budget span,
+.app-main-play .tactical-budget small { font-size: 10px; }
+.app-main-play .tactical-heading h1 {
+  margin-top: 4px;
+  font-size: clamp(25px,2.2vw,34px);
+}
+.app-main-play .tactical-budget b { font-size: 17px; }
+
+.app-main-play .tactical-board {
+  flex: 1 1 auto;
+  min-height: 396px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(182px,1fr) 26px minmax(182px,1fr);
+  overflow: hidden;
+  border-width: 2px 0;
+}
+
+.app-main-play .tactical-team,
+.app-main-play .tactical-opponent {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 185px minmax(0,1fr);
+  grid-template-rows: auto auto auto minmax(0,1fr);
+  column-gap: 14px;
+  align-items: center;
+  padding: 7px 12px;
+  overflow: hidden;
+}
+
+.app-main-play .tactical-team-home {
+  border-right: 0;
+  border-bottom: 1px solid var(--ui-line);
+}
+.app-main-play .tactical-opponent {
+  border-left: 0;
+  border-top: 1px solid var(--ui-line);
+}
+
+.app-main-play .tactical-team-label,
+.app-main-play .tactical-opponent > .eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 10px;
+}
+.app-main-play .tactical-team-name,
+.app-main-play .tactical-opponent > h2 {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 5px 0 3px;
+  font-size: 19px;
+}
+.app-main-play .tactical-team-meta,
+.app-main-play .tactical-opponent > p {
+  grid-column: 1;
+  grid-row: 3;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: var(--ui-muted);
+  font-size: 10px;
+}
+.app-main-play .tactical-edit {
+  grid-column: 1;
+  grid-row: 4;
+  align-self: end;
+  min-height: 32px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.app-main-play .tactical-mini-roster,
+.app-main-play .tactical-opponent-roster {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  align-self: center;
+  width: min(100%,720px);
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  justify-content: start;
+  gap: 8px;
+  margin: 0;
+  overflow: visible;
+}
+
+.app-main-play .tactical-mini-roster .visual-player-card,
+.app-main-play .tactical-opponent-roster .visual-player-card,
+.app-main-play .tactical-opponent-roster .match-opponent-card {
+  width: 100%;
+  max-width: 132px;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+  aspect-ratio: 5 / 7;
+  align-self: center;
+  border-radius: 8px;
+}
+
+.app-main-play .tactical-vs {
+  min-height: 26px;
+  height: 26px;
+  flex-direction: row;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: rgba(255,255,255,.018);
+}
+.app-main-play .tactical-vs strong { font-size: 19px; }
+.app-main-play .tactical-vs span { font-size: 9px; }
+
+.app-main-play .tactical-mini-roster .visual-card-top,
+.app-main-play .tactical-opponent-roster .visual-card-top {
+  top: 5%;
+  left: 7%;
+  right: 7%;
+}
+.app-main-play .tactical-mini-roster .visual-card-top strong,
+.app-main-play .tactical-opponent-roster .visual-card-top strong { font-size: 22px; }
+.app-main-play .tactical-mini-roster .visual-card-top span,
+.app-main-play .tactical-opponent-roster .visual-card-top span { font-size: 9px; }
+
+.app-main-play .tactical-mini-roster .visual-country,
+.app-main-play .tactical-opponent-roster .visual-country {
+  top: 18%;
+  left: 7%;
+  font-size: 13px;
+}
+.app-main-play .tactical-mini-roster .visual-country span,
+.app-main-play .tactical-opponent-roster .visual-country span { font-size: 8px; }
+
+.app-main-play .tactical-mini-roster .visual-photo,
+.app-main-play .tactical-opponent-roster .visual-photo {
+  top: 15%;
+  left: 2%;
+  right: 2%;
+  height: 61%;
+  overflow: hidden;
+  place-items: end center;
+  background: radial-gradient(circle at 50% 40%,rgba(255,255,255,.07),transparent 45%);
+  -webkit-mask-image: linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+  mask-image: linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+}
+.app-main-play .tactical-mini-roster .visual-photo img,
+.app-main-play .tactical-opponent-roster .visual-photo img {
+  position: absolute;
+  left: -8%;
+  bottom: -11%;
+  width: 116%;
+  height: 116%;
+  object-fit: contain;
+  object-position: center bottom;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+.app-main-play .tactical-mini-roster .visual-monogram,
+.app-main-play .tactical-opponent-roster .visual-monogram { display: none; }
+
+.app-main-play .tactical-mini-roster .player-portrait-fallback,
+.app-main-play .tactical-opponent-roster .player-portrait-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 29%, rgba(207,218,239,.28) 0 14%, transparent 15%),
+    radial-gradient(ellipse at 50% 86%, rgba(207,218,239,.18) 0 35%, transparent 36%);
+}
+.app-main-play .tactical-mini-roster .player-portrait-fallback > span,
+.app-main-play .tactical-opponent-roster .player-portrait-fallback > span {
+  margin-bottom: 30%;
+  color: rgba(230,237,252,.42);
+  font-size: 18px;
+  letter-spacing: .05em;
+}
+
+.app-main-play .tactical-mini-roster .visual-identity,
+.app-main-play .tactical-opponent-roster .visual-identity {
+  z-index: 6;
+  left: 6%;
+  right: 6%;
+  bottom: 7%;
+  padding: 6px 4px 5px;
+  background: linear-gradient(90deg,transparent,rgba(4,8,20,.72) 20%,rgba(4,8,20,.72) 80%,transparent);
+}
+.app-main-play .tactical-mini-roster .visual-identity strong,
+.app-main-play .tactical-opponent-roster .visual-identity strong { font-size: 11px; }
+.app-main-play .tactical-mini-roster .visual-identity span,
+.app-main-play .tactical-opponent-roster .visual-identity span { font-size: 8px; }
+.app-main-play .tactical-mini-roster .visual-stats,
+.app-main-play .tactical-mini-roster .visual-rarity,
+.app-main-play .tactical-opponent-roster .visual-rarity { display: none; }
+
+.app-main-play .tactical-control-compact {
+  flex: 0 0 66px;
+  min-height: 66px;
+  grid-template-columns: minmax(0,1fr) minmax(270px,.5fr);
+  gap: 9px;
+  padding-top: 6px;
+}
+.app-main-play .tactical-event-lock {
+  min-height: 48px;
+  padding: 8px 10px;
+}
+.app-main-play .tactical-event-lock span { font-size: 10px; }
+.app-main-play .tactical-event-lock small { font-size: 9px; }
+.app-main-play .tactical-launch-compact {
+  gap: 4px;
+  padding-left: 9px;
+}
+.app-main-play .tactical-launch-compact .hq-primary-action {
+  min-height: 40px;
+  font-size: 11px;
+}
+.app-main-play .tactical-launch-compact > small { font-size: 9px; }
+
+.app-main-play .match-recap-line {
+  flex: 0 0 24px;
+  min-height: 24px;
+  font-size: 9px;
+}
+
+/* ROSTER ----------------------------------------------------------------- */
+
+.app-main-roster .game-roster-screen {
+  height: 100%;
+  min-height: 0;
+  max-width: 1560px;
+  overflow-y: auto;
+  padding-bottom: 30px;
+}
+
+.game-roster-heading {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+.game-roster-heading h1 { font-size: clamp(30px,3vw,42px); }
+.roster-score b { font-size: 36px; color: var(--ui-cyan); }
+.roster-score span,
+.roster-score small,
+.game-roster-summary span { font-size: 10px; }
+
+.game-roster-summary {
+  min-height: 42px;
+  margin-bottom: 10px;
+  padding: 8px 0;
+}
+
+.fifa-squad-overview {
+  grid-template-columns: minmax(0,1fr) 220px;
+  gap: 12px;
+}
+
+.lineup-board {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.lineup-board-head {
+  min-height: 34px;
+  margin-bottom: 7px;
+  padding-inline: 2px;
+}
+.lineup-board-head span,
+.bench-board-head span { color: var(--ui-cyan); font-size: 10px; }
+.lineup-board-head small,
+.bench-board-head small { font-size: 9px; }
+
+.lineup-slot-grid {
+  grid-template-columns: repeat(5,minmax(150px,1fr));
+  gap: 9px;
+  overflow: visible;
+}
+.lineup-slot {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+.lineup-slot.is-drop-target {
+  outline: 2px solid var(--ui-cyan);
+  outline-offset: 3px;
+  background: transparent;
+  box-shadow: none;
+}
+.lineup-slot-head {
+  min-height: 28px;
+  padding: 0 3px 6px;
+}
+.lineup-slot-head span { font-size: 10px; color: var(--ui-cyan); }
+.lineup-slot-head small { font-size: 8px; }
+
+.game-roster-card.visual-player-card {
+  border-radius: 8px;
+}
+.game-roster-card .visual-card-top strong { font-size: clamp(24px,2vw,30px); }
+.game-roster-card .visual-card-top span { font-size: 9px; }
+.game-roster-card .visual-country span { font-size: 8px; }
+.game-roster-card .visual-identity strong { font-size: clamp(13px,1.2vw,16px); }
+.game-roster-card .visual-identity span { font-size: 8px; }
+.game-roster-card .visual-stats span { font-size: 8px; }
+.game-roster-card .visual-stats b { font-size: 12px; }
+.game-roster-card .visual-rarity { display: none; }
+.visual-live-state span { font-size: 8px; min-width: 26px; }
+.visual-live-state b { font-size: 10px; }
+
+.lineup-slot-actions {
+  min-height: 34px;
+  padding-top: 6px;
+}
+.lineup-slot-actions button,
+.bench-card-actions button { font-size: 10px; min-height: 32px; }
+
+.squad-stats-panel {
+  padding: 14px;
+  border-width: 2px;
+}
+.squad-stats-head span,
+.squad-stat-lines span { font-size: 10px; }
+.squad-radar > span { font-size: 9px; }
+.squad-stat-lines b { font-size: 13px; }
+
+.bench-board {
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.bench-card-grid {
+  grid-template-columns: repeat(4,minmax(160px,220px));
+  gap: 10px;
+}
+.bench-card-meta { font-size: 9px; }
+
+/* SCOUT / TRANSFERS ------------------------------------------------------ */
+
+.app-main-scout .scout-market-screen {
+  height: 100%;
+  min-height: 0;
+  max-width: 1580px;
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  overflow: hidden;
+}
+
+.market-heading {
+  min-height: 58px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+.market-heading h1 { margin: 5px 0; font-size: clamp(29px,3vw,42px); }
+.market-heading p { font-size: 12px; }
+.market-budget span,
+.market-budget small { font-size: 10px; }
+.market-budget b { font-size: 21px; color: var(--ui-cyan); }
+
+.market-layout {
+  min-height: 0;
+  height: 100%;
+  border: 2px solid var(--ui-line);
+}
+.market-layout.awaiting-results { grid-template-columns: 310px minmax(0,1fr); }
+.market-layout.has-results { grid-template-columns: 250px minmax(0,1fr); }
+
+.market-brief {
+  min-height: 0;
+  padding: 16px 15px;
+  overflow-y: auto;
+  border-right: 1px solid var(--ui-line);
+  background: rgba(10,15,39,.72);
+}
+.market-brief-title {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+.market-brief-title span,
+.market-report-head span { color: var(--ui-cyan); font-size: 10px; }
+.market-brief-title b { font-size: 24px; }
+
+.market-field { gap: 7px; margin-bottom: 14px; }
+.market-field > span,
+.market-field small,
+.market-term small,
+.market-brief-preview p,
+.market-database-note small { font-size: 10px; }
+.market-field select { min-height: 38px; font-size: 11px; }
+.market-segmented button,
+.market-contract-options button,
+.market-role-promise button {
+  min-height: 34px;
+  font-size: 10px;
+}
+.market-segmented button.active,
+.market-contract-options button.active,
+.market-role-promise button.active {
+  border-color: var(--ui-cyan);
+  background: rgba(32,230,255,.08);
+  color: #fff;
+}
+.market-salary-field input[type="range"],
+.market-term input[type="range"] { accent-color: var(--ui-cyan); }
+
+.market-brief-preview {
+  margin: 16px 0 12px;
+  padding: 12px 0;
+}
+.market-brief-preview span,
+.market-database-note span { font-size: 9px; }
+.market-brief-preview strong { font-size: 14px; }
+
+.market-report {
+  min-height: 0;
+  padding: 16px 18px 22px;
+  overflow-y: auto;
+}
+.market-report-head { padding-bottom: 12px; }
+.market-report-head strong { font-size: 18px; }
+.market-report-head small { font-size: 10px; }
+
+.market-card-grid {
+  grid-template-columns: repeat(4,minmax(150px,1fr));
+  gap: 10px;
+  padding-top: 14px;
+}
+.market-candidate { padding: 6px; }
+.market-card-visual:hover,
+.market-card-visual:focus-visible { border-color: var(--ui-cyan); }
+.market-card-top span,
+.market-card-country span,
+.market-card-name span { font-size: 8px; }
+.market-card-stats span { font-size: 8px; }
+.market-card-stats b { font-size: 11px; }
+.market-card-meta { font-size: 9px; }
+.market-negotiate { min-height: 34px !important; font-size: 10px !important; }
+
+/* PACKS ------------------------------------------------------------------ */
+
+.app-main-packs .fifa-packs-screen {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: 58px 42px minmax(0,1fr);
+  padding: 44px 22px 12px;
+  overflow: hidden;
+}
+.packs-screen-header { height: 58px; }
+.packs-header-metrics {
+  display: flex;
+  align-items: end;
+  gap: 22px;
+}
+.pack-collection-summary-inline,
+.fifa-currency-large { display: grid; justify-items: end; gap: 3px; }
+.pack-collection-summary-inline small,
+.pack-collection-summary-inline span,
+.fifa-currency-large small { color: var(--ui-muted); font-size: 10px; font-weight: 800; }
+.pack-collection-summary-inline b {
+  color: #fff;
+  font-size: 22px;
+}
+.fifa-currency-large b { font-size: 27px; }
+
+.pack-section-tabs { min-height: 42px; }
+.pack-section-tabs button { font-size: 10px; }
+
+.pack-store-frame {
+  min-height: 0;
+  display: block;
+  padding-top: 10px;
+}
+.fifa-pack-shelf {
+  height: 100%;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 10px;
+}
+.fifa-pack-shelf .pack-box {
+  height: 100%;
+  min-height: 0;
+  padding: 13px;
+  border-width: 2px;
+}
+.fifa-pack-shelf .pack-artwork {
+  height: clamp(150px,22vh,210px);
+  margin: -13px -13px 13px;
+}
+.fifa-pack-shelf .pack-box > span { font-size: 10px; }
+.fifa-pack-shelf .pack-box h2 { font-size: clamp(19px,1.6vw,24px); }
+.pack-box-footer > strong { font-size: 17px; }
+.pack-box-footer > strong small { font-size: 9px; }
+.fifa-pack-shelf .fifa-primary-cta { min-height: 42px; font-size: 11px; }
+
+/* PRACTICE --------------------------------------------------------------- */
+
+.app-main-training .practice-room-screen {
+  height: 100%;
+  padding: 44px 22px 12px;
+  grid-template-rows: 58px minmax(0,1fr);
+}
+.practice-room-header { height: 58px; margin: 0; }
+.practice-room-layout { gap: 10px; grid-template-columns: minmax(0,1fr) 310px; }
+.practice-squad-panel,
+.practice-console { border-width: 2px; }
+.practice-panel-head span,
+.practice-continuity small,
+.practice-rules span,
+.practice-mode-note small,
+.practice-next-official,
+.practice-block-reason { font-size: 10px; }
+.practice-panel-head strong { font-size: 16px; }
+.practice-card-row {
+  grid-template-columns: repeat(5,minmax(110px,150px));
+  gap: 9px;
+}
+.practice-console h2 { font-size: 26px; }
+.practice-mode-note span { font-size: 10px; }
+
+/* PROFILE + INBOX -------------------------------------------------------- */
+
+.app-main-profile .manager-profile-screen {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 58px minmax(0,1fr) 68px;
+  gap: 10px;
+  overflow: hidden;
+}
+.manager-level-badge { font-size: 24px; }
+.manager-progress-hero {
+  min-height: 0;
+  grid-template-columns: 300px minmax(0,1fr);
+  border: 2px solid var(--ui-line);
+}
+.manager-progress-copy { padding: 28px 24px; }
+.manager-progress-copy span,
+.manager-progress-labels,
+.manager-milestones b,
+.manager-stat-strip span { font-size: 10px; }
+.manager-progress-copy > strong {
+  margin: 12px 0;
+  font-size: 78px;
+  color: var(--ui-cyan);
+}
+.manager-progress-copy h2 { font-size: 21px; }
+.manager-progress-copy p,
+.manager-milestones p { font-size: 11px; }
+.manager-progress-track {
+  min-height: 0;
+  padding: 28px 24px;
+  overflow-y: auto;
+}
+.manager-milestones {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+.manager-milestones article { padding: 14px; }
+.manager-milestones strong { margin: 10px 0 6px; font-size: 14px; }
+.manager-stat-strip {
+  min-height: 68px;
+  border: 2px solid var(--ui-line);
+}
+.manager-stat-strip b { font-size: 20px; }
+
+.app-main-inbox .newsroom-screen {
+  height: 100%;
+  min-height: 0;
+  max-width: 1450px;
+  display: grid;
+  grid-template-rows: 58px auto minmax(0,1fr) 36px;
+  gap: 9px;
+  overflow: hidden;
+}
+.club-decision-card {
+  margin: 0;
+  padding: 14px 16px;
+  border-width: 2px;
+}
+.club-decision-card > span { font-size: 10px; }
+.club-decision-card h2 { margin: 5px 0; font-size: 18px; }
+.club-decision-card p { font-size: 11px; }
+
+.newsroom-layout {
+  min-height: 0;
+  grid-template-columns: 140px minmax(0,1fr);
+  gap: 18px;
+  padding-top: 12px;
+  overflow: hidden;
+}
+.newsroom-season-mark { padding-right: 16px; }
+.newsroom-season-mark span,
+.newsroom-season-mark small { font-size: 10px; }
+.newsroom-season-mark b { font-size: 48px; color: var(--ui-cyan); }
+.timeline {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.timeline article { padding-block: 12px; }
+.timeline-marker {
+  width: 36px;
+  height: 36px;
+  color: var(--ui-cyan);
+}
+.timeline article span { font-size: 10px; }
+.timeline article h2 { margin: 6px 0; font-size: 18px; }
+.timeline article p { font-size: 12px; }
+.news-action { font-size: 10px; }
+.save-reset { align-self: end; justify-self: start; min-height: 32px; font-size: 10px; }
+
+/* MODALS ----------------------------------------------------------------- */
+
+.card-detail-backdrop,
+.lineup-picker-backdrop,
+.market-negotiation-backdrop,
+.pack-purchase-backdrop,
+.tournament-bracket-backdrop {
+  background: rgba(3,6,20,.88);
+  backdrop-filter: blur(9px);
+}
+
+.card-detail-modal,
+.lineup-picker,
+.market-negotiation,
+.pack-purchase-modal,
+.tournament-bracket-modal {
+  border: 2px solid var(--ui-line-strong);
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 14% 0%,rgba(92,72,220,.10),transparent 28%),
+    #0a1028;
+  box-shadow: 0 28px 90px rgba(0,0,0,.62);
+}
+
+.card-detail-close,
+.lineup-picker-close,
+.market-negotiation-close,
+.pack-purchase-close,
+.tournament-bracket-modal-head > button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--ui-line-strong);
+  background: rgba(12,17,42,.94);
+  color: #eaf0ff;
+}
+
+.card-detail-facts b,
+.card-detail-section-title,
+.card-detail-kicker { font-size: 10px; }
+.card-detail-facts span { font-size: 12px; }
+.card-detail-scores span { font-size: 10px; }
+
+/* MATCH SIM + BRACKET ---------------------------------------------------- */
+
+.match-radar-shell-canvas {
+  width: min(1500px,98vw);
+  height: min(900px,95vh);
+  grid-template-rows: 72px minmax(0,1fr) 5px;
+  border: 2px solid var(--ui-line-strong);
+}
+.match-radar-main-canvas { grid-template-columns: minmax(0,1fr) 285px; }
+.match-radar-roster-v2 > button { min-height: 46px; }
+.match-radar-roster-v2 > button > span b { font-size: 11px; }
+.match-radar-roster-v2 > button > span small { font-size: 9px; }
+.match-radar-context span,
+.match-radar-context small,
+.match-radar-feed div { font-size: 10px; }
+
+.tournament-bracket-modal {
+  width: min(1680px,98vw);
+  min-height: 82dvh;
+  max-height: 96dvh;
+}
+.tournament-bracket-modal-head span { font-size: 10px; }
+.tournament-bracket-modal-head h2 { font-size: 30px; }
+.bracket-column > header { font-size: 11px; }
+.bracket-match-meta { font-size: 10px !important; }
+.bracket-match > div:not(.bracket-match-meta) { font-size: 13px; }
+
+/* SHORTER / NARROWER DESKTOP ------------------------------------------- */
+
+@media (min-width: 901px) and (max-width: 1280px) {
+  .fifa-topbar {
+    grid-template-columns: 190px minmax(270px,1fr) minmax(350px,.9fr);
+    padding-inline: 16px;
+  }
+  .fifa-wallets > div,
+  .fifa-wallets > button { min-width: 84px; }
+
+  .app-main-hq .fifa-mode-grid {
+    grid-template-columns: 1.08fr 1fr;
+    grid-template-rows: repeat(3,minmax(0,1fr));
+  }
+  .app-main-hq .fifa-mode-hero { grid-row: span 2; }
+  .app-main-hq .fifa-practice-tile { grid-column: auto; }
+
+  .world-toolbar { grid-template-columns: 1fr; height: auto; }
+  .app-main-world .fifa-world-screen.world-view-map {
+    grid-template-rows: 52px 82px 64px minmax(0,1fr);
+  }
+  .world-view-switch { width: max-content; }
+  .app-main-world .world-map-layout-v2 {
+    grid-template-columns: minmax(0,1fr) 300px;
+  }
+
+  .calendar-manager-layout {
+    grid-template-columns: minmax(0,1.9fr) 300px;
+  }
+
+  .app-main-play .tactical-team,
+  .app-main-play .tactical-opponent {
+    grid-template-columns: 165px minmax(0,1fr);
+  }
+  .app-main-play .tactical-mini-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .match-opponent-card { max-width: 118px; }
+
+  .fifa-squad-overview { grid-template-columns: minmax(0,1fr) 190px; }
+  .squad-radar { width: 150px; height: 150px; }
+  .market-card-grid { grid-template-columns: repeat(3,minmax(150px,1fr)); }
+}
+
+@media (min-width: 901px) and (max-height: 820px) {
+  .app-main:not(.app-main-hq) > .screen { padding-top: 40px; }
+
+  .app-main-play .tournament-hub-compact { flex-basis: 70px; min-height: 70px; }
+  .app-main-play .tournament-hub-compact .tournament-hero,
+  .app-main-play .tournament-next-match { min-height: 70px; }
+  .app-main-play .tactical-heading { flex-basis: 42px; min-height: 42px; }
+  .app-main-play .tactical-board {
+    min-height: 346px;
+    grid-template-rows: minmax(160px,1fr) 24px minmax(160px,1fr);
+  }
+  .app-main-play .tactical-mini-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .visual-player-card,
+  .app-main-play .tactical-opponent-roster .match-opponent-card { max-width: 112px; }
+  .app-main-play .tactical-control-compact { flex-basis: 58px; min-height: 58px; }
+
+  .practice-card-row { grid-template-columns: repeat(5,minmax(96px,130px)); }
+
+  .fifa-pack-shelf .pack-artwork { height: clamp(125px,19vh,170px); }
+  .manager-progress-copy > strong { font-size: 64px; }
+}
+
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .app-shell { height: auto; min-height: 100dvh; overflow: visible; }
+  .app-main,
+  .app-main:not(.app-main-hq) { height: auto; overflow: visible; }
+  .app-main:not(.app-main-hq) > .screen-back-button {
+    position: relative;
+    top: auto;
+    left: auto;
+    margin: 8px 12px 0;
+  }
+  .app-main:not(.app-main-hq) > .screen {
+    height: auto;
+    padding: 16px 12px 40px;
+    overflow: visible;
+  }
+  .world-toolbar { grid-template-columns: 1fr; }
+  .world-filter-strip { overflow-x: auto; }
+  .calendar-manager-layout,
+  .practice-room-layout,
+  .manager-progress-hero,
+  .newsroom-layout { grid-template-columns: 1fr; }
+  .calendar-circuit-list { max-height: 400px; }
+  .market-layout,
+  .market-layout.has-results,
+  .market-layout.awaiting-results { display: block; height: auto; }
+  .market-brief,
+  .market-report { overflow: visible; }
+  .market-card-grid { grid-template-columns: repeat(2,minmax(145px,1fr)); }
+  .fifa-pack-shelf { display: flex; overflow-x: auto; }
+  .fifa-pack-shelf .pack-box { flex: 0 0 76vw; min-height: 430px; }
+  .lineup-slot-grid { grid-template-columns: repeat(5,170px); overflow-x: auto; }
+  .match-radar-main-canvas { grid-template-columns: 1fr; }
+  .match-radar-roster-v2 { display: none; }
+}

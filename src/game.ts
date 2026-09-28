@@ -1338,14 +1338,19 @@ export const startNextSeason = (state: GameState): GameState => {
   if (!state.seasonEnded) return state
   const roster = state.roster.map((player) => ({
     ...player,
-    fatigue: clamp(Math.round(player.fatigue * 0.35)),
+    fatigue: clamp(Math.round(player.fatigue * .35)),
     morale: clamp(Math.round((player.morale + 60) / 2)),
     form: clamp(Math.round((player.form + 55) / 2)),
   }))
+  const seasonStart = addGameDays(state.seasonStart, state.seasonLength * 7 + 7, 9)
+
   return {
     ...state,
     season: state.season + 1,
+    seasonStart,
+    now: seasonStart,
     week: 1,
+    seasonLength: 16,
     seasonEnded: false,
     seasonSummary: null,
     wins: 0,
@@ -1353,6 +1358,7 @@ export const startNextSeason = (state: GameState): GameState => {
     streak: 0,
     seasonPoints: 0,
     activeEventId: null,
+    activeTournament: null,
     pendingDecision: null,
     roster,
     news: [{
@@ -1360,8 +1366,8 @@ export const startNextSeason = (state: GameState): GameState => {
       week: 1,
       kind: 'media' as const,
       title: 'Начался новый сезон',
-      body: 'Контракты и коллекция продолжаются. Форма и усталость игроков восстановлены частично.',
-    }, ...state.news].slice(0, 50),
+      body: 'Календарь обновлён. Турниры снова распределены по датам, а форма и усталость состава частично восстановлены.',
+    }, ...state.news].slice(0, 80),
   }
 }
 

@@ -1,55 +1,36 @@
 import { useMemo, useState } from 'react'
-import { weeklyPayroll, type GameState } from './game'
+import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
+import { TOURNAMENTS, tournamentEntryCost, tournamentForId, type TournamentRegion } from './events'
 
-type Region = 'Europe' | 'Americas' | 'Asia' | 'CIS'
-
-type Tournament = {
-  id: string
-  name: string
-  city: string
-  region: Region
-  tier: 'S' | 'A' | 'B'
-  x: number
-  y: number
-  prize: number
-  travel: number
-  service: number
-  fatigue: number
-  label: string
-}
-
-const TOURNAMENTS: readonly Tournament[] = [
-  { id: 'helsinki', name: 'Nordic Masters', city: 'Helsinki', region: 'Europe', tier: 'A', x: 56, y: 25, prize: 3200, travel: 180, service: 240, fatigue: 6, label: 'LAN · 8 TEAMS' },
-  { id: 'cologne', name: 'Rhine Arena', city: 'Cologne', region: 'Europe', tier: 'S', x: 49, y: 31, prize: 6200, travel: 260, service: 360, fatigue: 9, label: 'LAN · 16 TEAMS' },
-  { id: 'katowice', name: 'Steel Cup', city: 'Katowice', region: 'Europe', tier: 'S', x: 53, y: 33, prize: 7000, travel: 250, service: 380, fatigue: 10, label: 'LAN · 16 TEAMS' },
-  { id: 'dallas', name: 'Lone Star Clash', city: 'Dallas', region: 'Americas', tier: 'A', x: 25, y: 43, prize: 4100, travel: 760, service: 510, fatigue: 15, label: 'LAN · 12 TEAMS' },
-  { id: 'sao-paulo', name: 'São Paulo Open', city: 'São Paulo', region: 'Americas', tier: 'A', x: 34, y: 70, prize: 3800, travel: 880, service: 460, fatigue: 16, label: 'LAN · 12 TEAMS' },
-  { id: 'chengdu', name: 'Chengdu Masters', city: 'Chengdu', region: 'Asia', tier: 'S', x: 78, y: 44, prize: 6800, travel: 980, service: 590, fatigue: 18, label: 'LAN · 16 TEAMS' },
-  { id: 'almaty', name: 'Steppe Invitational', city: 'Almaty', region: 'CIS', tier: 'B', x: 66, y: 36, prize: 2200, travel: 430, service: 280, fatigue: 8, label: 'LAN · 8 TEAMS' },
-] as const
-
-const REGIONS: Array<'All' | Region> = ['All', 'Europe', 'Americas', 'Asia', 'CIS']
+const REGIONS: Array<'All' | TournamentRegion> = ['All', 'Europe', 'Americas', 'Asia', 'CIS']
 
 export function WorldMap({
   state,
+  onBook,
   onPrepareMatch,
 }: {
   state: GameState
+  onBook: (eventId: string) => void
   onPrepareMatch: () => void
 }) {
-  const [region, setRegion] = useState<'All' | Region>('All')
-  const [selectedId, setSelectedId] = useState('cologne')
+  const [region, setRegion] = useState<'All' | TournamentRegion>('All')
+  const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'helsinki')
   const payroll = weeklyPayroll(state)
+  const level = managerLevelProgress(state.managerXp).level
   const visible = useMemo(() => TOURNAMENTS.filter((event) => region === 'All' || event.region === region), [region])
-  const selected = TOURNAMENTS.find((event) => event.id === selectedId) ?? TOURNAMENTS[0]
-  const weeklyOps = payroll + selected.travel + selected.service
+  const selected = tournamentForId(selectedId) ?? TOURNAMENTS[0]
+  const active = tournamentForId(state.activeEventId)
+  const booking = canBookTournament(state, selected.id)
+  const booked = state.activeEventId === selected.id
+  const eventCost = tournamentEntryCost(selected)
+  const weeklyOps = payroll + eventCost
 
   return (
     <section className="screen fifa-world-screen">
       <div className="fifa-screen-header">
         <div>
-          <span>COMPETE &gt; WORLD MAP</span>
-          <h1>SELECT TOURNAMENT</h1>
+          <span>GLOBAL CIRCUIT · MANAGER LVL {level}</span>
+          <h1>{active ? 'NEXT EVENT' : 'SELECT EVENT'}</h1>
         </div>
         <div className="fifa-screen-rank">
           <small>CLUB REP</small>
@@ -72,9 +53,9 @@ export function WorldMap({
             </button>
           ))}
           <div className="world-upkeep">
-            <span>WEEKLY OPERATIONS</span>
-            <strong>{weeklyOps.toLocaleString('ru-RU')}</strong>
-            <small>payroll + travel + service</small>
+            <span>WEEKLY PAYROLL</span>
+            <strong>{payroll.toLocaleString('ru-RU')}</strong>
+            <small>cash {state.credits.toLocaleString('ru-RU')}</small>
           </div>
         </aside>
 
@@ -94,22 +75,25 @@ export function WorldMap({
             <path className="world-grid-line" d="M0 130h1000M0 260h1000M0 390h1000M250 0v520M500 0v520M750 0v520" />
           </svg>
 
-          {visible.map((event) => (
-            <button
-              key={event.id}
-              className={'world-pin tier-' + event.tier.toLowerCase() + (selected.id === event.id ? ' active' : '')}
-              style={{ left: event.x + '%', top: event.y + '%' }}
-              onClick={() => setSelectedId(event.id)}
-              aria-label={event.name}
-            >
-              <i />
-              <span>{event.city}</span>
-            </button>
-          ))}
+          {visible.map((event) => {
+            const locked = level < event.unlockLevel
+            return (
+              <button
+                key={event.id}
+                className={'world-pin tier-' + event.tier.toLowerCase() + (selected.id === event.id ? ' active' : '') + (locked ? ' locked' : '') + (state.activeEventId === event.id ? ' booked' : '')}
+                style={{ left: event.x + '%', top: event.y + '%' }}
+                onClick={() => setSelectedId(event.id)}
+                aria-label={event.name + (locked ? ', locked' : '')}
+              >
+                <i />
+                <span>{locked ? 'LVL ' + event.unlockLevel : event.city}</span>
+              </button>
+            )
+          })}
 
           <div className="world-map-caption">
-            <span>GLOBAL EVENT NETWORK</span>
-            <small>{visible.length} active tournaments</small>
+            <span>{active ? active.name.toUpperCase() + ' BOOKED' : 'GLOBAL EVENT NETWORK'}</span>
+            <small>{visible.filter((event) => level >= event.unlockLevel).length} available events</small>
           </div>
         </div>
 
@@ -121,20 +105,26 @@ export function WorldMap({
 
           <div className="world-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>
-            <div><span>TRAVEL</span><b>{selected.travel}</b></div>
-            <div><span>SERVICE</span><b>{selected.service}</b></div>
+            <div><span>ENTRY COST</span><b>{eventCost}</b></div>
             <div><span>FATIGUE</span><b>+{selected.fatigue}</b></div>
+            <div><span>UNLOCK</span><b>LVL {selected.unlockLevel}</b></div>
           </div>
 
           <div className="world-budget-preview">
-            <span>EVENT WEEK COST</span>
+            <span>EVENT WEEK</span>
             <strong>{weeklyOps.toLocaleString('ru-RU')} CASH</strong>
-            <small>В кассе: {state.credits.toLocaleString('ru-RU')}</small>
+            <small>{booked ? 'Поездка уже оплачена' : 'payroll + travel + service'}</small>
           </div>
 
-          <button className="fifa-primary-cta" onClick={onPrepareMatch}>
-            PREPARE EVENT <span>→</span>
-          </button>
+          {booked ? (
+            <button className="fifa-primary-cta" onClick={onPrepareMatch}>
+              ENTER EVENT <span>→</span>
+            </button>
+          ) : (
+            <button className="fifa-primary-cta" disabled={!booking.ok} onClick={() => onBook(selected.id)}>
+              {booking.ok ? 'COMMIT TO EVENT' : booking.reason.toUpperCase()} <span>→</span>
+            </button>
+          )}
         </aside>
       </div>
     </section>

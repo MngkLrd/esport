@@ -542,4 +542,4 @@ export const simulationFrameAt = (round: SimRound, time: number) => {
 }
 
 export const radarAssetUrl = (mapKey: string) =>
-  '/esport/maps/' + mapKey + '.png'
+  '/esport/maps/' + mapKey + '_radar_v2.png'

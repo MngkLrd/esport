@@ -212,11 +212,29 @@ const drawBombState = (
   ctx.restore()
 }
 
+const shotPathIsClear = (
+  from: SimPlayerFrame,
+  to: SimPlayerFrame,
+  wallMask: Uint8Array | null,
+) => {
+  if (!wallMask) return true
+  const distance = Math.hypot(to.x - from.x, to.y - from.y)
+  const steps = Math.max(1, Math.ceil(distance / 2))
+  for (let step = 0; step <= steps; step += 1) {
+    const t = step / steps
+    const x = Math.max(0, Math.min(CANVAS_SIZE - 1, Math.round(from.x + (to.x - from.x) * t)))
+    const y = Math.max(0, Math.min(CANVAS_SIZE - 1, Math.round(from.y + (to.y - from.y) * t)))
+    if (wallMask[y * CANVAS_SIZE + x]) return false
+  }
+  return true
+}
+
 const drawShotLines = (
   ctx: CanvasRenderingContext2D,
   events: SimEvent[],
   players: SimPlayerFrame[],
   time: number,
+  wallMask: Uint8Array | null,
 ) => {
   const active = events.filter((event) =>
     (event.type === 'shot' || event.type === 'damage' || event.type === 'kill') &&
@@ -227,7 +245,7 @@ const drawShotLines = (
   for (const event of active) {
     const actor = players.find((player) => player.id === event.actorId)
     const target = players.find((player) => player.id === event.targetId)
-    if (!actor || !target) continue
+    if (!actor || !target || !shotPathIsClear(actor, target, wallMask)) continue
 
     ctx.save()
     ctx.globalAlpha = event.type === 'kill' ? .9 : .5
@@ -366,7 +384,7 @@ const drawCanvas = (
 
   drawUtility(ctx, round.events, frame.players, time)
   drawBombState(ctx, round, frame.players, time)
-  drawShotLines(ctx, round.events, frame.players, time)
+  drawShotLines(ctx, round.events, frame.players, time, wallMask)
 
   const ordered = [...frame.players].sort((a, b) => Number(a.alive) - Number(b.alive))
   ordered.forEach((player) => drawPlayer(ctx, player, wallMask, selectedId === player.id))

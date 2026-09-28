@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { geoCentroid, geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
-import { compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
+import { addGameHours, compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
 import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
 import { worldVrsStandings } from './world'
 import {
@@ -101,10 +101,12 @@ export function WorldMap({
   state,
   onBook,
   onPrepareMatch,
+  focusEventId,
 }: {
   state: GameState
   onBook: (eventId: string) => void
   onPrepareMatch: () => void
+  focusEventId?: string | null
 }) {
   const [viewMode, setViewMode] = useState<'map' | 'vrs'>('map')
   const [region, setRegion] = useState<'All' | TournamentRegion>('All')
@@ -115,6 +117,14 @@ export function WorldMap({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
+  useEffect(() => {
+    if (!focusEventId) return
+    const event = tournamentForId(focusEventId)
+    if (!event) return
+    const endsAt = tournamentEndsAt(event, state.seasonStart)
+    if (compareGameTime(endsAt, state.now) >= 0) setSelectedId(event.id)
+  }, [focusEventId, state.now, state.seasonStart])
+
   const payroll = weeklyPayroll(state)
   const level = managerLevelProgress(state.managerXp).level
   const vrsStandings = useMemo(
@@ -124,11 +134,12 @@ export function WorldMap({
   const clubVrs = vrsStandings.find((row) => row.isPlayer)
   const visible = useMemo(
     () => TOURNAMENTS.filter((event) =>
+      compareGameTime(tournamentEndsAt(event, state.seasonStart), state.now) >= 0 &&
       (region === 'All' || event.region === region) &&
       (circuit === 'All' || event.circuitTier === circuit) &&
       (format === 'All' || event.format === format),
     ),
-    [region, circuit, format],
+    [region, circuit, format, state.now, state.seasonStart],
   )
   const visibleCountries = useMemo(
     () => region === 'All'
@@ -147,7 +158,7 @@ export function WorldMap({
     () => clusterEventPoints(eventPoints, zoom),
     [eventPoints, zoom],
   )
-  const selected = tournamentForId(selectedId) ?? visible[0] ?? TOURNAMENTS[0]
+  const selected = visible.find((event) => event.id === selectedId) ?? visible[0] ?? TOURNAMENTS[0]
   const active = tournamentForId(state.activeEventId)
   const booking = canBookTournament(state, selected.id)
   const booked = state.activeEventId === selected.id
@@ -157,14 +168,18 @@ export function WorldMap({
   const selectedEnd = tournamentEndsAt(selected, state.seasonStart)
   const selectedRun = state.activeTournament?.eventId === selected.id ? state.activeTournament : null
   const selectedNextMatch = nextPlayerMatch(selectedRun)
-  const registrationClosed = compareGameTime(state.now, selectedStart) >= 0 && !booked
+  const registrationClosesAt = addGameHours(selectedStart, -72)
+  const registrationClosed = compareGameTime(state.now, registrationClosesAt) > 0 && !booked
+  const eventStarted = compareGameTime(state.now, selectedStart) >= 0
   const selectedStatus = booked
     ? (selectedRun?.status.replaceAll('_', ' ').toUpperCase() ?? 'REGISTERED')
-    : registrationClosed
-      ? 'REGISTRATION CLOSED'
-      : booking.ok
-        ? 'REGISTRATION OPEN'
-        : 'LOCKED'
+    : eventStarted
+      ? 'ONGOING'
+      : registrationClosed
+        ? 'REGISTRATION CLOSED'
+        : booking.ok
+          ? 'REGISTRATION OPEN'
+          : 'LOCKED'
 
   const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
     setRegion(nextRegion)
@@ -283,6 +298,27 @@ export function WorldMap({
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="world-event-rail" aria-label="Tournament selector">
+        {visible.map((event) => {
+          const start = tournamentStartsAt(event, state.seasonStart)
+          const gate = canBookTournament(state, event.id)
+          const isActive = state.activeEventId === event.id
+          const ongoing = compareGameTime(state.now, start) >= 0
+          const status = isActive ? 'REGISTERED' : ongoing ? 'ONGOING' : gate.ok ? 'OPEN' : 'CLOSED'
+          return (
+            <button
+              key={event.id}
+              className={(selected.id === event.id ? 'selected ' : '') + (isActive ? 'active' : '')}
+              onClick={() => setSelectedId(event.id)}
+            >
+              <span>T{event.circuitTier} · {event.format}</span>
+              <b>{event.name}</b>
+              <small>{status}</small>
+            </button>
+          )
+        })}
       </div>
 
       <div className="world-map-layout world-map-layout-v2">
@@ -405,6 +441,7 @@ export function WorldMap({
           <h2>{selected.name}</h2>
           <p>{STRUCTURE_LABELS[selected.structure]}</p>
           <div className="world-event-date">{formatGameDateTime(selectedStart)} — {formatGameDateTime(selectedEnd)}</div>
+          <div className="world-registration-deadline">REGISTRATION CLOSES · {formatGameDateTime(registrationClosesAt)}</div>
 
           <div className="world-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>

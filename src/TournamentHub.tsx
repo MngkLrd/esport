@@ -96,6 +96,7 @@ export function TournamentHub({
   const next = nextPlayerMatch(run)
   const columns = playoffColumns(run)
   const canAdvance = Boolean(next && state.now < next.scheduledAt)
+  const currentMatch = Boolean(next && state.now >= next.scheduledAt)
   const waiting = !next && !['eliminated', 'champion', 'complete'].includes(run.status)
 
   return (
@@ -116,7 +117,7 @@ export function TournamentHub({
 
         <div className="tournament-next-match">
           <div>
-            <span>NEXT CLUB MATCH</span>
+            <span>{currentMatch ? 'CURRENT CLUB MATCH' : 'NEXT CLUB MATCH'}</span>
             {next ? (
               <>
                 <strong>{teamName(run, next.teamAId)} <i>VS</i> {teamName(run, next.teamBId)}</strong>

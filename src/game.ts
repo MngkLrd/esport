@@ -315,7 +315,9 @@ export const teamRating = (roster: Player[], startingFive?: string[], continuity
       const condition = (p.form - 50) * 0.08 + (p.morale - 50) * 0.05 - p.fatigue * 0.07
       return sum + overall(p) + condition
     }, 0) / active.length
-  return Math.round(clamp(raw * 0.87 + chemistry(roster, active.map((p) => p.id), continuity) * 0.13))
+  // Player quality is the primary competitive signal. Chemistry still matters,
+  // but it should not flatten a clear skill gap between lineups.
+  return Math.round(clamp(raw * 0.94 + chemistry(roster, active.map((p) => p.id), continuity) * 0.06))
 }
 
 const roleFitBonus: Record<LineupSlot, Record<Role, number>> = {
@@ -820,7 +822,7 @@ const opponentNames = [
 const mapPool = ['Dust II', 'Mirage', 'Inferno', 'Nuke', 'Ancient', 'Anubis'] as const
 
 const modeTuning: Record<MatchMode, { difficulty: number; baseReward: number; fans: number; label: string }> = {
-  scrim: { difficulty: -5, baseReward: 700, fans: 25, label: 'Тренировочный контур' },
+  scrim: { difficulty: -5, baseReward: 0, fans: 0, label: 'Пракк-матч' },
   showmatch: { difficulty: 1, baseReward: 950, fans: 70, label: 'Шоуматч сообщества' },
   cup: { difficulty: 7, baseReward: 1450, fans: 150, label: 'Онлайн-кубок' },
 }
@@ -838,7 +840,7 @@ const matchVrsBase = (mode: MatchMode, event: TournamentEvent | null) => {
   if (event) return event.circuitTier === 1 ? 22 : event.circuitTier === 2 ? 15 : 10
   if (mode === 'cup') return 13
   if (mode === 'showmatch') return 8
-  return 3
+  return 0
 }
 
 const matchVrsAward = (
@@ -850,6 +852,7 @@ const matchVrsAward = (
 ) => {
   if (!won) return 0
   const base = matchVrsBase(mode, event)
+  if (base <= 0) return 0
   const strength = Math.round(clamp((opponentRating - ourRating) * .32, -3, 8))
   return Math.max(1, base + strength)
 }
@@ -939,12 +942,16 @@ const narrative = (
     'Хороших раундов недостаточно, чтобы удержать серию',
     'Под давлением мелкие слабости состава превращаются в поражение',
   ]
-  const financial = net >= 0
-    ? ' Неделя завершилась на ' + net + ' кредитов выше зарплатных расходов.'
-    : ' Дохода от результата не хватило на зарплаты: дефицит ' + Math.abs(net) + ' кредитов.'
-  const detail = won
-    ? 'Победа над ' + opponent + ' оправдала выбранный план. ' + mvp.alias + ' стал лучшим на сервере, а стабильность состава и состояние игроков повлияли на перевес между картами.'
-    : 'Поражение от ' + opponent + ' показало слабости выбранного плана. Штабу теперь нужно отделить тактическую ошибку от усталости, контрактных проблем и обычного разброса.'
+  const financial = mode === 'scrim'
+    ? ''
+    : net >= 0
+      ? ' Неделя завершилась на ' + net + ' кредитов выше зарплатных расходов.'
+      : ' Дохода от результата не хватило на зарплаты: дефицит ' + Math.abs(net) + ' кредитов.'
+  const detail = mode === 'scrim'
+    ? 'Пракк против ' + opponent + ' прошёл без рейтинговых и финансовых ставок. Серия нужна для сыгранности и проверки текущей пятёрки.'
+    : won
+      ? 'Победа над ' + opponent + ' оправдала выбранный план. ' + mvp.alias + ' стал лучшим на сервере, а стабильность состава и состояние игроков повлияли на перевес между картами.'
+      : 'Поражение от ' + opponent + ' показало слабости выбранного плана. Штабу теперь нужно отделить тактическую ошибку от усталости, контрактных проблем и обычного разброса.'
   return {
     headline: pick(won ? winHeads : lossHeads, rng),
     detail: detail + financial + ' Режим: ' + modeTuning[mode].label + '.',
@@ -1222,8 +1229,9 @@ export const canBookTournament = (state: GameState, eventId: string) => {
   }
 
   const startsAt = tournamentStartsAt(event, state.seasonStart)
-  if (compareGameTime(state.now, startsAt) >= 0 && state.activeEventId !== eventId) {
-    return { ok: false, reason: 'Регистрация уже закрыта.' }
+  const registrationClosesAt = addGameHours(startsAt, -72)
+  if (compareGameTime(state.now, registrationClosesAt) > 0 && state.activeEventId !== eventId) {
+    return { ok: false, reason: 'Регистрация закрывается за 3 дня до старта.' }
   }
 
   const cost = tournamentEntryCost(event)
@@ -1310,12 +1318,19 @@ export const canPlayMatch = (state: GameState, mode: MatchMode) => {
     const run = advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
     if (tournamentIsFinished(run)) return { ok: false, reason: 'Турнир завершён.' }
     const match = nextPlayerMatch(run)
-    if (!match) return { ok: false, reason: 'Ожидаются результаты других матчей сетки.' }
-    if (compareGameTime(state.now, match.scheduledAt) < 0) return { ok: false, reason: 'Матч ещё не начался по расписанию.' }
-    if (match.status !== 'ready') return { ok: false, reason: 'Сетка ещё не определила соперника.' }
+
+    if (mode === 'scrim') {
+      if (match && compareGameTime(state.now, match.scheduledAt) >= 0) {
+        return { ok: false, reason: 'Сначала сыграй текущий официальный матч.' }
+      }
+    } else {
+      if (!match) return { ok: false, reason: 'Ожидаются результаты других матчей сетки.' }
+      if (compareGameTime(state.now, match.scheduledAt) < 0) return { ok: false, reason: 'Матч ещё не начался по расписанию.' }
+      if (match.status !== 'ready') return { ok: false, reason: 'Сетка ещё не определила соперника.' }
+    }
   }
 
-  const event = tournamentForId(state.activeEventId)
+  const event = mode === 'scrim' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
   if (effectiveMode === 'cup' && !event && state.wins < 2 && state.reputation < 45) {
     return { ok: false, reason: 'Кубок откроется после 2 побед или при 45 репутации.' }
@@ -1328,11 +1343,12 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const gate = canPlayMatch(state, mode)
   if (!gate.ok) return state
 
-  const event = tournamentForId(state.activeEventId)
+  const event = mode === 'scrim' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
+  const isPractice = effectiveMode === 'scrim' && !event
   const clubSeed = tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity)
   const clubPlayerKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
-  const preparedRun = state.activeTournament
+  const preparedRun = event && state.activeTournament
     ? advanceTournamentTo(
         refreshTournamentTeamsFromWorld(state.activeTournament, state.world, clubPlayerKeys),
         state.now,
@@ -1375,7 +1391,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     const map = pick(mapPool.filter((name) => !maps.some((current) => current.map === name)), rng)
     const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
     const effectiveRating = baseRating + tacticMod + momentum - rolePenalty - mapFatigue
-    const volatility = tactic === 'aggressive' ? 6.8 : tactic === 'structured' ? 8.8 : 7.8
+    const volatility = tactic === 'aggressive' ? 5.4 : tactic === 'structured' ? 4.8 : 5.1
     const probability = 1 / (1 + Math.exp((opponent.rating - effectiveRating) / volatility))
     const wonMap = rng() < probability
     const closeness = 1 - Math.min(1, Math.abs(probability - .5) * 2)
@@ -1418,10 +1434,10 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   }
 
   const tune = modeTuning[effectiveMode]
-  const reward = event ? tournamentPrize : Math.round(tune.baseReward * (won ? 1 : .42))
+  const reward = isPractice ? 0 : event ? tournamentPrize : Math.round(tune.baseReward * (won ? 1 : .42))
   const payroll = 0
   const net = reward
-  const fansDelta = Math.round(tune.fans * (won ? 1 : .25))
+  const fansDelta = isPractice ? 0 : Math.round(tune.fans * (won ? 1 : .25))
 
   const performances = active
     .map((player) => ({ playerId: player.id, alias: player.alias, rating: performanceRating(player, won, tactic, rng) }))
@@ -1439,9 +1455,19 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const activeIds = new Set(active.map((player) => player.id))
   const roster = state.roster.map((player) => {
     const played = activeIds.has(player.id)
-    const formDelta = played ? (won ? 3 : -2) + Math.round((rng() - .5) * 3) : Math.round((rng() - .5) * 2)
-    const moraleDelta = played ? (won ? 4 : -4) : (won ? 1 : 0)
-    const fatigueGain = (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * .35) : 0)
+    const formDelta = isPractice
+      ? (played ? Math.round((rng() - .5) * 2) : 0)
+      : played
+        ? (won ? 3 : -2) + Math.round((rng() - .5) * 3)
+        : Math.round((rng() - .5) * 2)
+    const moraleDelta = isPractice
+      ? (played && won ? 1 : 0)
+      : played
+        ? (won ? 4 : -4)
+        : (won ? 1 : 0)
+    const fatigueGain = isPractice
+      ? 4
+      : (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * .35) : 0)
     return {
       ...player,
       form: clamp(player.form + formDelta),
@@ -1473,7 +1499,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     tournamentMatchId: tournamentMatch?.id ?? null,
     opponentTeamId: opponent.teamId ?? null,
     opponentRoster: opponent.roster ?? [],
-    vrsDelta: matchVrs + tournamentVrs,
+    vrsDelta: isPractice ? 0 : matchVrs + tournamentVrs,
   }
 
   const contractNews: NewsItem[] = roster.some((player) => player.contractWeeks <= 2)
@@ -1497,12 +1523,16 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     : []
 
   const nextWeek = Math.min(state.seasonLength, gameWeekForDate(state.seasonStart, matchEnd))
-  const nextActiveTournament = resolvedRun && !tournamentFinished ? resolvedRun : null
+  const nextActiveTournament = event
+    ? (resolvedRun && !tournamentFinished ? resolvedRun : null)
+    : state.activeTournament
+      ? advanceTournamentTo(state.activeTournament, matchEnd, state.seed + state.season)
+      : null
   const finishedHistory = resolvedRun && tournamentFinished
     ? [resolvedRun, ...state.tournamentHistory].slice(0, 30)
     : state.tournamentHistory
 
-  const updatedWorld = opponent.teamId && opponent.teamId !== PLAYER_CLUB_WORLD_ID
+  const updatedWorld = !isPractice && opponent.teamId && opponent.teamId !== PLAYER_CLUB_WORLD_ID
     ? awardWorldTeamVrs(state.world, opponent.teamId, opponentVrs)
     : state.world
 
@@ -1513,14 +1543,14 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     week: nextWeek,
     credits: state.credits + reward,
     fans: Math.max(0, state.fans + fansDelta),
-    reputation: clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
-    wins: state.wins + (won ? 1 : 0),
-    losses: state.losses + (won ? 0 : 1),
-    streak: won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
-    seasonPoints: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
-    clubVrsPoints: state.clubVrsPoints + matchVrs + tournamentVrs,
+    reputation: isPractice ? state.reputation : clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
+    wins: state.wins + (!isPractice && won ? 1 : 0),
+    losses: state.losses + (!isPractice && !won ? 1 : 0),
+    streak: isPractice ? state.streak : won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
+    seasonPoints: state.seasonPoints + (!isPractice && won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
+    clubVrsPoints: state.clubVrsPoints + (isPractice ? 0 : matchVrs + tournamentVrs),
     roster,
-    lineupContinuity: clamp(state.lineupContinuity + (won ? 3 : 1), 0, 100),
+    lineupContinuity: clamp(state.lineupContinuity + (isPractice ? 1 : won ? 3 : 1), 0, 100),
     history: [result, ...state.history].slice(0, 80),
     news: [
       { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail + (result.vrsDelta ? ' · VRS +' + result.vrsDelta : '') },
@@ -1528,14 +1558,16 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
       ...contractNews,
       ...state.news,
     ].slice(0, 80),
-    managerXp: state.managerXp + (effectiveMode === 'cup' ? 100 : effectiveMode === 'showmatch' ? 75 : 55) + (won ? 35 : 10),
-    packTokens: state.packTokens + (won ? (effectiveMode === 'cup' ? 55 : effectiveMode === 'showmatch' ? 40 : 25) : 10),
+    managerXp: state.managerXp + (isPractice ? 15 : (effectiveMode === 'cup' ? 100 : effectiveMode === 'showmatch' ? 75 : 55) + (won ? 35 : 10)),
+    packTokens: state.packTokens + (isPractice ? 0 : won ? (effectiveMode === 'cup' ? 55 : effectiveMode === 'showmatch' ? 40 : 25) : 10),
     activeEventId: nextActiveTournament?.eventId ?? null,
     activeTournament: nextActiveTournament,
     tournamentHistory: finishedHistory,
-    pendingDecision: event
-      ? (tournamentFinished ? weeklyDecision(state, won) : null)
-      : weeklyDecision(state, won),
+    pendingDecision: isPractice
+      ? null
+      : event
+        ? (tournamentFinished ? weeklyDecision(state, won) : null)
+        : weeklyDecision(state, won),
     lastWeekNet: reward,
   }
 
@@ -2005,8 +2037,8 @@ export const releasePlayer = (state: GameState, playerId: string): GameState => 
 
 export const modeInfo: Record<MatchMode, { name: string; description: string; risk: string }> = {
   scrim: {
-    name: 'Тренировочный микс',
-    description: 'Меньше давления и слабее соперник. Подходит для стабилизации изменённого состава, но доход ограничен.',
+    name: 'Пракк-матч',
+    description: 'Тренировочная серия без денег и VRS. Даёт только небольшой прирост сыгранности.',
     risk: 'Low',
   },
   showmatch: {

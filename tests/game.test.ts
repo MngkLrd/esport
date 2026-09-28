@@ -24,7 +24,7 @@ import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
 import { generateMatchPlayback, simulationFrameAt, type SimRound } from '../src/matchSimulation'
 import { constrainRoundToNavigation, isNavigationSegmentClear, type RadarNavigationGrid } from '../src/radarNavigation'
-import { hoursBetween } from '../src/calendar'
+import { addGameHours, hoursBetween } from '../src/calendar'
 import { PLAYER_CLUB_WORLD_ID, createWorldState } from '../src/world'
 import { tournamentForId } from '../src/events'
 import {
@@ -34,6 +34,7 @@ import {
   opponentForPlayerMatch,
   resolvePlayerTournamentMatch,
   tournamentIsFinished,
+  tournamentStartsAt,
 } from '../src/tournamentEngine'
 
 describe('P0 career flow', () => {
@@ -261,13 +262,30 @@ describe('P0 career flow', () => {
     expect(report.prospects).toHaveLength(6)
     expect(canBookTournament(levelThree, 'lisbon').ok).toBe(true)
     expect(canBookTournament(ready, 'lisbon').ok).toBe(false)
-    expect(canBookTournament(ready, 'eu-open-1').ok).toBe(true)
+    expect(canBookTournament(ready, 'eu-open-1').ok).toBe(false)
+    expect(canBookTournament(ready, 'nordic-online').ok).toBe(true)
   })
 
-  it('forces one weekly club decision before the next event loop', () => {
+  it('keeps pracc non-ranked and non-paid while nudging lineup continuity', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
     const played = playMatch(ready, 'scrim', 'balanced')
+
+    expect(played.credits).toBe(ready.credits)
+    expect(played.clubVrsPoints).toBe(ready.clubVrsPoints)
+    expect(played.wins).toBe(ready.wins)
+    expect(played.losses).toBe(ready.losses)
+    expect(played.packTokens).toBe(ready.packTokens)
+    expect(played.lineupContinuity).toBe(Math.min(100, ready.lineupContinuity + 1))
+    expect(played.history[0].reward).toBe(0)
+    expect(played.history[0].vrsDelta).toBe(0)
+    expect(played.pendingDecision).toBeNull()
+  })
+
+  it('forces one weekly club decision after an official non-tournament match', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const played = playMatch(ready, 'showmatch', 'balanced')
     expect(played.pendingDecision).toBeTruthy()
     expect(canPlayMatch(played, 'scrim').ok).toBe(false)
     expect(canBookTournament(played, 'helsinki').ok).toBe(false)
@@ -277,23 +295,35 @@ describe('P0 career flow', () => {
     expect(canPlayMatch(resolved, 'scrim').ok).toBe(true)
   })
 
+  it('keeps registration open until exactly 72 hours before tournament start', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const event = tournamentForId('nordic-online')!
+    const start = tournamentStartsAt(event, ready.seasonStart)
+    const atCutoff = { ...ready, now: addGameHours(start, -72) }
+    const afterCutoff = { ...ready, now: addGameHours(start, -71) }
+
+    expect(canBookTournament(atCutoff, event.id).ok).toBe(true)
+    expect(canBookTournament(afterCutoff, event.id).ok).toBe(false)
+  })
+
   it('keeps online tournaments free and scheduled in real calendar time', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    const booked = bookTournament(ready, 'eu-open-1')
+    const booked = bookTournament(ready, 'nordic-online')
     expect(booked.credits).toBe(ready.credits)
-    expect(booked.activeTournament?.startsAt).toContain('2026-09-30')
-    expect(canPlayMatch(booked, 'scrim').ok).toBe(false)
+    expect(booked.activeTournament?.startsAt).toContain('2026-10-10')
+    expect(canPlayMatch(booked, 'scrim').ok).toBe(true)
 
     const atMatch = advanceToNextTournamentMatch(booked)
-    expect(canPlayMatch(atMatch, 'scrim').ok).toBe(true)
+    expect(canPlayMatch(atMatch, 'scrim').ok).toBe(false)
     expect(atMatch.activeTournament?.matches.some((match) => match.status === 'ready' && [match.teamAId, match.teamBId].includes('club'))).toBe(true)
   })
 
   it('does not let manual calendar advance skip a mandatory club fixture', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    const booked = bookTournament(ready, 'eu-open-1')
+    const booked = bookTournament(ready, 'nordic-online')
     const farFuture = advanceCareerTo(booked, '2026-10-20T09:00:00')
     const fixture = nextPlayerMatch(farFuture.activeTournament)
     expect(fixture).toBeTruthy()
@@ -303,7 +333,7 @@ describe('P0 career flow', () => {
   it('freezes the career clock once a scheduled club fixture is due', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
-    const booked = bookTournament(ready, 'eu-open-1')
+    const booked = bookTournament(ready, 'nordic-online')
     const atMatch = advanceToNextTournamentMatch(booked)
     const attemptedSkip = advanceCareerTo(atMatch, '2026-10-10T09:00:00')
     expect(attemptedSkip.now).toBe(atMatch.now)

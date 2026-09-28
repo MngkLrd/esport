@@ -1,21 +1,20 @@
 import { managerLevelProgress, type GameState } from './game'
 
 const MILESTONES = [
-  { level: 1, title: 'Club Founder', body: 'Стартовый клуб, базовый рынок и welcome pack.' },
-  { level: 3, title: 'Regional Access', body: 'Расширенный scouting и больше tournament options.' },
-  { level: 5, title: 'Pro Circuit', body: 'Более дорогие турниры и повышенные награды.' },
-  { level: 8, title: 'Elite Manager', body: 'Продвинутые сезонные objectives и club prestige.' },
+  { level: 1, title: 'Regional Circuit', body: 'Nordic Masters и Steppe Invitational · shortlist 5 игроков.' },
+  { level: 3, title: 'International Network', body: 'Dallas и São Paulo · shortlist 6 игроков.' },
+  { level: 5, title: 'Pro Circuit', body: 'S-tier Cologne, Katowice и Chengdu · shortlist 7 игроков.' },
 ]
 
 export function ManagerProfile({ state }: { state: GameState }) {
   const progress = managerLevelProgress(state.managerXp)
-  const nextMilestone = MILESTONES.find((item) => item.level > progress.level) ?? MILESTONES[MILESTONES.length - 1]
+  const nextMilestone = MILESTONES.find((item) => item.level > progress.level) ?? null
 
   return (
     <section className="screen manager-profile-screen">
       <div className="fifa-screen-header">
         <div>
-          <span>PROFILE &gt; MANAGER PROGRESSION</span>
+          <span>CAREER PROGRESSION</span>
           <h1>MANAGER LEVEL</h1>
         </div>
         <div className="manager-level-badge">{progress.level}</div>
@@ -25,8 +24,8 @@ export function ManagerProfile({ state }: { state: GameState }) {
         <div className="manager-progress-copy">
           <span>CURRENT LEVEL</span>
           <strong>{String(progress.level).padStart(2, '0')}</strong>
-          <h2>{nextMilestone.title}</h2>
-          <p>{nextMilestone.body}</p>
+          <h2>{nextMilestone ? nextMilestone.title : 'ALL CIRCUITS UNLOCKED'}</h2>
+          <p>{nextMilestone ? 'NEXT · LVL ' + nextMilestone.level + ' · ' + nextMilestone.body : 'Полная турнирная карта и максимальная глубина scouting доступны.'}</p>
         </div>
         <div className="manager-progress-track">
           <div className="manager-progress-line"><i style={{ width: progress.percent + '%' }} /></div>
@@ -34,7 +33,7 @@ export function ManagerProfile({ state }: { state: GameState }) {
           <div className="manager-milestones">
             {MILESTONES.map((item) => (
               <article key={item.level} className={progress.level >= item.level ? 'complete' : ''}>
-                <b>LVL {item.level}</b>
+                <b>{progress.level >= item.level ? 'UNLOCKED' : 'LVL ' + item.level}</b>
                 <strong>{item.title}</strong>
                 <p>{item.body}</p>
               </article>

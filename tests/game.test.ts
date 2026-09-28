@@ -64,7 +64,8 @@ describe('P0 career flow', () => {
     expect(a.history).toHaveLength(1)
     expect(a.roster.every((player) => player.contractWeeks < 12)).toBe(true)
 
-    const final = playMatch({ ...a, seasonLength: 2 }, 'scrim', 'balanced')
+    const continued = resolveClubDecision(a, 'a')
+    const final = playMatch({ ...continued, seasonLength: 2 }, 'scrim', 'balanced')
     expect(final.seasonEnded).toBe(true)
     expect(final.seasonSummary?.season).toBe(1)
     expect(canPlayMatch(final, 'scrim').ok).toBe(false)

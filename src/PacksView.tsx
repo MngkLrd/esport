@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   PACKS,
-  RARITY_COLOR,
   RARITY_LABEL,
   hydratePackState,
 } from './packs'
@@ -18,8 +17,9 @@ import {
 import { countryFlag } from './playerVisuals'
 import { CardDetails } from './CardDetails'
 import { PackArtwork } from './PackArtwork'
-import { PlayerPortrait, preloadPlayerPortraits } from './PlayerPortrait'
+import { preloadPlayerPortraits } from './PlayerPortrait'
 import type { Player } from './game'
+import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 
 const SPIN_MS = 6000
 const QUANTITIES = [1, 3, 5, 10] as const
@@ -41,86 +41,81 @@ const FILTERS: Array<{ value: 'all' | PackRarity; label: string }> = [
   { value: 'legendary', label: 'Легендарные' },
 ]
 
+function packStats(card: PackCard) {
+  return card.cardStats
+    ? {
+        aim: card.cardStats.aim,
+        utility: card.cardStats.utility,
+        positioning: card.cardStats.positioning,
+        clutch: card.cardStats.clutch,
+      }
+    : null
+}
+
 function ReelCard({ card, winner = false }: { card: PackCard; winner?: boolean }) {
   return (
-    <div
-      className={'pack-reel-card rarity-' + card.rarity + (winner ? ' is-winner' : '')}
-      style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}
-    >
-      <div className="pack-reel-power">{card.power}</div>
-      <div className="pack-reel-photo">
-        <span>{card.alias.slice(0, 2).toUpperCase()}</span>
-        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="eager" draggable={false} />
-      </div>
-      <strong>{card.alias}</strong>
-      <small>{card.team}</small>
-      <i>{RARITY_LABEL[card.rarity]}</i>
+    <div className={'pack-reel-card shared-card-reel rarity-' + card.rarity + (winner ? ' is-winner' : '')}>
+      <CollectiblePlayerCard
+        rating={card.power}
+        tier={tierForPackRarity(card.rarity)}
+        role={card.role}
+        alias={card.alias}
+        team={card.team}
+        country={card.country}
+        profileId={card.profileId}
+        stats={packStats(card)}
+        loading="eager"
+        className="pack-shared-card"
+        badge={RARITY_LABEL[card.rarity]}
+      />
     </div>
   )
 }
 
 function CollectionCard({ card, count, onOpen }: { card: PackCard; count: number; onOpen: () => void }) {
   return (
-    <button type="button" aria-label={'Открыть карточку ' + card.alias} onClick={onOpen} className={'collection-card rarity-' + card.rarity} style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}>
-      <div className="collection-card-top">
-        <b>{card.power}</b>
-        <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
-      </div>
-      <div className="collection-edition">{card.edition}</div>
-      {count > 1 && <div className="collection-count">×{count}</div>}
-      <div className="collection-photo">
-        <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-        <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="lazy" />
-      </div>
-      <div className="collection-identity">
-        <strong>{card.alias}</strong>
-        <span>{countryFlag(card.country ?? 'Неизвестно')} {card.country ?? '—'} · {card.team}</span>
-      </div>
-      {card.cardStats && (
-        <div className="collection-card-stats">
-          <span><b>{card.cardStats.aim}</b>АИМ</span>
-          <span><b>{card.cardStats.utility}</b>УТЛ</span>
-          <span><b>{card.cardStats.positioning}</b>ПОЗ</span>
-          <span><b>{card.cardStats.clutch}</b>КЛА</span>
-        </div>
-      )}
-      <div className="collection-rarity">{RARITY_LABEL[card.rarity]}</div>
-    </button>
+    <div className={'collection-card-shell rarity-' + card.rarity}>
+      <CollectiblePlayerCard
+        rating={card.power}
+        tier={tierForPackRarity(card.rarity)}
+        role={card.role}
+        alias={card.alias}
+        team={card.team}
+        country={card.country}
+        profileId={card.profileId}
+        stats={packStats(card)}
+        onOpen={onOpen}
+        className="collection-shared-card"
+        badge={RARITY_LABEL[card.rarity]}
+      />
+      <div className="collection-edition-shared">{card.edition}</div>
+      {count > 1 && <div className="collection-count-shared">×{count}</div>}
+    </div>
   )
 }
 
 function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: boolean; onOpen: () => void }) {
   return (
-    <button type="button" onClick={onOpen} aria-label={'Открыть подробности ' + card.alias}
-      className={'pack-reveal rarity-' + card.rarity}
-      style={{ '--rarity': RARITY_COLOR[card.rarity] } as React.CSSProperties}
-    >
+    <div className={'pack-reveal shared-pack-reveal rarity-' + card.rarity}>
       <div className="pack-reveal-beam beam-one" />
       <div className="pack-reveal-beam beam-two" />
       <div className="pack-reveal-grid" />
-      <div className="pack-reveal-card">
-        <div className="pack-reveal-rating">
-          <b>{card.power}</b>
-          <span>{card.role ? ROLE_LABELS[card.role] : 'ПРО'}</span>
-          <i>{card.edition}</i>
-        </div>
-        <div className="pack-reveal-country">{countryFlag(card.country ?? 'Неизвестно')}</div>
-        <div className="pack-reveal-photo">
-          <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-          <PlayerPortrait alias={card.alias} playerId={card.profileId} alt={card.alias} loading="eager" />
-        </div>
-        <div className="pack-reveal-name">
-          <strong>{card.alias}</strong>
-          <span>{card.team}</span>
-        </div>
-        {card.cardStats && (
-          <div className="pack-reveal-card-stats">
-            <span><b>{card.cardStats.aim}</b>АИМ</span>
-            <span><b>{card.cardStats.utility}</b>УТЛ</span>
-            <span><b>{card.cardStats.positioning}</b>ПОЗ</span>
-            <span><b>{card.cardStats.clutch}</b>КЛА</span>
-          </div>
-        )}
+
+      <div className="pack-reveal-card-shared">
+        <CollectiblePlayerCard
+          rating={card.power}
+          tier={tierForPackRarity(card.rarity)}
+          role={card.role}
+          alias={card.alias}
+          team={card.team}
+          country={card.country}
+          profileId={card.profileId}
+          stats={packStats(card)}
+          onOpen={onOpen}
+          loading="eager"
+          className="winner-shared-card"
+          badge={RARITY_LABEL[card.rarity]}
+        />
       </div>
 
       <div className="pack-reveal-copy">
@@ -132,7 +127,7 @@ function WinnerReveal({ card, duplicate, onOpen }: { card: PackCard; duplicate: 
           <span><b>{duplicate ? 'ДУБЛЬ' : 'НОВАЯ'}</b> {duplicate ? 'уже есть в коллекции' : 'новая для коллекции'}</span>
         </div>
       </div>
-    </button>
+    </div>
   )
 }
 

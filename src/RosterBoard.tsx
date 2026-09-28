@@ -232,39 +232,39 @@ export function RosterBoard({
   }
 
   return (
-    <section className="screen roster-screen game-roster-screen">
-      <div className="roster-heading game-roster-heading">
+    <section className="sim-screen sim-roster">
+      <div className="sim-screen-head sim-roster-head">
         <div>
           <span className="eyebrow">ACTIVE LINEUP</span>
           <h1>STARTING FIVE</h1>
         </div>
-        <div className="roster-score">
+        <div className="sim-roster-rating">
           <b>{rating}</b>
           <span>OVR КОМАНДЫ</span>
           <small>{chem} химия · {state.lineupContinuity} стабильность</small>
         </div>
       </div>
 
-      <div className="roster-sheet-summary game-roster-summary">
+      <div className="sim-roster-toolbar">
         <span><b>{state.startingFive.length}/5</b> START</span>
         <span><b>{bench.length}</b> BENCH</span>
         <button className="secondary" onClick={onOpenScout}>TRANSFER MARKET</button>
       </div>
 
-      <div className="fifa-squad-overview">
-      <div className="lineup-board">
-        <div className="lineup-board-head">
+      <div className="sim-roster-body">
+      <div className="sim-lineup-stage">
+        <div className="sim-lineup-head">
           <div><span>STARTING FIVE</span></div>
-          <div className="lineup-board-pulse"><b>{chem}</b><span>CHEM</span></div>
+          <div className="sim-lineup-chem"><b>{chem}</b><span>CHEM</span></div>
         </div>
 
-        <div className="lineup-slot-grid">
+        <div className="sim-lineup-grid">
           {LINEUP_SLOTS.map((slot) => {
             const player = slotPlayer(slot)
             return (
               <article
                 key={slot}
-                className={'lineup-slot ' + (player ? 'is-filled ' : 'is-empty ') + (dragOverSlot === slot ? 'is-drop-target' : '')}
+                className={'sim-lineup-slot ' + (player ? 'is-filled ' : 'is-empty ') + (dragOverSlot === slot ? 'is-drop-target' : '')}
                 onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move' }}
                 onDragEnter={() => setDragOverSlot(slot)}
                 onDragLeave={(event) => {
@@ -272,7 +272,7 @@ export function RosterBoard({
                 }}
                 onDrop={(event) => dropIntoSlot(event, slot)}
               >
-                <div className="lineup-slot-head">
+                <div className="sim-lineup-role">
                   <span>{ROLE_LABELS[slot]}</span>
                   <small>{player ? (player.role === slot ? 'ROLE MATCH' : 'OFF-ROLE') : 'EMPTY SLOT'}</small>
                 </div>
@@ -287,14 +287,14 @@ export function RosterBoard({
                       onDragStart={(event) => startDrag(event, player.id)}
                       onDragEnd={() => setDragOverSlot(null)}
                     />
-                    <div className="lineup-slot-actions">
+                    <div className="sim-lineup-actions">
                       <button type="button" onClick={() => setPickerSlot(slot)}>Заменить</button>
                       <button type="button" className="text-button" onClick={() => setState((current) => clearLineupSlot(current, slot))}>В запас</button>
                     </div>
                   </>
                 ) : (
-                  <button type="button" className="lineup-empty-card" onClick={() => setPickerSlot(slot)}>
-                    <span className="lineup-empty-plus">+</span>
+                  <button type="button" className="sim-lineup-empty-card" onClick={() => setPickerSlot(slot)}>
+                    <span className="sim-lineup-empty-plus">+</span>
                     <strong>Добавить {ROLE_LABELS[slot]}</strong>
                   </button>
                 )}
@@ -303,13 +303,13 @@ export function RosterBoard({
           })}
         </div>
       </div>
-      <aside className="squad-stats-panel">
-        <div className="squad-stats-head"><span>OVERVIEW & STATS</span><b>{rating}</b></div>
+      <aside className="sim-roster-analysis">
+        <div className="sim-analysis-head"><span>OVERVIEW & STATS</span><b>{rating}</b></div>
         <div className="squad-radar">
           <div className="squad-radar-shape" style={{ '--aim': activeAverage((player) => player.aim) + '%', '--pos': activeAverage((player) => player.gameSense) + '%', '--utl': activeAverage((player) => player.utility) + '%', '--clu': activeAverage((player) => player.clutch) + '%' } as React.CSSProperties} />
           <span className="radar-aim">AIM</span><span className="radar-pos">POS</span><span className="radar-utl">UTL</span><span className="radar-clu">CLU</span>
         </div>
-        <div className="squad-stat-lines">
+        <div className="sim-analysis-stats">
           <span><b>{chem}</b> CHEMISTRY</span>
           <span><b>{state.lineupContinuity}</b> CONTINUITY</span>
           <span><b>{activeAverage((player) => player.form)}</b> FORM</span>
@@ -319,16 +319,16 @@ export function RosterBoard({
       </aside>
       </div>
 
-      <div className="bench-board">
-        <div className="bench-board-head">
+      <div className="sim-bench">
+        <div className="sim-bench-head">
           <div><span>BENCH / CLUB CARDS</span></div>
           <b>{bench.length}</b>
         </div>
 
         {bench.length > 0 ? (
-          <div className="bench-card-grid">
+          <div className="sim-bench-grid">
             {bench.map((player) => (
-              <article className="bench-card-shell" key={player.id}>
+              <article className="sim-bench-card" key={player.id}>
                 <GameCard
                   player={player}
                   draggable={player.contractWeeks > 0}
@@ -336,11 +336,11 @@ export function RosterBoard({
                   onDragStart={(event) => startDrag(event, player.id)}
                   onDragEnd={() => setDragOverSlot(null)}
                 />
-                <div className="bench-card-meta">
+                <div className="sim-bench-meta">
                   <span>{ROLE_LABELS[player.role]}</span>
                   <span>{player.contractWeeks > 0 ? player.contractWeeks + ' нед.' : 'КОНТРАКТ ИСТЁК'}</span>
                 </div>
-                <div className="bench-card-actions">
+                <div className="sim-bench-actions">
                   <button type="button" onClick={() => setState((current) => restPlayer(current, player.id))} disabled={state.staffEnergy < 1}>Отдых</button>
                   <button type="button" onClick={() => setState((current) => trainPlayer(current, player.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>Трен.</button>
                   <button type="button" onClick={() => setState((current) => renewContract(current, player.id))} disabled={state.credits < player.salary * 4}>Контракт</button>
@@ -350,7 +350,7 @@ export function RosterBoard({
             ))}
           </div>
         ) : (
-          <div className="bench-empty">Все доступные игроки сейчас стоят в стартовой пятёрке.</div>
+          <div className="sim-empty">Все доступные игроки сейчас стоят в стартовой пятёрке.</div>
         )}
       </div>
 

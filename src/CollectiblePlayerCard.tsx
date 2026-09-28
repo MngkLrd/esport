@@ -2,13 +2,14 @@ import type { DragEvent, ReactNode } from 'react'
 import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 
-export type CollectibleCardTier = 'silver' | 'rare' | 'elite' | 'gold'
+export type CollectibleCardTier = 'silver' | 'uncommon' | 'rare' | 'elite' | 'gold'
 
 export const tierForPackRarity = (rarity: string): CollectibleCardTier => {
   if (rarity === 'legendary') return 'gold'
   if (rarity === 'epic') return 'elite'
-  if (rarity === 'common') return 'silver'
-  return 'rare'
+  if (rarity === 'rare') return 'rare'
+  if (rarity === 'uncommon') return 'uncommon'
+  return 'silver'
 }
 
 const shortRole = (role: string | null | undefined) => {

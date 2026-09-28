@@ -23,6 +23,7 @@ import { rollWelcomePack } from '../src/welcomePack'
 import { rollPack } from '../src/packs'
 import { executeGameCommand } from '../src/gameCommands'
 import { generateMatchPlayback, simulationFrameAt } from '../src/matchSimulation'
+import { hoursBetween } from '../src/calendar'
 import { tournamentForId } from '../src/events'
 import {
   advanceTournamentTo,
@@ -33,6 +34,10 @@ import {
 } from '../src/tournamentEngine'
 
 describe('P0 career flow', () => {
+  it('keeps game time deterministic across DST boundaries', () => {
+    expect(hoursBetween('2026-10-24T09:00:00', '2026-10-26T09:00:00')).toBe(48)
+  })
+
   it('starts empty and creates one deterministic playable five from welcome cards', () => {
     const initial = createInitialState()
     expect(initial.roster).toHaveLength(0)

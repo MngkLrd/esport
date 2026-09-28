@@ -96,6 +96,9 @@ export interface MatchResult {
   headline: string
   detail: string
   mvp: string
+  playedAt?: string
+  tournamentId?: string | null
+  tournamentMatchId?: string | null
 }
 
 export interface SeasonSummary {
@@ -908,17 +911,139 @@ export const resolveClubDecision = (state: GameState, choice: 'a' | 'b'): GameSt
   }
 }
 
+export const activeTournamentMatch = (state: GameState) => {
+  if (!state.activeTournament) return null
+  const run = advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+  return nextPlayerMatch(run)
+}
+
+const settleFinishedTournament = (state: GameState, run: TournamentRun): GameState => {
+  if (!tournamentIsFinished(run)) return { ...state, activeTournament: run }
+
+  const event = tournamentForId(run.eventId)
+  const prize = run.prizePaid ? 0 : tournamentPrizeForStatus(run.eventId, run)
+  const settledRun: TournamentRun = {
+    ...run,
+    earnedPrize: run.earnedPrize + prize,
+    prizePaid: true,
+  }
+
+  return {
+    ...state,
+    credits: state.credits + prize,
+    activeEventId: null,
+    activeTournament: null,
+    tournamentHistory: [settledRun, ...state.tournamentHistory].slice(0, 30),
+    news: event ? [{
+      id: 'tournament-finish-' + settledRun.id,
+      week: state.week,
+      kind: 'match' as const,
+      title: event.name + ' · ' + (settledRun.placement ?? settledRun.status).toUpperCase(),
+      body: prize > 0
+        ? 'Турнир завершён. Призовые: ' + prize + ' кр.'
+        : 'Турнир завершён без призовых.',
+    }, ...state.news].slice(0, 50) : state.news,
+  }
+}
+
+export const advanceCareerTo = (state: GameState, target: string): GameState => {
+  if (compareGameTime(target, state.now) <= 0 || state.seasonEnded) return state
+
+  const previousWeek = gameWeekForDate(state.seasonStart, state.now)
+  const nextWeekRaw = gameWeekForDate(state.seasonStart, target)
+  const payrollCycles = Math.max(0, nextWeekRaw - previousWeek)
+  const payrollPerWeek = weeklyPayroll(state)
+  const payrollCost = payrollPerWeek * payrollCycles
+  const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, target) / 24))
+
+  let next: GameState = {
+    ...state,
+    now: target,
+    week: Math.min(state.seasonLength, nextWeekRaw),
+    credits: Math.max(0, state.credits - payrollCost),
+    staffEnergy: payrollCycles > 0 ? 3 : state.staffEnergy,
+    roster: state.roster.map((player) => ({
+      ...player,
+      fatigue: clamp(player.fatigue - Math.min(18, elapsedDays * 2)),
+      contractWeeks: Math.max(0, player.contractWeeks - payrollCycles),
+    })),
+    lastPayroll: payrollCycles > 0 ? payrollPerWeek : state.lastPayroll,
+    lastWeekNet: payrollCycles > 0 ? -payrollPerWeek : state.lastWeekNet,
+  }
+
+  if (payrollCycles > 0) {
+    next = {
+      ...next,
+      news: [{
+        id: 'payroll-' + target,
+        week: next.week,
+        kind: 'finance' as const,
+        title: 'Недельный расчёт клуба',
+        body: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
+      }, ...next.news].slice(0, 50),
+    }
+  }
+
+  if (next.activeTournament) {
+    const advanced = advanceTournamentTo(next.activeTournament, target, next.seed + next.season)
+    next = settleFinishedTournament(next, advanced)
+  }
+
+  const seasonExpired = nextWeekRaw > state.seasonLength
+  if (seasonExpired && !next.activeTournament) {
+    const bestPlayer = [...next.history]
+      .filter((match) => match.season === next.season)
+      .flatMap((match) => match.performances)
+      .sort((a, b) => b.rating - a.rating)[0]?.alias ?? null
+
+    next = {
+      ...next,
+      seasonEnded: true,
+      seasonSummary: {
+        season: next.season,
+        wins: next.wins,
+        losses: next.losses,
+        points: next.seasonPoints,
+        reputation: next.reputation,
+        fans: next.fans,
+        credits: next.credits,
+        bestPlayer,
+        payroll: weeklyPayroll(next),
+        objective: {
+          label: 'Выиграть минимум 5 матчей',
+          target: 5,
+          value: next.wins,
+          completed: next.wins >= 5,
+        },
+      },
+    }
+  }
+
+  return next
+}
+
 export const canBookTournament = (state: GameState, eventId: string) => {
   const event = tournamentForId(eventId)
   if (!event) return { ok: false, reason: 'Событие недоступно.' }
   if (state.pendingDecision) return { ok: false, reason: 'Сначала закрой решение недели в Inbox.' }
+  if (state.seasonEnded) return { ok: false, reason: 'Сезон завершён.' }
+
   const level = managerLevelFromXp(state.managerXp)
   if (level < event.unlockLevel) return { ok: false, reason: 'Откроется на уровне менеджера ' + event.unlockLevel + '.' }
   if (event.circuitTier === 1 && state.wins < 2 && state.reputation < 45) return { ok: false, reason: 'T1 требует 2 победы или 45 репутации.' }
-  if (state.activeEventId && state.activeEventId !== eventId) return { ok: false, reason: 'Сначала заверши уже выбранный турнир.' }
+
+  if (state.activeTournament && !tournamentIsFinished(state.activeTournament) && state.activeEventId !== eventId) {
+    return { ok: false, reason: 'Сначала заверши уже выбранный турнир.' }
+  }
+
+  const startsAt = tournamentStartsAt(event, state.seasonStart)
+  if (compareGameTime(state.now, startsAt) >= 0 && state.activeEventId !== eventId) {
+    return { ok: false, reason: 'Регистрация уже закрыта.' }
+  }
+
   const cost = tournamentEntryCost(event)
-  if (state.credits < cost) return { ok: false, reason: 'Недостаточно средств на поездку и обслуживание.' }
-  if (state.seasonEnded) return { ok: false, reason: 'Сезон завершён.' }
+  if (state.credits < cost) return { ok: false, reason: 'Недостаточно средств на поездку.' }
+
   return { ok: true, reason: '' }
 }
 
@@ -926,35 +1051,89 @@ export const bookTournament = (state: GameState, eventId: string): GameState => 
   const event = tournamentForId(eventId)
   const gate = canBookTournament(state, eventId)
   if (!event || !gate.ok) return state
-  if (state.activeEventId === eventId) return state
+  if (state.activeEventId === eventId && state.activeTournament) return state
 
   const cost = tournamentEntryCost(event)
+  const activeTournament = createTournamentRun(
+    event,
+    state.seasonStart,
+    state.now,
+    state.seed + state.season * 100 + event.startDay,
+  )
+
   return {
     ...state,
     credits: Math.max(0, state.credits - cost),
     activeEventId: event.id,
+    activeTournament,
     news: [{
-      id: 'event-' + event.id + '-' + state.week,
+      id: 'event-' + event.id + '-' + state.season,
       week: state.week,
       kind: 'media' as const,
-      title: 'Следующая остановка — ' + event.city,
-      body: event.name + ' подтверждён. Поездка и обслуживание оплачены: ' + cost + ' кр. Призовой фонд: ' + event.prize + ' кр.',
+      title: event.name + ' подтверждён',
+      body: event.format === 'ONLINE'
+        ? 'Онлайн-регистрация бесплатна. Первый матч появится в турнирной сетке по расписанию.'
+        : 'Поездка подтверждена: ' + cost + ' кр. Первый матч появится в турнирной сетке по расписанию.',
     }, ...state.news].slice(0, 50),
   }
+}
+
+export const advanceToNextTournamentMatch = (state: GameState): GameState => {
+  if (!state.activeTournament || state.seasonEnded) return state
+  let current = state
+
+  for (let guard = 0; guard < 24; guard += 1) {
+    if (!current.activeTournament) return current
+
+    const run = advanceTournamentTo(current.activeTournament, current.now, current.seed + current.season)
+    current = settleFinishedTournament({ ...current, activeTournament: run }, run)
+    if (!current.activeTournament) return current
+
+    const playerMatch = nextPlayerMatch(current.activeTournament)
+    if (playerMatch) {
+      if (compareGameTime(current.now, playerMatch.scheduledAt) < 0) {
+        current = advanceCareerTo(current, playerMatch.scheduledAt)
+      }
+      return current
+    }
+
+    const nextAction = nextTournamentActionTime(current.activeTournament)
+    if (compareGameTime(nextAction, current.now) <= 0) {
+      current = advanceCareerTo(current, addGameHours(current.now, 1))
+    } else {
+      current = advanceCareerTo(current, nextAction)
+    }
+  }
+
+  return current
 }
 
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   if (!state.welcomeComplete) return { ok: false, reason: 'Сначала открой стартовый набор и собери пятёрку.' }
   if (state.pendingDecision) return { ok: false, reason: 'Сначала закрой решение недели в Inbox.' }
-  if (state.seasonEnded || state.week > state.seasonLength) return { ok: false, reason: 'Сезон завершён. Открой итог и начни следующий сезон.' }
+  if (state.seasonEnded) return { ok: false, reason: 'Сезон завершён. Открой итог и начни следующий сезон.' }
+
   const active = getStartingFive(state.roster, state.startingFive)
   if (active.length !== 5) return { ok: false, reason: 'Выбери ровно пять игроков в основу.' }
-  if (active.some((p) => p.contractWeeks <= 0)) return { ok: false, reason: 'Продли контракт или убери из основы каждого игрока с истёкшим контрактом.' }
+  if (active.some((player) => player.contractWeeks <= 0)) {
+    return { ok: false, reason: 'Продли контракт или убери из основы каждого игрока с истёкшим контрактом.' }
+  }
+
+  if (state.activeTournament) {
+    const run = advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+    if (tournamentIsFinished(run)) return { ok: false, reason: 'Турнир завершён.' }
+    const match = nextPlayerMatch(run)
+    if (!match) return { ok: false, reason: 'Ожидаются результаты других матчей сетки.' }
+    if (compareGameTime(state.now, match.scheduledAt) < 0) return { ok: false, reason: 'Матч ещё не начался по расписанию.' }
+    if (match.status !== 'ready') return { ok: false, reason: 'Сетка ещё не определила соперника.' }
+  }
+
   const event = tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
-  if (effectiveMode === 'cup' && state.wins < 2 && state.reputation < 45) {
-    return { ok: false, reason: 'Онлайн-кубок откроется после 2 побед или при 45 репутации.' }
+  if (effectiveMode === 'cup' && !event && state.wins < 2 && state.reputation < 45) {
+    return { ok: false, reason: 'Кубок откроется после 2 побед или при 45 репутации.' }
   }
+
   return { ok: true, reason: '' }
 }
 
@@ -964,25 +1143,44 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
 
   const event = tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
-  const rng = mulberry32(hashSeed([state.seed, state.week, state.history.length, effectiveMode, tactic, state.activeEventId ?? 'open', state.startingFive.join(',')].join(':')))
-  const opponent = generateOpponent(state, effectiveMode, rng)
+  const preparedRun = state.activeTournament
+    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+    : null
+  const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
+  const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null
+
+  const rng = mulberry32(hashSeed([
+    state.seed,
+    state.season,
+    state.now,
+    state.history.length,
+    effectiveMode,
+    tactic,
+    tournamentMatch?.id ?? state.activeEventId ?? 'open',
+    state.startingFive.join(','),
+  ].join(':')))
+
+  const opponent = tournamentOpponent
+    ? { name: tournamentOpponent.name, rating: tournamentOpponent.rating }
+    : generateOpponent(state, effectiveMode, rng)
+
   const active = getStartingFive(state.roster, state.startingFive)
   const baseRating = teamRating(state.roster, state.startingFive, state.lineupContinuity)
   const tacticMod = tacticalModifier(active, tactic)
-  const rolePenalty = (!active.some((p) => p.role === 'IGL') ? 4 : 0) + (!active.some((p) => p.role === 'AWP') ? 2.5 : 0)
+  const rolePenalty = (!active.some((player) => player.role === 'IGL') ? 4 : 0) + (!active.some((player) => player.role === 'AWP') ? 2.5 : 0)
   const maps: MapResult[] = []
   let ourMaps = 0
   let theirMaps = 0
   let momentum = 0
 
   while (ourMaps < 2 && theirMaps < 2) {
-    const map = pick(mapPool.filter((name) => !maps.some((m) => m.map === name)), rng)
-    const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? 0.7 : 1)
+    const map = pick(mapPool.filter((name) => !maps.some((current) => current.map === name)), rng)
+    const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
     const effectiveRating = baseRating + tacticMod + momentum - rolePenalty - mapFatigue
     const volatility = tactic === 'aggressive' ? 6.8 : tactic === 'structured' ? 8.8 : 7.8
     const probability = 1 / (1 + Math.exp((opponent.rating - effectiveRating) / volatility))
     const wonMap = rng() < probability
-    const closeness = 1 - Math.min(1, Math.abs(probability - 0.5) * 2)
+    const closeness = 1 - Math.min(1, Math.abs(probability - .5) * 2)
     const [us, them] = mapScore(wonMap, closeness, rng)
     const mapTop = [...active].sort((a, b) => performanceRating(b, wonMap, tactic, rng) - performanceRating(a, wonMap, tactic, rng))[0]
     maps.push({ map, us, them, winChance: Math.round(probability * 100), topPerformer: mapTop.alias })
@@ -996,41 +1194,60 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   }
 
   const won = ourMaps > theirMaps
+  const matchEnd = addGameHours(state.now, 3)
+  let resolvedRun = preparedRun
+    ? resolvePlayerTournamentMatch(preparedRun, won, ourMaps, theirMaps)
+    : null
+  if (resolvedRun) resolvedRun = advanceTournamentTo(resolvedRun, matchEnd, state.seed + state.season)
+
+  const tournamentFinished = Boolean(resolvedRun && tournamentIsFinished(resolvedRun))
+  const tournamentPrize = resolvedRun && tournamentFinished && !resolvedRun.prizePaid
+    ? tournamentPrizeForStatus(resolvedRun.eventId, resolvedRun)
+    : 0
+
+  if (resolvedRun && tournamentFinished) {
+    resolvedRun = {
+      ...resolvedRun,
+      earnedPrize: resolvedRun.earnedPrize + tournamentPrize,
+      prizePaid: true,
+    }
+  }
+
+  const tune = modeTuning[effectiveMode]
+  const reward = event ? tournamentPrize : Math.round(tune.baseReward * (won ? 1 : .42))
+  const payroll = 0
+  const net = reward
+  const fansDelta = Math.round(tune.fans * (won ? 1 : .25))
+
   const performances = active
     .map((player) => ({ playerId: player.id, alias: player.alias, rating: performanceRating(player, won, tactic, rng) }))
     .sort((a, b) => b.rating - a.rating)
   const mvpPerf = performances[0]
-  const mvp = active.find((p) => p.id === mvpPerf.playerId) ?? active[0]
-  const tune = modeTuning[effectiveMode]
-  const reward = event
-    ? Math.round(event.prize * (won ? 1 : 0.16))
-    : Math.round(tune.baseReward * (won ? 1 : 0.42))
-  const payroll = weeklyPayroll(state)
-  const net = reward - payroll
-  const fansDelta = Math.round(tune.fans * (won ? 1 : 0.25))
+  const mvp = active.find((player) => player.id === mvpPerf.playerId) ?? active[0]
   const storyBase = narrative(state, opponent.name, won, mvp, effectiveMode, tactic, net, rng)
   const story = event
-    ? { ...storyBase, detail: storyBase.detail + ' Турнир: ' + event.name + ', ' + event.city + '.' }
+    ? {
+        ...storyBase,
+        detail: storyBase.detail + ' · ' + event.name + ' · ' + (tournamentMatch?.label ?? 'MATCH') + '.',
+      }
     : storyBase
 
-  const activeIds = new Set(active.map((p) => p.id))
+  const activeIds = new Set(active.map((player) => player.id))
   const roster = state.roster.map((player) => {
     const played = activeIds.has(player.id)
-    const formDelta = played ? (won ? 3 : -2) + Math.round((rng() - 0.5) * 3) : Math.round((rng() - 0.5) * 2)
+    const formDelta = played ? (won ? 3 : -2) + Math.round((rng() - .5) * 3) : Math.round((rng() - .5) * 2)
     const moraleDelta = played ? (won ? 4 : -4) : (won ? 1 : 0)
-    const fatigueGain = (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * 0.45) : 0)
+    const fatigueGain = (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * .35) : 0)
     return {
       ...player,
       form: clamp(player.form + formDelta),
-      morale: clamp(player.morale + moraleDelta + (net < 0 ? -1 : 0)),
-      fatigue: clamp(player.fatigue + (played ? fatigueGain : -9)),
-      contractWeeks: Math.max(0, player.contractWeeks - 1),
+      morale: clamp(player.morale + moraleDelta),
+      fatigue: clamp(player.fatigue + (played ? fatigueGain : -6)),
     }
   })
 
-  const expired = roster.filter((p) => p.contractWeeks === 0)
   const result: MatchResult = {
-    id: 'm-' + state.week + '-' + state.history.length,
+    id: 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, ''),
     season: state.season,
     week: state.week,
     mode: effectiveMode,
@@ -1047,92 +1264,74 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     headline: story.headline,
     detail: story.detail,
     mvp: mvp.alias,
+    playedAt: state.now,
+    tournamentId: event?.id ?? null,
+    tournamentMatchId: tournamentMatch?.id ?? null,
   }
 
-  const contractNews: NewsItem[] = expired.length
+  const contractNews: NewsItem[] = roster.some((player) => player.contractWeeks <= 2)
     ? [{
-        id: 'contracts-' + state.week,
-        week: state.week + 1,
+        id: 'contracts-warning-' + result.id,
+        week: state.week,
         kind: 'contract' as const,
-        title: 'Контракт истёк',
-        body: expired.map((p) => p.alias).join(', ') + ': нельзя выпускать на следующий матч без продления или замены.',
+        title: 'Контрактное давление растёт',
+        body: 'До окончания контрактов осталось не больше двух недель: ' + roster.filter((player) => player.contractWeeks <= 2).map((player) => player.alias).join(', ') + '.',
       }]
-    : roster.some((p) => p.contractWeeks <= 2)
-      ? [{
-          id: 'contracts-warning-' + state.week,
-          week: state.week + 1,
-          kind: 'contract' as const,
-          title: 'Контрактное давление растёт',
-          body: 'До окончания контрактов осталось не больше двух недель: ' + roster.filter((p) => p.contractWeeks <= 2).map((p) => p.alias).join(', ') + '.',
-        }]
-      : []
+    : []
 
-  const financeNews: NewsItem = {
-    id: 'finance-' + result.id,
-    week: state.week,
-    kind: 'finance' as const,
-    title: net >= 0 ? 'Матчевая неделя покрыла зарплаты' : 'Зарплаты превысили доход от матча',
-    body: 'Доход за участие и результат: ' + reward + ' кр. Зарплаты: ' + payroll + ' кр. Итог: ' + (net >= 0 ? '+' : '') + net + ' кр.',
-  }
+  const financeNews: NewsItem[] = reward > 0
+    ? [{
+        id: 'finance-' + result.id,
+        week: state.week,
+        kind: 'finance' as const,
+        title: event ? 'Турнир выплатил призовые' : 'Доход от матча',
+        body: 'Доход: +' + reward + ' кр.',
+      }]
+    : []
 
-  const seasonEnded = state.week >= state.seasonLength
-  const seasonPerformances = [result, ...state.history.filter((match) => match.season === state.season)].reduce<Record<string, { alias: string; total: number }>>((scores, match) => {
-    for (const performance of match.performances) {
-      const current = scores[performance.playerId] ?? { alias: performance.alias, total: 0 }
-      scores[performance.playerId] = { alias: current.alias, total: current.total + performance.rating }
-    }
-    return scores
-  }, {})
-  const bestPlayer = Object.values(seasonPerformances).sort((a, b) => b.total - a.total)[0]?.alias ?? mvp.alias
-  const seasonSummary: SeasonSummary | null = seasonEnded
-    ? {
-        season: state.season,
-        wins: state.wins + (won ? 1 : 0),
-        losses: state.losses + (won ? 0 : 1),
-        points: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
-        reputation: clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
-        fans: Math.max(0, state.fans + fansDelta),
-        credits: Math.max(0, state.credits + net),
-        bestPlayer,
-        payroll,
-        objective: {
-          label: 'Выиграть минимум 5 матчей',
-          target: 5,
-          value: state.wins + (won ? 1 : 0),
-          completed: state.wins + (won ? 1 : 0) >= 5,
-        },
-      }
-    : null
+  const nextWeek = Math.min(state.seasonLength, gameWeekForDate(state.seasonStart, matchEnd))
+  const nextActiveTournament = resolvedRun && !tournamentFinished ? resolvedRun : null
+  const finishedHistory = resolvedRun && tournamentFinished
+    ? [resolvedRun, ...state.tournamentHistory].slice(0, 30)
+    : state.tournamentHistory
 
-  return {
+  const next: GameState = {
     ...state,
-    week: seasonEnded ? state.week : state.week + 1,
-    seasonEnded,
-    seasonSummary,
-    credits: Math.max(0, state.credits + net),
+    now: matchEnd,
+    week: nextWeek,
+    credits: state.credits + reward,
     fans: Math.max(0, state.fans + fansDelta),
     reputation: clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
     wins: state.wins + (won ? 1 : 0),
     losses: state.losses + (won ? 0 : 1),
     streak: won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
     seasonPoints: state.seasonPoints + (won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
-    staffEnergy: 3,
     roster,
     lineupContinuity: clamp(state.lineupContinuity + (won ? 3 : 1), 0, 100),
-    history: [result, ...state.history].slice(0, 30),
+    history: [result, ...state.history].slice(0, 80),
     news: [
       { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail },
-      financeNews,
+      ...financeNews,
       ...contractNews,
       ...state.news,
-    ].slice(0, 50),
-    managerXp: state.managerXp + (effectiveMode === 'cup' ? 220 : effectiveMode === 'showmatch' ? 150 : 90) + (won ? 50 : 15),
-    packTokens: state.packTokens + (won ? (effectiveMode === 'cup' ? 90 : effectiveMode === 'showmatch' ? 60 : 35) : 15),
-    activeEventId: null,
-    pendingDecision: seasonEnded ? null : weeklyDecision(state, won),
-    lastPayroll: payroll,
-    lastWeekNet: net,
+    ].slice(0, 80),
+    managerXp: state.managerXp + (effectiveMode === 'cup' ? 100 : effectiveMode === 'showmatch' ? 75 : 55) + (won ? 35 : 10),
+    packTokens: state.packTokens + (won ? (effectiveMode === 'cup' ? 55 : effectiveMode === 'showmatch' ? 40 : 25) : 10),
+    activeEventId: nextActiveTournament?.eventId ?? null,
+    activeTournament: nextActiveTournament,
+    tournamentHistory: finishedHistory,
+    pendingDecision: event
+      ? (tournamentFinished ? weeklyDecision(state, won) : null)
+      : weeklyDecision(state, won),
+    lastWeekNet: reward,
   }
+
+  const seasonWeekAfterMatch = gameWeekForDate(next.seasonStart, next.now)
+  if (seasonWeekAfterMatch > next.seasonLength && !next.activeTournament) {
+    return advanceCareerTo(next, addGameHours(next.now, 1))
+  }
+
+  return next
 }
 
 export const startNextSeason = (state: GameState): GameState => {

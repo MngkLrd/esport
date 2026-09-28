@@ -17,6 +17,10 @@ const T_COLOR = '#f2a04b'
 const DEAD_COLOR = '#ff5b72'
 const WALL_LUMA = 58
 
+type RadarResource = { image: HTMLImageElement; wallMask: Uint8Array | null }
+const radarResourceCache = new Map<string, RadarResource>()
+const radarResourcePromises = new Map<string, Promise<RadarResource | null>>()
+
 const sideColor = (side: SimSide) => side === 'CT' ? CT_COLOR : T_COLOR
 
 const extractWallMask = (img: HTMLImageElement) => {
@@ -48,6 +52,32 @@ const extractWallMask = (img: HTMLImageElement) => {
   }
 
   return mask
+}
+
+const loadRadarResource = (mapKey: string) => {
+  const cached = radarResourceCache.get(mapKey)
+  if (cached) return Promise.resolve<RadarResource | null>(cached)
+
+  const pending = radarResourcePromises.get(mapKey)
+  if (pending) return pending
+
+  const promise = new Promise<RadarResource | null>((resolve) => {
+    const image = new Image()
+    image.onload = () => {
+      const resource = { image, wallMask: extractWallMask(image) }
+      radarResourceCache.set(mapKey, resource)
+      radarResourcePromises.delete(mapKey)
+      resolve(resource)
+    }
+    image.onerror = () => {
+      radarResourcePromises.delete(mapKey)
+      resolve(null)
+    }
+    image.src = radarAssetUrl(mapKey)
+  })
+
+  radarResourcePromises.set(mapKey, promise)
+  return promise
 }
 
 const raycastCone = (
@@ -387,28 +417,25 @@ export function MatchRadar({
 
   useEffect(() => {
     if (!round) return
+    let cancelled = false
     setImageReady(false)
     imageRef.current = null
     wallMaskRef.current = null
 
-    const image = new Image()
-    image.onload = () => {
-      imageRef.current = image
-      wallMaskRef.current = extractWallMask(image)
+    void loadRadarResource(round.mapKey).then((resource) => {
+      if (cancelled) return
+      imageRef.current = resource?.image ?? null
+      wallMaskRef.current = resource?.wallMask ?? null
       setImageReady(true)
-    }
-    image.onerror = () => {
-      imageRef.current = null
-      wallMaskRef.current = null
-      setImageReady(true)
-    }
-    image.src = radarAssetUrl(round.mapKey)
+    })
+
+    const nextRound = playback.rounds[currentRoundIndex + 1]
+    if (nextRound) void loadRadarResource(nextRound.mapKey)
 
     return () => {
-      image.onload = null
-      image.onerror = null
+      cancelled = true
     }
-  }, [round?.mapKey])
+  }, [currentRoundIndex, playback.rounds, round?.mapKey])
 
   useEffect(() => {
     let raf = 0

@@ -1325,24 +1325,48 @@ body::before{
 }
 .sim-pool-card{
   --pool-accent:#4b89c8;
+  --pool-art:url('./assets/cards/uncommon_front.webp');
   position:relative;
+  isolation:isolate;
   min-width:0;
   min-height:0;
   display:grid;
   grid-template-columns:minmax(0,1fr) 46%;
   overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--pool-accent) 48%,rgba(145,159,255,.18));
-  background:
-    radial-gradient(circle at 82% 25%,color-mix(in srgb,var(--pool-accent) 16%,transparent),transparent 36%),
-    linear-gradient(145deg,#101936,#081025 70%);
-  color:#dce5f7;
+  border:1px solid color-mix(in srgb,var(--pool-accent) 54%,rgba(145,159,255,.18));
+  background:#081025;
+  color:#f4f7ff;
   text-align:left;
   cursor:pointer;
 }
-.sim-pool-card.tier-silver{--pool-accent:#b8c1cd}
-.sim-pool-card.tier-rare{--pool-accent:#4c9ee8}
-.sim-pool-card.tier-elite{--pool-accent:#7568f1}
-.sim-pool-card.tier-gold{--pool-accent:#efc34f}
+.sim-pool-card::before{
+  content:'';
+  position:absolute;
+  inset:-18% -3%;
+  z-index:0;
+  pointer-events:none;
+  background-image:var(--pool-art);
+  background-size:cover;
+  background-position:center 43%;
+  background-repeat:no-repeat;
+  opacity:.72;
+  filter:saturate(1.03) contrast(1.03);
+  transform:scale(1.04);
+}
+.sim-pool-card::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(3,7,18,.94) 0%,rgba(3,7,18,.84) 36%,rgba(3,7,18,.46) 58%,rgba(3,7,18,.16) 100%),
+    linear-gradient(180deg,rgba(3,7,18,.04) 0%,rgba(3,7,18,.10) 54%,rgba(3,7,18,.48) 100%);
+}
+.sim-pool-card.tier-silver{--pool-accent:#c7ced7;--pool-art:url('./assets/cards/common_front.webp')}
+.sim-pool-card.tier-rare{--pool-accent:#79d34f;--pool-art:url('./assets/cards/uncommon_front.webp')}
+.sim-pool-card.tier-elite{--pool-accent:#d550ff;--pool-art:url('./assets/cards/epic_front.webp')}
+.sim-pool-card.tier-gold{--pool-accent:#efc34f;--pool-art:url('./assets/cards/legend_front.png')}
 .sim-pool-card:hover,
 .sim-pool-card.is-selected{
   border-color:var(--pool-accent);
@@ -1353,6 +1377,7 @@ body::before{
   filter:saturate(.72);
 }
 .sim-pool-card-copy{
+  position:relative;
   z-index:2;
   min-width:0;
   display:flex;
@@ -1361,10 +1386,10 @@ body::before{
 }
 .sim-pool-card-top{display:flex;align-items:baseline;gap:7px}
 .sim-pool-card-top strong{color:#fff;font:1000 20px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif}
-.sim-pool-card-top span{color:#8895b1;font:900 7px/1 Arial,sans-serif;letter-spacing:.08em}
+.sim-pool-card-top span{color:#c9d2e6;font:900 7px/1 Arial,sans-serif;letter-spacing:.08em;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-name{min-width:0;display:grid;gap:2px;margin-top:8px}
 .sim-pool-card-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65728f;font-size:7px}
+.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#aebbd2;font-size:7px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-stats{
   margin-top:auto;
   display:grid;
@@ -1374,12 +1399,13 @@ body::before{
 .sim-pool-card-stats span{
   display:grid;
   gap:1px;
-  color:#697590;
+  color:#b3bfd5;
   font:800 6px/1 Arial,sans-serif;
 }
-.sim-pool-card-stats b{color:#cbd5eb;font-size:9px}
+.sim-pool-card-stats b{color:#fff;font-size:9px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-photo{
   position:relative;
+  z-index:2;
   min-width:0;
   overflow:hidden;
   -webkit-mask-image:linear-gradient(to left,#000 0%,#000 76%,transparent 100%);

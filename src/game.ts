@@ -117,6 +117,17 @@ export interface NewsItem {
   body: string
 }
 
+export type ClubDecisionKind = 'recovery' | 'sponsor' | 'media'
+
+export interface ClubDecision {
+  id: string
+  kind: ClubDecisionKind
+  title: string
+  body: string
+  optionA: string
+  optionB: string
+}
+
 export interface GameState {
   version: 9
   saveId: string
@@ -137,6 +148,7 @@ export interface GameState {
   seasonPoints: number
   staffEnergy: number
   activeEventId: string | null
+  pendingDecision: ClubDecision | null
   welcomeComplete: boolean
   roster: Player[]
   startingFive: string[]
@@ -452,6 +464,7 @@ export const createInitialState = (): GameState => ({
   seasonPoints: 0,
   staffEnergy: 3,
   activeEventId: null,
+  pendingDecision: null,
   welcomeComplete: false,
   roster: [],
   startingFive: [],
@@ -551,6 +564,7 @@ export const migrateState = (raw: unknown): GameState => {
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
       managerXp: typeof parsed.managerXp === 'number' ? parsed.managerXp : 0,
       activeEventId: typeof parsed.activeEventId === 'string' ? parsed.activeEventId : null,
+      pendingDecision: parsed.pendingDecision && typeof parsed.pendingDecision === 'object' ? parsed.pendingDecision as ClubDecision : null,
       roster,
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
@@ -772,9 +786,101 @@ const performanceRating = (player: Player, won: boolean, tactic: TacticalPlan, r
 export const weeklyPayroll = (state: GameState) =>
   state.roster.reduce((sum, player) => sum + (player.contractWeeks > 0 ? player.salary : 0), 0)
 
+const weeklyDecision = (state: GameState, won: boolean): ClubDecision => {
+  const cycle = (state.week + state.season + (won ? 1 : 0)) % 3
+  if (cycle === 0) {
+    return {
+      id: 'decision-recovery-' + state.season + '-' + state.week,
+      kind: 'recovery',
+      title: 'Штаб просит разгрузить неделю',
+      body: 'После серии игрокам нужен восстановительный блок. Это снизит усталость, но съест часть бюджета.',
+      optionA: 'ДАТЬ ВОССТАНОВЛЕНИЕ',
+      optionB: 'ДЕРЖАТЬ ТЕМП',
+    }
+  }
+  if (cycle === 1) {
+    return {
+      id: 'decision-sponsor-' + state.season + '-' + state.week,
+      kind: 'sponsor',
+      title: 'Спонсор просит быструю активацию',
+      body: 'Партнёр готов заплатить за дополнительную медиа-активность между матчами.',
+      optionA: 'ПРИНЯТЬ АКТИВАЦИЮ',
+      optionB: 'ОТКАЗАТЬ',
+    }
+  }
+  return {
+    id: 'decision-media-' + state.season + '-' + state.week,
+    kind: 'media',
+    title: 'Пресса ждёт позицию клуба',
+    body: won ? 'После победы можно снять давление с состава или поднять планку ожиданий.' : 'После поражения нужно выбрать публичный тон на следующую неделю.',
+    optionA: 'ПОДДЕРЖАТЬ СОСТАВ',
+    optionB: 'ДАВИТЬ НА РЕЗУЛЬТАТ',
+  }
+}
+
+export const resolveClubDecision = (state: GameState, choice: 'a' | 'b'): GameState => {
+  const decision = state.pendingDecision
+  if (!decision) return state
+
+  let next: GameState = { ...state, pendingDecision: null }
+  let result = ''
+
+  if (decision.kind === 'recovery') {
+    if (choice === 'a') {
+      next = {
+        ...next,
+        credits: Math.max(0, next.credits - 120),
+        roster: next.roster.map((player) => ({ ...player, fatigue: clamp(player.fatigue - 12), morale: clamp(player.morale + 2) })),
+      }
+      result = 'Клуб оплатил восстановительный блок. Усталость состава снизилась.'
+    } else {
+      next = {
+        ...next,
+        managerXp: next.managerXp + 35,
+        roster: next.roster.map((player) => ({ ...player, fatigue: clamp(player.fatigue + 4), morale: clamp(player.morale - 2) })),
+      }
+      result = 'Штаб сохранил высокий темп. Менеджер получил опыт, но состав заплатил усталостью.'
+    }
+  } else if (decision.kind === 'sponsor') {
+    if (choice === 'a') {
+      next = { ...next, credits: next.credits + 450, fans: next.fans + 40 }
+      result = 'Активация принесла 450 кр. и дополнительный охват.'
+    } else {
+      next = { ...next, reputation: clamp(next.reputation + 2), managerXp: next.managerXp + 25 }
+      result = 'Клуб отказался от быстрой сделки и сохранил спортивный фокус.'
+    }
+  } else if (choice === 'a') {
+    next = {
+      ...next,
+      fans: next.fans + 50,
+      roster: next.roster.map((player) => ({ ...player, morale: clamp(player.morale + 4) })),
+    }
+    result = 'Публичная поддержка подняла мораль и отклик аудитории.'
+  } else {
+    next = {
+      ...next,
+      reputation: clamp(next.reputation + 3),
+      roster: next.roster.map((player) => ({ ...player, morale: clamp(player.morale - 3) })),
+    }
+    result = 'Жёсткая позиция повысила ожидания вокруг клуба, но добавила давления игрокам.'
+  }
+
+  return {
+    ...next,
+    news: [{
+      id: 'resolved-' + decision.id,
+      week: state.week,
+      kind: decision.kind === 'sponsor' ? 'finance' as const : 'media' as const,
+      title: decision.title,
+      body: result,
+    }, ...state.news].slice(0, 50),
+  }
+}
+
 export const canBookTournament = (state: GameState, eventId: string) => {
   const event = tournamentForId(eventId)
   if (!event) return { ok: false, reason: 'Событие недоступно.' }
+  if (state.pendingDecision) return { ok: false, reason: 'Сначала закрой решение недели в Inbox.' }
   const level = managerLevelFromXp(state.managerXp)
   if (level < event.unlockLevel) return { ok: false, reason: 'Откроется на уровне менеджера ' + event.unlockLevel + '.' }
   if (state.activeEventId && state.activeEventId !== eventId) return { ok: false, reason: 'Сначала заверши уже выбранный турнир.' }
@@ -807,6 +913,7 @@ export const bookTournament = (state: GameState, eventId: string): GameState => 
 
 export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   if (!state.welcomeComplete) return { ok: false, reason: 'Сначала открой стартовый набор и собери пятёрку.' }
+  if (state.pendingDecision) return { ok: false, reason: 'Сначала закрой решение недели в Inbox.' }
   if (state.seasonEnded || state.week > state.seasonLength) return { ok: false, reason: 'Сезон завершён. Открой итог и начни следующий сезон.' }
   const active = getStartingFive(state.roster, state.startingFive)
   if (active.length !== 5) return { ok: false, reason: 'Выбери ровно пять игроков в основу.' }
@@ -990,6 +1097,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     managerXp: state.managerXp + (effectiveMode === 'cup' ? 220 : effectiveMode === 'showmatch' ? 150 : 90) + (won ? 50 : 15),
     packTokens: state.packTokens + (won ? (effectiveMode === 'cup' ? 90 : effectiveMode === 'showmatch' ? 60 : 35) : 15),
     activeEventId: null,
+    pendingDecision: seasonEnded ? null : weeklyDecision(state, won),
     lastPayroll: payroll,
     lastWeekNet: net,
   }
@@ -1014,6 +1122,7 @@ export const startNextSeason = (state: GameState): GameState => {
     streak: 0,
     seasonPoints: 0,
     activeEventId: null,
+    pendingDecision: null,
     roster,
     news: [{
       id: 'season-start-' + (state.season + 1),

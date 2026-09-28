@@ -43,6 +43,7 @@ import { SeasonCalendar } from './SeasonCalendar'
 import { rollPack } from './packs'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
+import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -102,37 +103,25 @@ function Metric({ label, value, accent }: { label: string; value: string | numbe
 
 function PlayerVisualCard({ player, starter = false, compact = false, onClick }: { player: Player; starter?: boolean; compact?: boolean; onClick?: () => void }) {
   const ovr = overall(player)
-  const tier = cardTier(ovr)
-  const initials = player.alias.slice(0, 3).toUpperCase()
-  const role = player.role === 'Rifler' ? 'РИФ' : player.role === 'Support' ? 'САП' : player.role === 'Entry' ? 'ЕНТ' : player.role
-
   return (
-    <button type="button" aria-label={'Открыть профиль ' + player.alias} onClick={onClick} className={'visual-player-card tier-' + tier + (starter ? ' is-starter' : '') + (compact ? ' compact' : '')}>
-      <div className="visual-card-shine" />
-      <div className="visual-card-top">
-        <div>
-          <strong>{ovr}</strong>
-          <span>{role}</span>
-        </div>
-        {starter && <b className="starter-star">★</b>}
-      </div>
-      <div className="visual-country">{countryFlag(player.country)} <span>{player.country}</span></div>
-      <div className="visual-photo">
-        <div className="visual-monogram">{initials}</div>
-        <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.realName + ' (' + player.alias + ')'} />
-      </div>
-      <div className="visual-identity">
-        <strong>{player.alias}</strong>
-        <span>{player.team}</span>
-      </div>
-      <div className="visual-stats">
-        <span><b>{player.aim}</b>АИМ</span>
-        <span><b>{player.gameSense}</b>СЕНС</span>
-        <span><b>{player.utility}</b>УТИЛ</span>
-        <span><b>{player.clutch}</b>КЛАТЧ</span>
-      </div>
-      <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
-    </button>
+    <CollectiblePlayerCard
+      rating={ovr}
+      tier={cardTier(ovr)}
+      role={player.role}
+      alias={player.alias}
+      team={player.team}
+      country={player.country}
+      profileId={player.profileId}
+      stats={{
+        aim: player.aim,
+        utility: player.utility,
+        positioning: player.gameSense,
+        clutch: player.clutch,
+      }}
+      starter={starter}
+      onOpen={onClick}
+      className={compact ? 'compact' : ''}
+    />
   )
 }
 

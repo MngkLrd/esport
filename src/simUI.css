@@ -759,6 +759,100 @@ body::before{
 }
 .sim-match-recap b{color:#cbd4e8}.sim-match-recap .text-button{margin-left:auto;font-size:9px}
 
+/* COMPACT CARD GEOMETRY ------------------------------------------------- */
+
+.sim-match-roster .visual-player-card,
+.sim-practice-cards .visual-player-card,
+.sim-lineup-slot .visual-player-card,
+.sim-bench-card .visual-player-card {
+  min-height:0 !important;
+  height:auto !important;
+  padding:0;
+}
+
+.sim-practice-cards .visual-card-top,
+.sim-lineup-slot .visual-card-top,
+.sim-bench-card .visual-card-top {
+  top:6%;
+  left:7%;
+  right:7%;
+}
+.sim-practice-cards .visual-card-top strong,
+.sim-lineup-slot .visual-card-top strong { font-size:24px; }
+.sim-practice-cards .visual-card-top span,
+.sim-lineup-slot .visual-card-top span { margin-top:3px;font-size:8px; }
+
+.sim-practice-cards .visual-country,
+.sim-lineup-slot .visual-country,
+.sim-bench-card .visual-country {
+  top:19%;
+  left:7%;
+}
+.sim-practice-cards .visual-country span,
+.sim-lineup-slot .visual-country span { font-size:7px; }
+
+.sim-practice-cards .visual-photo,
+.sim-lineup-slot .visual-photo,
+.sim-bench-card .visual-photo {
+  top:15%;
+  left:2%;
+  right:2%;
+  height:60%;
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+  mask-image:linear-gradient(to bottom,#000 0%,#000 86%,transparent 100%);
+}
+.sim-practice-cards .visual-photo img,
+.sim-lineup-slot .visual-photo img,
+.sim-bench-card .visual-photo img {
+  position:absolute;
+  left:-6%;
+  bottom:-8%;
+  width:112%;
+  height:112%;
+  inset:auto auto -8% -6%;
+  object-fit:contain;
+  object-position:center bottom;
+  mix-blend-mode:normal;
+  opacity:1;
+}
+.sim-practice-cards .visual-monogram,
+.sim-lineup-slot .visual-monogram,
+.sim-bench-card .visual-monogram { display:none; }
+
+.sim-practice-cards .visual-identity {
+  left:6%;right:6%;bottom:7%;
+  padding:6px 4px;
+}
+.sim-practice-cards .visual-identity strong {font-size:12px}
+.sim-practice-cards .visual-identity span {font-size:7px}
+.sim-practice-cards .visual-stats,
+.sim-practice-cards .visual-rarity {display:none}
+
+.sim-lineup-slot .visual-identity {
+  left:7%;right:7%;bottom:21%;
+  padding:6px 4px 7px;
+}
+.sim-lineup-slot .visual-stats {
+  left:7%;right:7%;bottom:5%;
+  gap:2px;
+}
+.sim-lineup-slot .visual-rarity {display:none}
+
+.sim-bench-card .visual-card-top strong {font-size:18px}
+.sim-bench-card .visual-card-top span,
+.sim-bench-card .visual-country span,
+.sim-bench-card .visual-stats,
+.sim-bench-card .visual-rarity,
+.sim-bench-card .visual-live-state {display:none}
+.sim-bench-card .visual-country {font-size:10px}
+.sim-bench-card .visual-identity {
+  left:5%;right:5%;bottom:6%;
+  padding:4px 2px;
+}
+.sim-bench-card .visual-identity strong {font-size:9px}
+.sim-bench-card .visual-identity span {font-size:6px}
+
 /* PRACTICE --------------------------------------------------------------- */
 
 .sim-practice{
@@ -1269,8 +1363,8 @@ body::before{
   .sim-match-head{flex-basis:46px;min-height:46px}
   .sim-match-stage{min-height:314px;grid-template-rows:minmax(142px,1fr) 26px minmax(142px,1fr)}
   .sim-team-deck{padding-block:6px}
-  .sim-match-roster{grid-template-columns:repeat(5,minmax(0,102px));gap:6px}
-  .sim-match-roster .visual-player-card{max-width:102px}
+  .sim-match-roster{grid-template-columns:repeat(5,minmax(0,92px));gap:6px}
+  .sim-match-roster .visual-player-card{max-width:92px}
   .sim-match-actions{flex-basis:58px;min-height:58px}
   .sim-match-format{min-height:43px}
   .sim-practice-cards{grid-template-columns:repeat(5,minmax(0,125px))}

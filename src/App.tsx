@@ -541,6 +541,7 @@ function App() {
             state={state}
             onAdvance={advanceTime}
             onAdvanceToMatch={advanceToTournamentMatch}
+            onOpenMatch={() => openTab('Play')}
             onOpenWorld={() => openTab('World')}
           />
         )}

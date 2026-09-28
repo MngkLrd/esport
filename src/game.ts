@@ -1803,24 +1803,51 @@ export const negotiateProspect = (
   }
   if (!evaluation.accepted) return { state, evaluation }
 
+  const worldIdentity = (prospect.playerKey ? state.world.players[prospect.playerKey] : null) ?? worldPlayerByAlias(state.world, prospect.alias)
+  if (worldIdentity?.teamId === PLAYER_CLUB_WORLD_ID) {
+    return {
+      state,
+      evaluation: { ...evaluation, accepted: false, reason: 'Игрок уже принадлежит вашему клубу.' },
+    }
+  }
+
+  const sourceTeam = worldIdentity ? worldTeamForPlayer(state.world, worldIdentity.key) : null
   const signed: Player = {
     ...prospect,
+    playerKey: worldIdentity?.key ?? prospect.playerKey,
+    team: 'YOUR CLUB',
     salary: Math.max(1, Math.round(terms.salary)),
     contractWeeks: Math.round(clamp(terms.contractWeeks, 6, 16)),
     morale: clamp(prospect.morale + (terms.squadRole === 'starter' ? 7 : 3)),
   }
+  const nextRoster = [...state.roster, signed]
+  const nextWorld = claimWorldPlayersForClub(
+    state.world,
+    [signed.playerKey ?? 'alias:' + signed.alias.toLocaleLowerCase('en-US')],
+    state.now,
+    state.seed + state.scoutCycle * 97,
+  )
+  const clubKeys = new Set(
+    nextRoster
+      .map((player) => player.playerKey ?? worldPlayerByAlias(nextWorld, player.alias)?.key)
+      .filter((key): key is string => Boolean(key)),
+  )
 
   let next: GameState = {
     ...state,
+    world: nextWorld,
+    activeTournament: state.activeTournament
+      ? refreshTournamentTeamsFromWorld(state.activeTournament, nextWorld, clubKeys)
+      : null,
     credits: state.credits - Math.max(0, Math.round(terms.fee)),
-    roster: [...state.roster, signed],
-    prospects: state.prospects.filter((player) => player.id !== playerId),
+    roster: nextRoster,
+    prospects: state.prospects.filter((player) => player.id !== playerId && player.playerKey !== signed.playerKey),
     news: [{
       id: 'sign-' + playerId + '-' + state.week,
       week: state.week,
       kind: 'contract' as const,
       title: prospect.alias + ' подписывает контракт',
-      body: 'Трансфер: ' + Math.round(terms.fee) + ' кр. Зарплата: ' + Math.round(terms.salary) + ' кр./нед. Срок: ' + Math.round(terms.contractWeeks) + ' нед. Роль: ' + (terms.squadRole === 'starter' ? 'основа' : 'ротация') + '.',
+      body: (sourceTeam ? 'Переход из ' + sourceTeam.name + '. ' : 'Переход свободного агента. ') + 'Трансфер: ' + Math.round(terms.fee) + ' кр. Зарплата: ' + Math.round(terms.salary) + ' кр./нед. Срок: ' + Math.round(terms.contractWeeks) + ' нед. Роль: ' + (terms.squadRole === 'starter' ? 'основа' : 'ротация') + '.',
     }, ...state.news].slice(0, 50),
   }
 

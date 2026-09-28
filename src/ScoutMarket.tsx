@@ -7,6 +7,7 @@ import {
   evaluateNegotiation,
   negotiateProspect,
   overall,
+  managerLevelProgress,
   scout,
   scoutFitScore,
   type GameState,
@@ -60,7 +61,7 @@ function CandidateCard({
       <button type="button" className="market-card-visual" onClick={onOpen} aria-label={'Открыть переговоры с ' + player.alias}>
         <div className="market-card-top">
           <div><b>{ovr}</b><span>{ROLE_LABELS[player.role]}</span></div>
-          <div className="market-fit"><b>{Math.min(99, fit)}</b><span>FIT</span></div>
+          <div className="market-fit"><b>{fit >= 78 ? 'TOP' : fit >= 68 ? 'GOOD' : fit >= 58 ? 'OK' : 'RISK'}</b><span>FIT</span></div>
         </div>
         <div className="market-card-country">{countryFlag(player.country)} <span>{player.country}</span></div>
         <div className="market-card-photo">
@@ -120,6 +121,8 @@ export function ScoutMarket({
   }, [negotiating])
 
   const reportBrief = state.scoutBrief ?? DEFAULT_SCOUT_BRIEF
+  const managerLevel = managerLevelProgress(state.managerXp).level
+  const scoutSlots = managerLevel >= 5 ? 7 : managerLevel >= 3 ? 6 : 5
   const rankedProspects = useMemo(
     () => [...state.prospects].sort((a, b) => scoutFitScore(b, reportBrief) - scoutFitScore(a, reportBrief)),
     [state.prospects, reportBrief],
@@ -141,6 +144,22 @@ export function ScoutMarket({
     setFeedback(null)
   }
 
+  const applyOfferPackage = (kind: 'lean' | 'standard' | 'push') => {
+    if (!negotiating) return
+    const base = defaultNegotiationTerms(negotiating)
+    const multiplier = kind === 'lean'
+      ? { fee: .9, salary: .95 }
+      : kind === 'push'
+        ? { fee: 1.12, salary: 1.08 }
+        : { fee: 1, salary: 1 }
+    setTerms((current) => ({
+      ...(current ?? base),
+      fee: Math.round(base.fee * multiplier.fee / 10) * 10,
+      salary: Math.round(base.salary * multiplier.salary / 5) * 5,
+    }))
+    setFeedback(null)
+  }
+
   const submitOffer = () => {
     if (!negotiating || !terms || !evaluation) return
     if (!evaluation.accepted) {
@@ -158,8 +177,8 @@ export function ScoutMarket({
     <section className="screen scout-market-screen">
       <div className="market-heading">
         <div>
-          <span className="eyebrow">TRANSFER DESK · {state.roster.length}/8 PLAYERS</span>
-          <h1>Ищи игрока под конкретную задачу.</h1>
+          <span className="eyebrow">TRANSFER WINDOW · SCOUT NETWORK LVL {managerLevel}</span>
+          <h1>BUILD YOUR SHORTLIST</h1>
         </div>
         <div className="market-budget">
           <span>БЮДЖЕТ КЛУБА</span>
@@ -212,13 +231,12 @@ export function ScoutMarket({
               value={brief.maxSalary}
               onChange={(event) => setBrief((current) => ({ ...current, maxSalary: Number(event.target.value) }))}
             />
-            <small>Это приоритет поиска, а не жёсткий запрет: сильный кандидат может попросить больше.</small>
           </label>
 
           <div className="market-brief-preview">
             <span>ЗАДАЧА ШТАБА</span>
             <strong>{brief.role === 'Any' ? 'Усилить глубину состава' : 'Найти ' + ROLE_LABELS[brief.role]}</strong>
-            <p>{AGE_LABELS[brief.ageProfile]} · до {brief.maxSalary} кр./нед. · shortlist 5 игроков</p>
+            <p>{AGE_LABELS[brief.ageProfile]} · до {brief.maxSalary} кр./нед. · {scoutSlots} targets</p>
           </div>
 
           <button
@@ -290,39 +308,22 @@ export function ScoutMarket({
                 <span>ИНТЕРЕС К ПЕРЕХОДУ</span>
                 <b className={'interest-' + evaluation.interest}>{INTEREST_LABELS[evaluation.interest]}</b>
               </div>
-              <div className="market-interest-track"><i style={{ width: Math.min(100, Math.round(evaluation.score / evaluation.threshold * 100)) + '%' }} /></div>
               <small>{evaluation.reason}</small>
             </div>
 
+            <div className="market-offer-packages">
+              <button type="button" onClick={() => applyOfferPackage('lean')}>
+                <span>LEAN</span><b>Сдержанно</b><small>Ниже запроса · выше риск отказа</small>
+              </button>
+              <button type="button" onClick={() => applyOfferPackage('standard')}>
+                <span>STANDARD</span><b>По рынку</b><small>{evaluation.askingFee} кр. · {evaluation.askingSalary}/нед.</small>
+              </button>
+              <button type="button" onClick={() => applyOfferPackage('push')}>
+                <span>PUSH</span><b>Закрыть быстро</b><small>Выше рынка · сильнее интерес</small>
+              </button>
+            </div>
+
             <div className="market-terms-grid">
-              <label className="market-term">
-                <span>Трансферный платёж</span>
-                <b>{terms.fee} кр.</b>
-                <input
-                  type="range"
-                  min={Math.max(50, Math.round(evaluation.askingFee * 0.65 / 10) * 10)}
-                  max={Math.round(evaluation.askingFee * 1.4 / 10) * 10}
-                  step="10"
-                  value={terms.fee}
-                  onChange={(event) => updateTerms({ fee: Number(event.target.value) })}
-                />
-                <small>Запрос: около {evaluation.askingFee} кр.</small>
-              </label>
-
-              <label className="market-term">
-                <span>Зарплата в неделю</span>
-                <b>{terms.salary} кр.</b>
-                <input
-                  type="range"
-                  min={Math.max(40, Math.round(evaluation.askingSalary * 0.7 / 5) * 5)}
-                  max={Math.round(evaluation.askingSalary * 1.4 / 5) * 5}
-                  step="5"
-                  value={terms.salary}
-                  onChange={(event) => updateTerms({ salary: Number(event.target.value) })}
-                />
-                <small>Ожидание: {evaluation.askingSalary} кр./нед.</small>
-              </label>
-
               <div className="market-term">
                 <span>Срок контракта</span>
                 <div className="market-contract-options">
@@ -363,7 +364,7 @@ export function ScoutMarket({
                 <small>останется {Math.max(0, state.credits - terms.fee)} кр.</small>
               </div>
               <button type="button" className="hq-primary-action" onClick={submitOffer} disabled={state.roster.length >= 8}>
-                {evaluation.accepted ? 'Закрыть сделку' : 'Сделать предложение'} <span>→</span>
+                СДЕЛАТЬ ПРЕДЛОЖЕНИЕ <span>→</span>
               </button>
             </div>
           </section>

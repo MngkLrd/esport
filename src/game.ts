@@ -777,6 +777,7 @@ export const canBookTournament = (state: GameState, eventId: string) => {
   if (!event) return { ok: false, reason: 'Событие недоступно.' }
   const level = managerLevelFromXp(state.managerXp)
   if (level < event.unlockLevel) return { ok: false, reason: 'Откроется на уровне менеджера ' + event.unlockLevel + '.' }
+  if (state.activeEventId && state.activeEventId !== eventId) return { ok: false, reason: 'Сначала заверши уже выбранный турнир.' }
   const cost = tournamentEntryCost(event)
   if (state.credits < cost) return { ok: false, reason: 'Недостаточно средств на поездку и обслуживание.' }
   if (state.seasonEnded) return { ok: false, reason: 'Сезон завершён.' }
@@ -810,7 +811,9 @@ export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   const active = getStartingFive(state.roster, state.startingFive)
   if (active.length !== 5) return { ok: false, reason: 'Выбери ровно пять игроков в основу.' }
   if (active.some((p) => p.contractWeeks <= 0)) return { ok: false, reason: 'Продли контракт или убери из основы каждого игрока с истёкшим контрактом.' }
-  if (mode === 'cup' && state.wins < 2 && state.reputation < 45) {
+  const event = tournamentForId(state.activeEventId)
+  const effectiveMode = event ? tournamentMode(event) : mode
+  if (effectiveMode === 'cup' && state.wins < 2 && state.reputation < 45) {
     return { ok: false, reason: 'Онлайн-кубок откроется после 2 побед или при 45 репутации.' }
   }
   return { ok: true, reason: '' }

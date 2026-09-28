@@ -52,13 +52,14 @@ const PacksView = lazy(() =>
 )
 
 const saveRepository = createBrowserSaveRepository()
-type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'
+type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Training' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'
 
 const TAB_LABELS: Record<Tab, string> = {
   HQ: 'HOME',
   World: 'WORLD MAP',
   Calendar: 'CALENDAR',
   Play: 'MATCHDAY',
+  Training: 'PRACTICE',
   Roster: 'SQUAD',
   Packs: 'PACKS',
   Scout: 'TRANSFERS',
@@ -321,7 +322,7 @@ function App() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
-  const [pendingMatch, setPendingMatch] = useState<{ nextState: GameState; result: MatchResult } | null>(null)
+  const [pendingMatch, setPendingMatch] = useState<{ nextState: GameState; result: MatchResult; returnTab: Tab } | null>(null)
   const [worldFocusId, setWorldFocusId] = useState<string | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
@@ -341,7 +342,11 @@ function App() {
   const bracketMatch = activeTournamentMatch(state)
   const bracketOpponent = opponentForPlayerMatch(state.activeTournament)
   const bracketRoster = bracketOpponent?.roster ?? []
-  const currentPlayGate = canPlayMatch(state, activeEventMode ?? 'scrim')
+  const currentFixtureDue = Boolean(bracketMatch && compareGameTime(bracketMatch.scheduledAt, state.now) <= 0)
+  const currentPlayGate = activeEventMode
+    ? canPlayMatch(state, activeEventMode)
+    : { ok: false, reason: 'Нет текущего официального матча.' }
+  const practiceGate = canPlayMatch(state, 'practice')
   const canAdvanceTournamentClock = Boolean(
     state.activeTournament &&
     (!bracketMatch || compareGameTime(state.now, bracketMatch.scheduledAt) < 0) &&
@@ -381,7 +386,7 @@ function App() {
     setPendingMatch((current) => {
       if (!current) return null
       setState(current.nextState)
-      setTab(current.nextState.activeTournament ? 'Play' : 'HQ')
+      setTab(current.returnTab)
       return null
     })
   }, [])
@@ -392,7 +397,7 @@ function App() {
     const result = executeGameCommand(state, { type: 'PLAY_MATCH', mode, tactic })
     const match = result.state.history[0]
     if (result.state === state || !match) return
-    setPendingMatch({ nextState: result.state, result: match })
+    setPendingMatch({ nextState: result.state, result: match, returnTab: mode === 'practice' ? 'Training' : result.state.activeTournament ? 'Play' : 'HQ' })
   }
 
   const reset = () => {
@@ -528,12 +533,21 @@ function App() {
           <span className="fifa-brand-mark">E</span>
           <strong>ESPORT AI MANAGER</strong>
         </button>
-        <button className="fifa-topbar-center fifa-clock-button" onClick={() => openTab('Calendar')}>
-          <span>{formatGameDate(state.now)}</span>
-          <b>{formatGameTime(state.now)}</b>
-          <i />
-          <span>{activeEvent ? 'NEXT · ' + activeEvent.name.toUpperCase() : 'OPEN CALENDAR'}</span>
-        </button>
+        {currentFixtureDue ? (
+          <button className="fifa-topbar-center fifa-current-match-button" onClick={() => openTab('Play')}>
+            <span>CURRENT MATCH</span>
+            <b>YOUR CLUB <em>VS</em> {bracketOpponent?.name ?? 'OPPONENT'}</b>
+            <i />
+            <strong>PLAY →</strong>
+          </button>
+        ) : (
+          <button className="fifa-topbar-center fifa-clock-button" onClick={() => openTab('Calendar')}>
+            <span>{formatGameDate(state.now)}</span>
+            <b>{formatGameTime(state.now)}</b>
+            <i />
+            <span>{activeEvent ? 'NEXT · ' + activeEvent.name.toUpperCase() : 'OPEN CALENDAR'}</span>
+          </button>
+        )}
         <div className="fifa-wallets">
           <button onClick={() => openTab('Inbox')} className={unread > 0 ? 'has-unread' : ''}><span>INBOX</span><b>{unread > 0 ? unread + ' NEW' : 'CLEAR'}</b></button>
           <button onClick={() => openTab('Profile')}><span>MANAGER LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
@@ -595,15 +609,83 @@ function App() {
             <div className="tactical-control">
               <div className="tactical-plans"><div className="control-label">ПЛАН ИГРЫ</div>{(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}><span>{tacticInfo[plan].name}</span><small>{tacticInfo[plan].description}</small></button>)}</div>
               <div className="tactical-modes">
-                <div className="control-label">{activeEvent ? 'EVENT FORMAT' : 'УРОВЕНЬ СЕРИИ'}</div>
-                {activeEventMode ? <>
-                  {(() => { const gate = canPlayMatch(state, activeEventMode); return <button className="tactical-mode selected" disabled={!gate.ok} onClick={() => play(activeEventMode)}><span>{modeInfo[activeEventMode].name}</span><small>{RISK_LABELS[modeInfo[activeEventMode].risk]} · {gate.ok ? 'TIER ' + activeEvent?.circuitTier + ' · ' + activeEvent?.format : gate.reason}</small></button> })()}
-                  {(() => { const gate = canPlayMatch(state, 'scrim'); return <button className="tactical-mode practice" disabled={!gate.ok} onClick={() => play('scrim')}><span>ПРАКК-МАТЧ</span><small>{gate.ok ? '0 КР. · 0 VRS · +1 СЫГРАННОСТЬ' : gate.reason}</small></button> })()}
-                </> : (['scrim', 'showmatch', 'cup'] as MatchMode[]).map((mode) => { const gate = canPlayMatch(state, mode); return <button key={mode} className={'tactical-mode ' + (mode === 'scrim' ? 'selected' : '')} disabled={!gate.ok} onClick={() => play(mode)}><span>{modeInfo[mode].name}</span><small>{RISK_LABELS[modeInfo[mode].risk]} · {gate.ok ? (mode === 'scrim' ? '0 КР. · 0 VRS · +1 СЫГРАННОСТЬ' : 'готово') : gate.reason}</small></button> })}
+                <div className="control-label">EVENT FORMAT</div>
+                {activeEventMode && activeEvent ? (
+                  <div className="tactical-event-lock">
+                    <span>OFFICIAL · TIER {activeEvent.circuitTier} · {activeEvent.format}</span>
+                    <small>{bracketMatch?.label ?? activeEvent.label} · VRS ENABLED</small>
+                  </div>
+                ) : (
+                  <div className="tactical-event-lock muted-lock">
+                    <span>NO OFFICIAL FIXTURE</span>
+                    <small>Выбери турнир на World Map. Пракки находятся в Training.</small>
+                  </div>
+                )}
               </div>
-              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong>{activeEvent && canAdvanceTournamentClock ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button> : <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode ?? 'scrim')}>{activeEvent ? 'ИГРАТЬ МАТЧ' : 'ИГРАТЬ ПРАКК'} <span>→</span></button>}{!currentPlayGate.ok && !canAdvanceTournamentClock ? <small>{currentPlayGate.reason}</small> : warnings.length > 0 && <small>{warnings[0]}</small>}</div>
+              <div className="tactical-launch"><span className="control-label">СЛЕДУЮЩИЙ ХОД</span><strong>{tacticInfo[tactic].name}</strong>{activeEvent && canAdvanceTournamentClock ? <button className="hq-primary-action" onClick={advanceToTournamentMatch}>К СЛЕДУЮЩЕМУ МАТЧУ <span>→</span></button> : activeEventMode ? <button className="hq-primary-action" disabled={!currentPlayGate.ok} onClick={() => play(activeEventMode)}>ИГРАТЬ МАТЧ <span>→</span></button> : <button className="hq-primary-action" onClick={() => openTab('World')}>ВЫБРАТЬ ТУРНИР <span>→</span></button>}{activeEventMode && !currentPlayGate.ok && !canAdvanceTournamentClock ? <small>{currentPlayGate.reason}</small> : warnings.length > 0 && <small>{warnings[0]}</small>}</div>
             </div>
             {last && <div className="match-recap-line"><span>ПОСЛЕДНИЙ RECAP · {last.opponent}</span><b>{last.won ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ'} {last.maps.map((map) => map.us + ':' + map.them).join(' ')}</b><button className="text-button" onClick={() => openTab('Inbox')}>Открыть ленту</button></div>}
+          </section>
+        )}
+
+
+        {tab === 'Training' && (
+          <section className="screen practice-room-screen">
+            <div className="fifa-screen-header practice-room-header">
+              <div>
+                <span>TRAINING GROUND · NO VRS · NO CASH</span>
+                <h1>PRACTICE</h1>
+              </div>
+              <div className="practice-continuity">
+                <small>LINEUP CONTINUITY</small>
+                <b>{state.lineupContinuity}</b>
+                <i><em style={{ width: state.lineupContinuity + '%' }} /></i>
+              </div>
+            </div>
+
+            <div className="practice-room-layout">
+              <section className="practice-squad-panel">
+                <div className="practice-panel-head">
+                  <div>
+                    <span>ACTIVE FIVE · {rating} OVR</span>
+                    <strong>{starters.map((player) => player.alias).join(' · ')}</strong>
+                  </div>
+                  <button className="secondary" onClick={() => openTab('Roster')}>EDIT FIVE</button>
+                </div>
+                <div className="practice-card-row">
+                  {starters.map((player) => (
+                    <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />
+                  ))}
+                </div>
+              </section>
+
+              <aside className="practice-console">
+                <span className="control-label">SESSION RULES</span>
+                <h2>BO3 PRACTICE</h2>
+                <div className="practice-rules">
+                  <span><b>0</b>CASH</span>
+                  <span><b>0</b>VRS</span>
+                  <span><b>+1</b>CONTINUITY</span>
+                  <span><b>+4</b>FATIGUE</span>
+                </div>
+                <div className="practice-tactics">
+                  <span className="control-label">PLAN</span>
+                  {(Object.keys(tacticInfo) as TacticalPlan[]).map((plan) => (
+                    <button key={plan} className={'tactical-plan ' + (tactic === plan ? 'selected' : '')} onClick={() => setTactic(plan)}>
+                      <span>{tacticInfo[plan].name}</span>
+                      <small>{tacticInfo[plan].description}</small>
+                    </button>
+                  ))}
+                </div>
+                <button className="fifa-primary-cta practice-start" disabled={!practiceGate.ok} onClick={() => play('practice')}>
+                  PLAY PRACC <span>→</span>
+                </button>
+                {!practiceGate.ok && <p className="practice-block-reason">{practiceGate.reason}</p>}
+                {state.activeTournament && !currentFixtureDue && bracketMatch && (
+                  <p className="practice-next-official">NEXT OFFICIAL · {formatGameDate(bracketMatch.scheduledAt)} · {formatGameTime(bracketMatch.scheduledAt)}</p>
+                )}
+              </aside>
+            </div>
           </section>
         )}
 

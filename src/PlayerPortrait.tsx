@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { playerPhoto } from './playerVisuals'
+import { hltvSnapshotForAlias } from './cardStats'
 
 const staticCandidates = (playerId: number | null | undefined) => {
   if (!playerId) return []
@@ -15,10 +16,14 @@ const failedPortraitUrls = new Set<string>()
 const portraitKey = (alias: string, playerId: number | null | undefined) =>
   alias.toLocaleLowerCase('en-US') + ':' + (playerId ?? 'none')
 
+const effectivePlayerId = (alias: string, playerId: number | null | undefined) =>
+  playerId ?? hltvSnapshotForAlias(alias)?.playerId ?? null
+
 const portraitCandidates = (alias: string, playerId: number | null | undefined) => {
-  const key = portraitKey(alias, playerId)
+  const resolvedId = effectivePlayerId(alias, playerId)
+  const key = portraitKey(alias, resolvedId)
   const cached = resolvedPortraits.get(key)
-  return [...new Set([cached, playerPhoto(alias), ...staticCandidates(playerId)]
+  return [...new Set([cached, playerPhoto(alias), ...staticCandidates(resolvedId)]
     .filter((url): url is string => Boolean(url)))]
     .filter((url) => !failedPortraitUrls.has(url))
 }
@@ -36,10 +41,11 @@ const preloadUrl = (url: string) => new Promise<boolean>((resolve) => {
 })
 
 export const preloadPlayerPortrait = async (alias: string, playerId?: number | null) => {
-  const key = portraitKey(alias, playerId)
+  const resolvedId = effectivePlayerId(alias, playerId)
+  const key = portraitKey(alias, resolvedId)
   if (resolvedPortraits.has(key)) return true
 
-  for (const url of portraitCandidates(alias, playerId)) {
+  for (const url of portraitCandidates(alias, resolvedId)) {
     if (await preloadUrl(url)) {
       resolvedPortraits.set(key, url)
       return true
@@ -54,7 +60,10 @@ export const preloadPlayerPortraits = async (
   entries: Array<{ alias: string; playerId?: number | null }>,
   concurrency = 8,
 ) => {
-  const unique = [...new Map(entries.map((entry) => [portraitKey(entry.alias, entry.playerId), entry])).values()]
+  const unique = [...new Map(entries.map((entry) => {
+    const resolvedId = effectivePlayerId(entry.alias, entry.playerId)
+    return [portraitKey(entry.alias, resolvedId), { ...entry, playerId: resolvedId }] as const
+  })).values()]
   if (!unique.length) return { loaded: 0, failed: 0 }
 
   let cursor = 0
@@ -90,13 +99,14 @@ export function PlayerPortrait({
   loading?: 'eager' | 'lazy'
   draggable?: boolean
 }) {
+  const resolvedId = effectivePlayerId(alias, playerId)
   const candidates = useMemo(
-    () => portraitCandidates(alias, playerId),
-    [alias, playerId],
+    () => portraitCandidates(alias, resolvedId),
+    [alias, resolvedId],
   )
   const [index, setIndex] = useState(0)
 
-  useEffect(() => setIndex(0), [alias, playerId])
+  useEffect(() => setIndex(0), [alias, resolvedId])
 
   const src = candidates[index]
   if (!src) {
@@ -121,7 +131,7 @@ export function PlayerPortrait({
       loading={loading}
       draggable={draggable}
       referrerPolicy="no-referrer"
-      onLoad={() => resolvedPortraits.set(portraitKey(alias, playerId), src)}
+      onLoad={() => resolvedPortraits.set(portraitKey(alias, resolvedId), src)}
       onError={() => {
         failedPortraitUrls.add(src)
         setIndex((current) => current + 1)

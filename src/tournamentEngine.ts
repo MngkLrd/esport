@@ -86,7 +86,7 @@ const hashSeed = (input: string) => {
   return h >>> 0
 }
 
-const mulberry32 = (seed: number) => () => {
+const mulberry32 = (seed: number) => {
   let value = seed >>> 0
   return () => {
     value += 0x6d2b79f5

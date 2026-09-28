@@ -1,0 +1,21 @@
+body {
+  position: relative;
+  isolation: isolate;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -16px;
+  background: url('./assets/ui/site-background.webp') center center / cover no-repeat;
+  opacity: 0.3;
+  filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}

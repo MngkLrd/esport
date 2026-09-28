@@ -112,10 +112,30 @@ export function TournamentHub({
       </div>
 
       {run.structure !== 'single_elim' && (
-        <div className="tournament-groups">
-          <GroupTable run={run} group="A" />
-          <GroupTable run={run} group="B" />
-        </div>
+        <>
+          <div className="tournament-groups">
+            <GroupTable run={run} group="A" />
+            <GroupTable run={run} group="B" />
+          </div>
+          <div className="tournament-group-fixtures">
+            <span>YOUR GROUP FIXTURES</span>
+            <div>
+              {run.matches
+                .filter((match) => match.stage === 'group' && (match.teamAId === PLAYER_TEAM_ID || match.teamBId === PLAYER_TEAM_ID))
+                .map((match) => (
+                  <article key={match.id} className={match.status === 'complete' ? 'complete' : ''}>
+                    <small>{formatGameDateTime(match.scheduledAt)}</small>
+                    <strong>
+                      {teamName(run, match.teamAId)}
+                      <i>{scoreLabel(match)}</i>
+                      {teamName(run, match.teamBId)}
+                    </strong>
+                    <b>{match.status === 'complete' ? (match.winnerId === PLAYER_TEAM_ID ? 'WIN' : 'LOSS') : match.label}</b>
+                  </article>
+                ))}
+            </div>
+          </div>
+        </>
       )}
 
       <div className="tournament-bracket">

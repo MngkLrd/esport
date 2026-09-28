@@ -227,9 +227,22 @@ export const refreshTournamentTeamsFromWorld = (
     if (team.isPlayer || !team.worldTeamId) return team
     const worldTeam = world.teams.find((candidate) => candidate.id === team.worldTeamId)
     if (!worldTeam) return team
-    const roster = tournamentRosterFromWorld(world, worldTeam.id)
+
+    const liveRoster = tournamentRosterFromWorld(world, worldTeam.id)
       .filter((player) => !clubPlayerKeys.has(player.playerKey))
-      .slice(0, 5)
+    const liveByKey = new Map(liveRoster.map((player) => [player.playerKey, player] as const))
+
+    // A tournament lineup keeps its slot/order while a player still belongs to
+    // the team. Transfers only replace the missing slot instead of shuffling the
+    // full five every time Matchday refreshes from the living world.
+    const preserved = team.roster
+      .map((player) => liveByKey.get(player.playerKey) ?? null)
+      .filter((player): player is TournamentRosterPlayer => Boolean(player))
+
+    const used = new Set(preserved.map((player) => player.playerKey))
+    const replacements = liveRoster.filter((player) => !used.has(player.playerKey))
+    const roster = [...preserved, ...replacements].slice(0, 5)
+
     return {
       ...team,
       rating: worldTeamRating(world, worldTeam),

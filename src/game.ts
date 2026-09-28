@@ -516,7 +516,9 @@ export const createInitialState = (): GameState => ({
 
 const normalizePlayers = (players: Player[], packs: PackState): Player[] => players.map((player) => {
   const aliasKey = player.alias.toLocaleLowerCase('en-US')
-  const card = packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
+  const card = (player.acquiredCardId
+    ? packs.inventory.find((entry) => entry.id === player.acquiredCardId)
+    : undefined) ?? packs.inventory.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
   const identity = REAL_PLAYERS.find((entry) => entry.alias.toLocaleLowerCase('en-US') === aliasKey)
   const profileMatch = identity?.profileUrl?.match(/\/player\/(\d+)/)
   return {

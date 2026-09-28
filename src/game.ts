@@ -1631,39 +1631,39 @@ const matchesAgeProfile = (age: number | null, profile: ScoutAgeProfile) => {
 const makeProspect = (
   state: GameState,
   index: number,
-  identity: (typeof proPlayerIdentities)[number],
+  identity: WorldPlayer,
   rng: () => number,
   brief: ScoutBrief,
 ): Player => {
-  const base = Math.round(54 + state.reputation * 0.22 + rng() * 14)
+  const base = Math.round(clamp(identity.currentRating + (rng() - .5) * 6, 48, 97))
   const role = identity.role ?? (brief.role === 'Any' ? pick(simulationRoles, rng) : brief.role)
+  const currentTeam = worldTeamForPlayer(state.world, identity.key)
+  const teamName = currentTeam?.name ?? 'Free agent'
   return {
     id: 'prospect-' + state.scoutCycle + '-' + index + '-' + identity.alias,
-    playerKey: 'alias:' + identity.alias.toLocaleLowerCase('en-US'),
+    playerKey: identity.key,
     acquiredCardId: null,
-    profileId: profileIdFromUrl(identity.profileUrl),
+    profileId: identity.profileId,
     alias: identity.alias,
     firstName: identity.realName ?? identity.alias,
     realName: identity.realName ?? identity.alias,
     country: identity.country ?? 'Неизвестно',
-    team: identity.team,
+    team: teamName,
     age: identity.age,
     role,
-    aim: clamp(base + Math.round((rng() - 0.5) * 14)),
-    gameSense: clamp(base + Math.round((rng() - 0.5) * 14)),
-    utility: clamp(base + Math.round((rng() - 0.5) * 14)),
-    clutch: clamp(base + Math.round((rng() - 0.5) * 14)),
-    leadership: clamp(base + Math.round((rng() - 0.5) * 14)),
-    form: Math.round(48 + rng() * 25),
-    morale: Math.round(55 + rng() * 30),
-    fatigue: Math.round(rng() * 12),
-    potential: clamp(base + 15 + Math.round(rng() * 15)),
-    salary: Math.round(70 + base * 0.72),
-    contractWeeks: 8,
+    aim: clamp(base + Math.round((rng() - .5) * 10)),
+    gameSense: clamp(base + Math.round((rng() - .5) * 10)),
+    utility: clamp(base + Math.round((rng() - .5) * 10)),
+    clutch: clamp(base + Math.round((rng() - .5) * 10)),
+    leadership: clamp(base + Math.round((rng() - .5) * 10)),
+    form: identity.form,
+    morale: identity.morale,
+    fatigue: identity.fatigue,
+    potential: clamp(base + Math.max(3, 27 - (identity.age ?? 25)) + Math.round(rng() * 6), 45, 99),
+    salary: Math.round(60 + base * .82),
+    contractWeeks: identity.contractWeeks,
     traits: [pick(traits, rng), pick(traits, rng)],
-    bio: identity.realName
-      ? identity.realName + ' · ' + (identity.country ?? 'страна неизвестна') + ' · команда в профиле: ' + identity.team + '. Рейтинг, зарплата и потенциал вымышлены для игрового процесса.'
-      : identity.alias + ' · команда по срезу Valve VRS: ' + identity.team + ' (2026-09-07). Полное имя, национальность и возраст пока не обогащены; роль, рейтинг, зарплата и потенциал являются данными симуляции.',
+    bio: (identity.realName ?? identity.alias) + ' · ' + (identity.country ?? 'страна неизвестна') + ' · ' + teamName + '.',
   }
 }
 
@@ -1690,8 +1690,11 @@ export const scout = (state: GameState, rawBrief: ScoutBrief = state.scoutBrief 
     brief.maxSalary,
     brief.ageProfile,
   ].join(':')))
+  const rosterKeys = new Set(state.roster.map((player) => player.playerKey).filter((key): key is string => Boolean(key)))
   const rosterAliases = new Set(state.roster.map((player) => player.alias.toLocaleLowerCase('en-US')))
-  const available = proPlayerIdentities
+  const available = Object.values(state.world.players)
+    .filter((identity) => identity.teamId !== PLAYER_CLUB_WORLD_ID)
+    .filter((identity) => !rosterKeys.has(identity.key))
     .filter((identity) => !rosterAliases.has(identity.alias.toLocaleLowerCase('en-US')))
     .filter((identity) => brief.role === 'Any' || identity.role === brief.role || identity.role == null)
     .filter((identity) => matchesAgeProfile(identity.age, brief.ageProfile))

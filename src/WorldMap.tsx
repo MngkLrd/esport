@@ -3,6 +3,8 @@ import { geoCentroid, geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
+import { formatGameDateTime } from './calendar'
+import { tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
 import {
   TOURNAMENTS,
   tournamentEntryCost,
@@ -88,6 +90,8 @@ export function WorldMap({
   const booked = state.activeEventId === selected.id
   const eventCost = tournamentEntryCost(selected)
   const weeklyOps = payroll + eventCost
+  const selectedStart = tournamentStartsAt(selected, state.seasonStart)
+  const selectedEnd = tournamentEndsAt(selected, state.seasonStart)
 
   const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
     setRegion(nextRegion)
@@ -263,10 +267,11 @@ export function WorldMap({
           <span>{selected.region.toUpperCase()} · {selected.city.toUpperCase()}</span>
           <h2>{selected.name}</h2>
           <p>{selected.label}</p>
+          <div className="world-event-date">{formatGameDateTime(selectedStart)} — {formatGameDateTime(selectedEnd)}</div>
 
           <div className="world-event-stats">
             <div><span>PRIZE POOL</span><b>{selected.prize.toLocaleString('ru-RU')}</b></div>
-            <div><span>{selected.format === 'ONLINE' ? 'ENTRY / OPS' : 'TRAVEL + OPS'}</span><b>{eventCost}</b></div>
+            <div><span>{selected.format === 'ONLINE' ? 'ENTRY FEE' : 'TRAVEL + OPS'}</span><b>{selected.format === 'ONLINE' ? 'FREE' : eventCost}</b></div>
             <div><span>FATIGUE</span><b>+{selected.fatigue}</b></div>
             <div><span>UNLOCK</span><b>LVL {selected.unlockLevel}</b></div>
           </div>
@@ -274,7 +279,7 @@ export function WorldMap({
           <div className="world-budget-preview">
             <span>EVENT WEEK</span>
             <strong>{weeklyOps.toLocaleString('ru-RU')} CASH</strong>
-            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'payroll + event ops' : 'payroll + travel + service'}</small>
+            <small>{booked ? 'Ивент уже подтверждён' : selected.format === 'ONLINE' ? 'online entry is free' : 'payroll + travel + service'}</small>
           </div>
 
           {booked ? (

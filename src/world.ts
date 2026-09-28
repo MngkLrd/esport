@@ -434,32 +434,31 @@ const simulateAiTransfer = (source: WorldState, seed: number, date: string): Wor
     return team
   })
 
+  const transfer: WorldTransfer = {
+    id: 'ai-transfer-' + candidate.key + '-' + date,
+    date,
+    playerKey: candidate.key,
+    alias: candidate.alias,
+    fromTeamId: seller.id,
+    toTeamId: buyer.id,
+    kind: 'ai-transfer',
+  }
+  const freeAgentMove: WorldTransfer = {
+    id: 'ai-release-' + released.key + '-' + date,
+    date,
+    playerKey: released.key,
+    alias: released.alias,
+    fromTeamId: buyer.id,
+    toTeamId: null,
+    kind: 'ai-free-agent',
+  }
+
   let world: WorldState = {
     ...source,
     players,
     teams,
     freeAgentKeys: uniqueFreeAgents({ ...source, players, teams }),
-    transferHistory: [
-      {
-        id: 'ai-transfer-' + candidate.key + '-' + date,
-        date,
-        playerKey: candidate.key,
-        alias: candidate.alias,
-        fromTeamId: seller.id,
-        toTeamId: buyer.id,
-        kind: 'ai-transfer',
-      },
-      {
-        id: 'ai-release-' + released.key + '-' + date,
-        date,
-        playerKey: released.key,
-        alias: released.alias,
-        fromTeamId: buyer.id,
-        toTeamId: null,
-        kind: 'ai-free-agent',
-      },
-      ...source.transferHistory,
-    ].slice(0, 120),
+    transferHistory: [transfer, freeAgentMove, ...source.transferHistory].slice(0, 120),
   }
 
   world = refillTeam(world, seller.id, seed ^ 0x7f4a7c15)
@@ -475,7 +474,7 @@ export const advanceWorldWeeks = (
   let world = source
 
   for (let step = 0; step < weeks; step += 1) {
-    const weekSeed = seed + (world.weeksSimulated + step + 1) * 7919
+    const weekSeed = seed + (world.weeksSimulated + 1) * 7919
     const players: Record<string, WorldPlayer> = {}
     for (const player of Object.values(world.players)) {
       const rng = mulberry32(hashSeed(player.key + ':' + weekSeed))

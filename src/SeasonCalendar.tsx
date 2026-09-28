@@ -65,10 +65,16 @@ export function SeasonCalendar({
 
   const monthStart = monthStartFor(state.now, monthOffset)
   const monthDate = parseGameDate(monthStart)
-  const monthKey = monthStart.slice(0, 7)
+  const year = monthDate.getUTCFullYear()
+  const month = monthDate.getUTCMonth()
   const mondayOffset = (monthDate.getUTCDay() + 6) % 7
-  const gridStart = addGameDays(monthStart, -mondayOffset, 9)
-  const days = Array.from({ length: 42 }, (_, index) => addGameDays(gridStart, index, 9))
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const monthDays = Array.from({ length: daysInMonth }, (_, index) => addGameDays(monthStart, index, 9))
+  const calendarCells: Array<string | null> = [
+    ...Array.from({ length: mondayOffset }, () => null),
+    ...monthDays,
+  ]
+  const weekRows = Math.max(4, Math.ceil(calendarCells.length / 7))
 
   const statusFor = (eventId: string, start: string, end: string) => {
     if (state.activeEventId === eventId) return 'REGISTERED'
@@ -150,12 +156,13 @@ export function SeasonCalendar({
           <div className="calendar-weekdays">
             {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) => <span key={day}>{day}</span>)}
           </div>
-          <div className="calendar-month-grid">
-            {days.map((day) => {
+          <div className="calendar-month-grid" style={{ gridTemplateRows: 'repeat(' + weekRows + ', minmax(0, 1fr))' }}>
+            {calendarCells.map((day, index) => {
+              if (!day) return <div key={'blank-' + index} className="calendar-empty-day" aria-hidden="true" />
+
               const label = dayLabel(day)
               const dayKey = gameDayKey(day)
               const current = dayKey === gameDayKey(state.now)
-              const outside = day.slice(0, 7) !== monthKey
               const clubMatchToday = nextClubMatch && gameDayKey(nextClubMatch.scheduledAt) === dayKey
               const starts = eventRows.filter((item) => gameDayKey(item.start) === dayKey)
               const closes = eventRows.filter((item) => gameDayKey(addGameHours(item.start, -72)) === dayKey)
@@ -172,7 +179,7 @@ export function SeasonCalendar({
               if (!markers.length && live) markers.push({ item: live, label: 'LIVE' })
 
               return (
-                <article key={dayKey} className={(current ? 'is-today ' : '') + (outside ? 'outside-month' : '')}>
+                <article key={dayKey} className={current ? 'is-today' : ''}>
                   <header>
                     <span>{label.dow}</span>
                     <b>{label.day}</b>

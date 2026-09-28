@@ -2,26 +2,28 @@ export const INITIAL_SEASON_START = '2026-09-28T09:00:00'
 
 const pad = (value: number) => String(value).padStart(2, '0')
 
-export const parseGameDate = (value: string) => new Date(value)
+const withUtc = (value: string) => value.endsWith('Z') ? value : value + 'Z'
+
+export const parseGameDate = (value: string) => new Date(withUtc(value))
 
 export const toGameIso = (date: Date) =>
-  date.getFullYear() + '-' +
-  pad(date.getMonth() + 1) + '-' +
-  pad(date.getDate()) + 'T' +
-  pad(date.getHours()) + ':' +
-  pad(date.getMinutes()) + ':00'
+  date.getUTCFullYear() + '-' +
+  pad(date.getUTCMonth() + 1) + '-' +
+  pad(date.getUTCDate()) + 'T' +
+  pad(date.getUTCHours()) + ':' +
+  pad(date.getUTCMinutes()) + ':00'
 
 export const addGameHours = (value: string, hours: number) => {
   const date = parseGameDate(value)
-  date.setHours(date.getHours() + hours)
+  date.setUTCHours(date.getUTCHours() + hours)
   return toGameIso(date)
 }
 
 export const addGameDays = (value: string, days: number, hour?: number) => {
   const date = parseGameDate(value)
-  date.setDate(date.getDate() + days)
+  date.setUTCDate(date.getUTCDate() + days)
   if (hour != null) {
-    date.setHours(hour, 0, 0, 0)
+    date.setUTCHours(hour, 0, 0, 0)
   }
   return toGameIso(date)
 }
@@ -44,6 +46,7 @@ export const formatGameDate = (value: string) =>
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   }).format(parseGameDate(value)).toUpperCase()
 
 export const formatGameTime = (value: string) =>
@@ -51,6 +54,7 @@ export const formatGameTime = (value: string) =>
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: 'UTC',
   }).format(parseGameDate(value))
 
 export const formatGameDateTime = (value: string) =>
@@ -58,7 +62,7 @@ export const formatGameDateTime = (value: string) =>
 
 export const startOfGameDay = (value: string) => {
   const date = parseGameDate(value)
-  date.setHours(0, 0, 0, 0)
+  date.setUTCHours(0, 0, 0, 0)
   return toGameIso(date)
 }
 

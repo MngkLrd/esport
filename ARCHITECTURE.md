@@ -17,16 +17,30 @@ A deterministic, timezone-independent game clock. Stored values intentionally ha
 ### Career state
 `src/game.ts`
 
-The persisted aggregate. Current schema version: **10**.
+The persisted aggregate. Current schema version: **11**.
 
 Important career fields:
 - `seasonStart`
 - `now`
 - `activeTournament`
 - `tournamentHistory`
+- `world`
 - squad/economy/progression state
 
 Matches no longer advance a whole week. Calendar progression does.
+
+### Living world
+`src/world.ts`
+
+Persistent real-team/player simulation seeded from the bundled Valve VRS snapshot:
+- one global owner per real player
+- real organizations and five-player lineups
+- player form, morale, fatigue and rating drift
+- deterministic AI transfers and free agents
+- old-team refill after a transfer
+- player-club signings remove the same player from every AI roster
+
+Tournament entries snapshot their participating real-team lineups, then refresh only ownership changes while preserving tournament lineup order.
 
 ### Tournament engine
 `src/tournamentEngine.ts`
@@ -82,9 +96,11 @@ The architecture deliberately keeps persistence behind a repository so IndexedDB
 5. A tournament remains active across all group/playoff matches until elimination or championship.
 6. AI bracket results are deterministic for a save/run.
 7. Match visualization cannot change the already calculated competitive result.
-8. Saved v9 active events migrate into a full v10 tournament run.
-9. Internal game dates are timezone-independent.
-10. Heavy tactical playback generation must not block the React render thread.
+8. Saved pre-v11 careers migrate into the shared real-team world and active events become v11 tournament runs.
+9. A real player has exactly one current world owner; the same player cannot simultaneously represent the player club and an AI club.
+10. Tournament and ordinary match opponents use real world-team rosters whenever a complete real lineup exists.
+11. Internal game dates are timezone-independent.
+12. Heavy tactical playback generation must not block the React render thread.
 
 ## Near-term extension points
 

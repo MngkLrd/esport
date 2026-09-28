@@ -76,37 +76,80 @@ interface MapProfile {
   ctMid: Point
 }
 
+const profile = (
+  key: string,
+  label: string,
+  tSpawn: Point,
+  ctSpawn: Point,
+  a: Point,
+  b: Point,
+  midBias: Point = [0, 0],
+): MapProfile => {
+  const mid: Point = [
+    (tSpawn[0] + ctSpawn[0]) / 2 + midBias[0],
+    (tSpawn[1] + ctSpawn[1]) / 2 + midBias[1],
+  ]
+  const mix = (from: Point, to: Point, t: number): Point => [
+    from[0] + (to[0] - from[0]) * t,
+    from[1] + (to[1] - from[1]) * t,
+  ]
+  return {
+    key,
+    label,
+    tSpawn,
+    ctSpawn,
+    a,
+    b,
+    mid,
+    aEntry: mix(mid, a, .62),
+    bEntry: mix(mid, b, .62),
+    ctA: mix(ctSpawn, a, .68),
+    ctB: mix(ctSpawn, b, .68),
+    ctMid: mix(ctSpawn, mid, .58),
+  }
+}
+
+// Spawn/site anchors come from CS2 overview metadata and are projected directly
+// into the 1024×1024 radar texture used by the Canvas renderer.
+const radarPoint = (x: number, y: number): Point => [x * 1024, y * 1024]
+
 const MAPS: Record<string, MapProfile> = {
-  'Dust II': {
-    key: 'de_dust2', label: 'Dust II',
-    tSpawn: [455, 780], ctSpawn: [610, 220], a: [760, 225], b: [250, 245], mid: [490, 470],
-    aEntry: [650, 350], bEntry: [330, 380], ctA: [700, 275], ctB: [290, 295], ctMid: [535, 390],
-  },
-  Mirage: {
-    key: 'de_mirage', label: 'Mirage',
-    tSpawn: [410, 820], ctSpawn: [625, 205], a: [760, 275], b: [250, 255], mid: [500, 475],
-    aEntry: [650, 405], bEntry: [345, 390], ctA: [700, 300], ctB: [300, 300], ctMid: [535, 405],
-  },
-  Inferno: {
-    key: 'de_inferno', label: 'Inferno',
-    tSpawn: [500, 840], ctSpawn: [500, 185], a: [735, 245], b: [285, 250], mid: [500, 470],
-    aEntry: [640, 360], bEntry: [360, 360], ctA: [685, 280], ctB: [315, 285], ctMid: [500, 375],
-  },
-  Nuke: {
-    key: 'de_nuke', label: 'Nuke',
-    tSpawn: [310, 770], ctSpawn: [665, 240], a: [620, 365], b: [560, 585], mid: [485, 455],
-    aEntry: [535, 425], bEntry: [500, 520], ctA: [650, 330], ctB: [620, 520], ctMid: [540, 385],
-  },
-  Ancient: {
-    key: 'de_ancient', label: 'Ancient',
-    tSpawn: [420, 805], ctSpawn: [610, 210], a: [735, 290], b: [285, 270], mid: [500, 475],
-    aEntry: [640, 385], bEntry: [360, 390], ctA: [690, 310], ctB: [325, 305], ctMid: [525, 390],
-  },
-  Anubis: {
-    key: 'de_anubis', label: 'Anubis',
-    tSpawn: [430, 805], ctSpawn: [625, 205], a: [735, 300], b: [270, 315], mid: [505, 470],
-    aEntry: [640, 400], bEntry: [360, 415], ctA: [690, 320], ctB: [315, 335], ctMid: [535, 390],
-  },
+  'Dust II': profile(
+    'de_dust2', 'Dust II',
+    radarPoint(.39, .91), radarPoint(.62, .21),
+    radarPoint(.80, .16), radarPoint(.21, .12),
+    [-18, 18],
+  ),
+  Mirage: profile(
+    'de_mirage', 'Mirage',
+    radarPoint(.87, .36), radarPoint(.28, .70),
+    radarPoint(.54, .76), radarPoint(.23, .28),
+    [12, -8],
+  ),
+  Inferno: profile(
+    'de_inferno', 'Inferno',
+    radarPoint(.10, .67), radarPoint(.90, .35),
+    radarPoint(.81, .69), radarPoint(.49, .22),
+    [-20, 10],
+  ),
+  Nuke: profile(
+    'de_nuke', 'Nuke',
+    radarPoint(.19, .54), radarPoint(.82, .45),
+    radarPoint(.58, .48), radarPoint(.58, .58),
+    [0, 8],
+  ),
+  Ancient: profile(
+    'de_ancient', 'Ancient',
+    radarPoint(.485, .87), radarPoint(.51, .17),
+    radarPoint(.31, .25), radarPoint(.80, .40),
+    [0, 0],
+  ),
+  Anubis: profile(
+    'de_anubis', 'Anubis',
+    radarPoint(.58, .93), radarPoint(.61, .22),
+    radarPoint(.32, .49), radarPoint(.76, .26),
+    [-12, 0],
+  ),
 }
 
 const FALLBACK_MAPS = Object.values(MAPS)

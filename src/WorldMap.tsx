@@ -27,6 +27,7 @@ const STRUCTURE_LABELS = {
 
 const MAP_WIDTH = 1000
 const MAP_HEIGHT = 520
+const DEFAULT_MAP_VIEW = { center: [29, 50] as [number, number], zoom: 3.25 }
 const worldFeature = feature(
   worldMap as unknown as Parameters<typeof feature>[0],
   (worldMap as unknown as { objects: { countries: Parameters<typeof feature>[1] } }).objects.countries,
@@ -35,6 +36,11 @@ const worldFeature = feature(
 const projection = geoEqualEarth()
   .fitExtent([[20, 20], [MAP_WIDTH - 20, MAP_HEIGHT - 20]], worldFeature as never)
 const worldPath = geoPath(projection)
+const defaultMapPoint = projection(DEFAULT_MAP_VIEW.center) ?? [MAP_WIDTH / 2, MAP_HEIGHT / 2]
+const DEFAULT_MAP_PAN = {
+  x: -DEFAULT_MAP_VIEW.zoom * (defaultMapPoint[0] - MAP_WIDTH / 2),
+  y: -DEFAULT_MAP_VIEW.zoom * (defaultMapPoint[1] - MAP_HEIGHT / 2),
+}
 
 const CIS_COUNTRY_IDS = new Set([
   '31', '51', '112', '268', '398', '417', '498', '643', '762', '795', '804', '860',
@@ -113,8 +119,8 @@ export function WorldMap({
   const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
   const [format, setFormat] = useState<'All' | EventFormat>('All')
   const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'eu-open-1')
-  const [zoom, setZoom] = useState(2)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(DEFAULT_MAP_VIEW.zoom)
+  const [pan, setPan] = useState(DEFAULT_MAP_PAN)
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
   useEffect(() => {
@@ -184,8 +190,8 @@ export function WorldMap({
   const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
     setRegion(nextRegion)
     if (nextRegion === 'All') {
-      setZoom(2)
-      setPan({ x: 0, y: 0 })
+      setZoom(DEFAULT_MAP_VIEW.zoom)
+      setPan(DEFAULT_MAP_PAN)
       return
     }
     const view = REGION_VIEW[nextRegion]
@@ -320,6 +326,7 @@ export function WorldMap({
             >
               <span>T{event.circuitTier} · {event.format}</span>
               <b>{event.name}</b>
+              <em>{formatGameDateTime(start)} · {event.city}</em>
               <small>{status}</small>
             </button>
           )
@@ -466,6 +473,24 @@ export function WorldMap({
                 <b>{formatGameDateTime(selectedNextMatch.scheduledAt)} · {humanTimeUntil(state.now, selectedNextMatch.scheduledAt)}</b>
               </div>
             )}
+          </div>
+
+          <div className="world-event-timeline">
+            <div className={compareGameTime(state.now, registrationClosesAt) > 0 ? 'done' : 'current'}>
+              <i />
+              <span>REGISTRATION CLOSES</span>
+              <b>{formatGameDateTime(registrationClosesAt)}</b>
+            </div>
+            <div className={compareGameTime(state.now, selectedStart) >= 0 ? 'done' : compareGameTime(state.now, registrationClosesAt) > 0 ? 'current' : ''}>
+              <i />
+              <span>EVENT START</span>
+              <b>{formatGameDateTime(selectedStart)}</b>
+            </div>
+            <div className={eventStarted ? 'current' : ''}>
+              <i />
+              <span>EVENT END</span>
+              <b>{formatGameDateTime(selectedEnd)}</b>
+            </div>
           </div>
 
           <div className="world-budget-preview">

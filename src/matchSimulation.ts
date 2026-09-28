@@ -246,11 +246,12 @@ const buildCombatEvents = (
 ): SimEvent[] => {
   const rankedHome = performanceBias(result, starters)
   const homeIds = starters.slice(0, 5).map((player) => player.id)
+  const rankedHomeIds = rankedHome.map((player) => player.id)
   const homeNames = new Map(starters.map((player) => [player.id, player.alias]))
   const rivalNames = awayNames(result.opponent)
   const awayIds = rivalNames.map((_, index) => 'away-' + index)
-  const winningIds = roundWinner === 'HOME' ? homeIds : awayIds
-  const losingIds = roundWinner === 'HOME' ? awayIds : homeIds
+  const winningIds = roundWinner === 'HOME' ? rankedHomeIds : awayIds
+  const losingIds = roundWinner === 'HOME' ? awayIds : [...rankedHomeIds].reverse()
   const winningNames = (id: string) =>
     homeNames.get(id) ?? rivalNames[Number(id.replace('away-', ''))] ?? result.opponent
   const sideForId = (id: string): SimSide => {
@@ -324,9 +325,9 @@ const buildCombatEvents = (
   const tSide = homeSide === 'T' ? 'HOME' : 'AWAY'
   const tIds = tSide === 'HOME' ? homeIds : awayIds
   const tNames = (id: string) => homeNames.get(id) ?? rivalNames[Number(id.replace('away-', ''))] ?? result.opponent
-  const bombActor = tIds[0]
   const tWins = roundWinner === tSide
   const plantTime = 6500
+  const bombActor = tIds.find((id) => !events.some((event) => event.type === 'kill' && event.targetId === id && event.time < plantTime)) ?? tIds[0]
 
   if (tWins || rng() > .34) {
     events.push({
@@ -431,6 +432,8 @@ const makeRound = (
     },
   ]
   const allEvents = [...utility, ...events].sort((a, b) => a.time - b.time)
+  const plantEvent = allEvents.find((event) => event.type === 'plant')
+  const bombCarrierId = plantEvent?.actorId ?? (bombHome ? starters[0]?.id : 'away-0')
 
   const frames: SimFrame[] = []
   const frameStep = 100
@@ -455,7 +458,7 @@ const makeRound = (
         hp: status.hp,
         alive: status.alive,
         weapon: weaponFor(player, side, index),
-        hasBomb: bombHome && index === 0 && !allEvents.some((event) => event.type === 'plant' && event.time <= time),
+        hasBomb: bombHome && player.id === bombCarrierId && !allEvents.some((event) => event.type === 'plant' && event.time <= time),
       })
     })
 
@@ -477,7 +480,7 @@ const makeRound = (
         hp: status.hp,
         alive: status.alive,
         weapon: weaponFor(null, side, index),
-        hasBomb: !bombHome && index === 0 && !allEvents.some((event) => event.type === 'plant' && event.time <= time),
+        hasBomb: !bombHome && id === bombCarrierId && !allEvents.some((event) => event.type === 'plant' && event.time <= time),
       })
     })
 

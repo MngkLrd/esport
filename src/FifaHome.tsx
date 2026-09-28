@@ -28,22 +28,20 @@ export function FifaHome({
   const heroTarget: ModeKey = pendingDecision ? 'Inbox' : matchDue ? 'Play' : activeEvent ? 'Play' : 'World'
   const heroKicker = pendingDecision
     ? 'CLUB DECISION · ACTION REQUIRED'
-    : matchDue
-      ? 'CURRENT MATCH · TIME LOCKED'
+    : matchDue && activeEvent
+      ? 'LIVE EVENT · ' + activeEvent.city.toUpperCase()
       : activeEvent
         ? 'NEXT EVENT · ' + activeEvent.city.toUpperCase()
         : 'GLOBAL CIRCUIT'
   const heroTitle = pendingDecision
     ? pendingDecision.title
-    : matchDue
-      ? 'YOUR CLUB vs ' + (opponent?.name ?? 'OPPONENT')
-      : activeEvent
-        ? activeEvent.name
-        : 'SELECT EVENT'
+    : activeEvent
+      ? activeEvent.name
+      : 'SELECT EVENT'
   const heroMeta = pendingDecision
     ? pendingDecision.body
     : matchDue
-      ? (nextMatch?.label ?? 'OFFICIAL MATCH') + ' · PLAY TO CONTINUE TIME'
+      ? (nextMatch?.label ?? 'OFFICIAL MATCH') + ' · VS ' + (opponent?.name ?? 'OPPONENT')
       : activeEvent
         ? activeEvent.label + ' · ' + activeEvent.prize.toLocaleString('ru-RU') + ' PRIZE'
         : null

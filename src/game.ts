@@ -965,7 +965,7 @@ const performanceRating = (player: Player, won: boolean, tactic: TacticalPlan, r
       : tactic === 'structured'
         ? ((player.gameSense + player.utility + player.leadership) / 3 - 65) * 0.07
         : 0
-  return Math.round(clamp(overall(player) + (player.form - 50) * 0.1 - player.fatigue * 0.06 + tacticFit + (won ? 4 : -3) + (rng() - 0.5) * 12, 35, 99))
+  return Math.round(clamp(overall(player) + (player.form - 50) * 0.1 - player.fatigue * 0.06 + tacticFit + (won ? 4 : -3) + (rng() - 0.5) * 6, 35, 99))
 }
 
 export const weeklyPayroll = (state: GameState) =>

@@ -374,6 +374,61 @@ export const constrainRoundToNavigation = (
     return { ...frame, players }
   })
 
+  // Combat is generated before real radar navigation is applied. Re-time each
+  // duel to a frame where both players have actual line of sight, then rebuild
+  // HP/alive state from those corrected events.
+  const clearCombatTimeByPair = new Map<string, number>()
+  const pairKey = (actorId?: string, targetId?: string) => actorId && targetId ? actorId + '>' + targetId : ''
+
+  for (const event of round.events) {
+    if (event.type !== 'kill' || !event.actorId || !event.targetId) continue
+    const orderedFrames = [...frames].sort((a, b) =>
+      Math.abs(a.time - event.time) - Math.abs(b.time - event.time),
+    )
+    const clearFrame = orderedFrames.find((frame) => {
+      const actor = frame.players.find((player) => player.id === event.actorId)
+      const target = frame.players.find((player) => player.id === event.targetId)
+      return Boolean(actor && target && isNavigationSegmentClear(
+        grid,
+        { x: actor.x, y: actor.y },
+        { x: target.x, y: target.y },
+      ))
+    })
+    if (clearFrame) clearCombatTimeByPair.set(pairKey(event.actorId, event.targetId), clearFrame.time)
+  }
+
+  const navigatedEvents = round.events
+    .map((event) => {
+      if ((event.type === 'shot' || event.type === 'damage' || event.type === 'kill') && event.actorId && event.targetId) {
+        const clearKillTime = clearCombatTimeByPair.get(pairKey(event.actorId, event.targetId))
+        if (clearKillTime != null) {
+          const offset = event.type === 'shot' ? -240 : event.type === 'damage' ? -130 : 0
+          return { ...event, time: Math.max(0, clearKillTime + offset) }
+        }
+      }
+      return event
+    })
+    .sort((a, b) => a.time - b.time)
+
+  const reconciledFrames = frames.map((frame) => ({
+    ...frame,
+    players: frame.players.map((player) => {
+      let hp = 100
+      let alive = true
+      for (const event of navigatedEvents) {
+        if (event.time > frame.time) break
+        if (event.targetId !== player.id) continue
+        if (event.type === 'damage') hp = Math.max(1, hp - (event.damage ?? 0))
+        if (event.type === 'kill') {
+          hp = 0
+          alive = false
+          break
+        }
+      }
+      return { ...player, hp, alive, hasBomb: alive ? player.hasBomb : false }
+    }),
+  }))
+
   const projectEvent = (x: number | undefined, y: number | undefined) => {
     if (x == null || y == null) return null
     const index = nearestWalkableIndex(grid, { x, y })
@@ -381,10 +436,10 @@ export const constrainRoundToNavigation = (
     return pointForCell(grid, index)
   }
 
-  const events = round.events.map((event) => {
+  const events = navigatedEvents.map((event) => {
     const projected = projectEvent(event.x, event.y)
     return projected ? { ...event, x: projected.x, y: projected.y } : event
   })
 
-  return { ...round, frames, events }
+  return { ...round, frames: reconciledFrames, events }
 }

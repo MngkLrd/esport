@@ -141,6 +141,48 @@ describe('P0 career flow', () => {
     expect(points.some((point) => point.y > 28)).toBe(true)
   })
 
+  it('re-times combat to legal line-of-sight frames after navigation', () => {
+    const cols = 16
+    const rows = 16
+    const walkable = new Uint8Array(cols * rows)
+    walkable.fill(1)
+    for (let row = 0; row < 13; row += 1) walkable[row * cols + 8] = 0
+    const grid: RadarNavigationGrid = { cols, rows, cellSize: 8, walkable }
+
+    const round: SimRound = {
+      id: 'combat-los-test',
+      map: 'Test',
+      mapKey: 'test',
+      homeSide: 'T',
+      scenario: 'default',
+      scenarioLabel: 'DEFAULT',
+      site: 'A',
+      duration: 900,
+      winner: 'HOME',
+      events: [
+        { id: 'shot-0', time: 160, type: 'shot', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47' },
+        { id: 'damage-0', time: 270, type: 'damage', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47', damage: 55 },
+        { id: 'kill-0', time: 400, type: 'kill', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47' },
+      ],
+      frames: Array.from({ length: 10 }, (_, index) => ({
+        time: index * 100,
+        players: [
+          { id: 'a', name: 'A', side: 'T' as const, x: 20 + index * 5, y: 28 + index * 5, yaw: 0, hp: 100, alive: true, weapon: 'AK-47', hasBomb: false },
+          { id: 'b', name: 'B', side: 'CT' as const, x: 108, y: 28 + index * 5, yaw: 180, hp: index >= 4 ? 0 : 100, alive: index < 4, weapon: 'M4A1-S', hasBomb: false },
+        ],
+      })),
+    }
+
+    const constrained = constrainRoundToNavigation(round, grid)
+    const kill = constrained.events.find((event) => event.type === 'kill')!
+    const frame = constrained.frames.reduce((best, current) =>
+      Math.abs(current.time - kill.time) < Math.abs(best.time - kill.time) ? current : best,
+    )
+    const actor = frame.players.find((player) => player.id === 'a')!
+    const target = frame.players.find((player) => player.id === 'b')!
+    expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
+  })
+
   it('builds deterministic frame-based tactical playback for every map', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))

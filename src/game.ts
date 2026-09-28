@@ -951,13 +951,16 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
 export const advanceCareerTo = (state: GameState, target: string): GameState => {
   if (state.pendingDecision || compareGameTime(target, state.now) <= 0 || state.seasonEnded) return state
 
-  const preparedTournament = state.activeTournament
-    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
+  const projectedTournament = state.activeTournament
+    ? advanceTournamentTo(state.activeTournament, target, state.seed + state.season)
     : null
-  const mandatoryMatch = nextPlayerMatch(preparedTournament)
+  const mandatoryMatch = nextPlayerMatch(projectedTournament)
   const effectiveTarget = mandatoryMatch && compareGameTime(target, mandatoryMatch.scheduledAt) > 0
     ? mandatoryMatch.scheduledAt
     : target
+  const preparedTournament = state.activeTournament
+    ? advanceTournamentTo(state.activeTournament, effectiveTarget, state.seed + state.season)
+    : null
 
   const previousWeek = gameWeekForDate(state.seasonStart, state.now)
   const nextWeekRaw = gameWeekForDate(state.seasonStart, effectiveTarget)
@@ -996,7 +999,7 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   }
 
   if (next.activeTournament) {
-    const advanced = advanceTournamentTo(next.activeTournament, target, next.seed + next.season)
+    const advanced = advanceTournamentTo(next.activeTournament, effectiveTarget, next.seed + next.season)
     next = settleFinishedTournament(next, advanced)
   }
 

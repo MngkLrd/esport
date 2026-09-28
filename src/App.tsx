@@ -508,7 +508,7 @@ function App() {
 
 
 
-      <main>
+      <main className={'app-main app-main-' + tab.toLowerCase()}>
         {tab !== 'HQ' && !pendingMatch && (
           <button className="screen-back-button" onClick={() => openTab('HQ')} aria-label="Назад">
             <span>←</span> НАЗАД

@@ -10,6 +10,7 @@ import {
   type SimSide,
 } from './matchSimulation'
 import { buildMatchPlayback } from './simulationClient'
+import { constrainRoundToNavigation, createRadarNavigationGrid, type RadarNavigationGrid } from './radarNavigation'
 
 const CANVAS_SIZE = 1024
 const PLAYER_RADIUS = 9
@@ -18,22 +19,22 @@ const T_COLOR = '#f2a04b'
 const DEAD_COLOR = '#ff5b72'
 const WALL_LUMA = 58
 
-type RadarResource = { image: HTMLImageElement; wallMask: Uint8Array | null }
+type RadarResource = { image: HTMLImageElement; wallMask: Uint8Array | null; navigationGrid: RadarNavigationGrid | null }
 const radarResourceCache = new Map<string, RadarResource>()
 const radarResourcePromises = new Map<string, Promise<RadarResource | null>>()
 
 const sideColor = (side: SimSide) => side === 'CT' ? CT_COLOR : T_COLOR
 
-const extractWallMask = (img: HTMLImageElement) => {
+const extractRadarMasks = (img: HTMLImageElement) => {
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) return null
+  if (!ctx) return { wallMask: null, navigationGrid: null }
 
   ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE)
   const data = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data
-  const mask = new Uint8Array(CANVAS_SIZE * CANVAS_SIZE)
+  const wallMask = new Uint8Array(CANVAS_SIZE * CANVAS_SIZE)
 
   for (let y = 1; y < CANVAS_SIZE - 1; y += 2) {
     for (let x = 1; x < CANVAS_SIZE - 1; x += 2) {
@@ -44,15 +45,18 @@ const extractWallMask = (img: HTMLImageElement) => {
 
       const luma = (data[off] + data[off + 1] + data[off + 2]) / 3
       if (luma < WALL_LUMA) {
-        mask[pixel] = 1
-        mask[pixel + 1] = 1
-        mask[pixel + CANVAS_SIZE] = 1
-        mask[pixel + CANVAS_SIZE + 1] = 1
+        wallMask[pixel] = 1
+        wallMask[pixel + 1] = 1
+        wallMask[pixel + CANVAS_SIZE] = 1
+        wallMask[pixel + CANVAS_SIZE + 1] = 1
       }
     }
   }
 
-  return mask
+  return {
+    wallMask,
+    navigationGrid: createRadarNavigationGrid(data, CANVAS_SIZE, CANVAS_SIZE, wallMask),
+  }
 }
 
 const loadRadarResource = (mapKey: string) => {
@@ -65,7 +69,8 @@ const loadRadarResource = (mapKey: string) => {
   const promise = new Promise<RadarResource | null>((resolve) => {
     const image = new Image()
     image.onload = () => {
-      const resource = { image, wallMask: extractWallMask(image) }
+      const masks = extractRadarMasks(image)
+      const resource = { image, ...masks }
       radarResourceCache.set(mapKey, resource)
       radarResourcePromises.delete(mapKey)
       resolve(resource)
@@ -390,6 +395,7 @@ export function MatchRadar({
   const [paused, setPaused] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(starters[0]?.id ?? null)
   const [imageReady, setImageReady] = useState(false)
+  const [navigationRound, setNavigationRound] = useState<SimRound | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -425,12 +431,13 @@ export function MatchRadar({
       )
     : 0
   const round = rounds[currentRoundIndex]
+  const activeRound = navigationRound?.id === round?.id ? navigationRound : null
   const roundOffset = roundOffsets[currentRoundIndex]?.start ?? 0
   const localTime = Math.max(0, elapsed - roundOffset)
-  const frame = round ? simulationFrameAt(round, localTime) : null
+  const frame = activeRound ? simulationFrameAt(activeRound, localTime) : null
   const totalDuration = playback?.totalDuration ?? 0
   const seriesProgress = totalDuration ? Math.min(1, elapsed / totalDuration) : 0
-  const roundProgress = round ? Math.min(1, localTime / round.duration) : 1
+  const roundProgress = activeRound ? Math.min(1, localTime / activeRound.duration) : 0
   const timer = Math.max(0, 115 - Math.floor(roundProgress * 115))
   const finalPhase = seriesProgress > .965
 
@@ -438,6 +445,7 @@ export function MatchRadar({
     if (!round) return
     let cancelled = false
     setImageReady(false)
+    setNavigationRound(null)
     imageRef.current = null
     wallMaskRef.current = null
 
@@ -445,6 +453,11 @@ export function MatchRadar({
       if (cancelled) return
       imageRef.current = resource?.image ?? null
       wallMaskRef.current = resource?.wallMask ?? null
+      setNavigationRound(
+        resource?.navigationGrid
+          ? constrainRoundToNavigation(round, resource.navigationGrid)
+          : round,
+      )
       setImageReady(true)
     })
 
@@ -454,7 +467,7 @@ export function MatchRadar({
     return () => {
       cancelled = true
     }
-  }, [currentRoundIndex, rounds, round?.mapKey])
+  }, [currentRoundIndex, rounds, round])
 
   useEffect(() => {
     if (!playback || playback.totalDuration <= 0) return
@@ -466,7 +479,7 @@ export function MatchRadar({
       const delta = Math.min(80, now - lastFrameRef.current)
       lastFrameRef.current = now
 
-      if (!paused && !finishedRef.current) {
+      if (!paused && !finishedRef.current && navigationRound?.id === round?.id) {
         elapsedRef.current = Math.min(playback.totalDuration, elapsedRef.current + delta * speed)
         if (now - lastHudUpdate > 45 || elapsedRef.current >= playback.totalDuration) {
           setElapsed(elapsedRef.current)
@@ -486,21 +499,21 @@ export function MatchRadar({
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [onComplete, paused, playback, speed])
+  }, [navigationRound, onComplete, paused, playback, round?.id, speed])
 
   useEffect(() => {
-    if (!canvasRef.current || !round) return
-    drawCanvas(canvasRef.current, imageRef.current, wallMaskRef.current, round, localTime, selectedId)
-  }, [elapsed, imageReady, localTime, round, selectedId])
+    if (!canvasRef.current || !activeRound) return
+    drawCanvas(canvasRef.current, imageRef.current, wallMaskRef.current, activeRound, localTime, selectedId)
+  }, [activeRound, elapsed, imageReady, localTime, selectedId])
 
-  const recentKills = round
-    ? round.events.filter((event) => event.type === 'kill' && event.time <= localTime && localTime - event.time < 3500).slice(-4)
+  const recentKills = activeRound
+    ? activeRound.events.filter((event) => event.type === 'kill' && event.time <= localTime && localTime - event.time < 3500).slice(-4)
     : []
-  const recentUtility = round
-    ? round.events.filter((event) => event.type === 'utility' && event.time <= localTime && localTime - event.time < 1800).slice(-1)[0]
+  const recentUtility = activeRound
+    ? activeRound.events.filter((event) => event.type === 'utility' && event.time <= localTime && localTime - event.time < 1800).slice(-1)[0]
     : null
-  const plant = round?.events.find((event) => event.type === 'plant' && event.time <= localTime)
-  const defuse = round?.events.find((event) => event.type === 'defuse' && event.time <= localTime)
+  const plant = activeRound?.events.find((event) => event.type === 'plant' && event.time <= localTime)
+  const defuse = activeRound?.events.find((event) => event.type === 'defuse' && event.time <= localTime)
   const selected = frame?.players.find((player) => player.id === selectedId) ?? null
   const homePlayers = frame?.players.filter((player) => !player.id.startsWith('away-')) ?? []
   const awayPlayers = frame?.players.filter((player) => player.id.startsWith('away-')) ?? []
@@ -517,7 +530,7 @@ export function MatchRadar({
         <header className="match-radar-header">
           <div>
             <span>{playback ? 'LIVE TACTICAL SIM · MAP ' + (currentRoundIndex + 1) + '/' + rounds.length : 'PREPARING MATCH SIMULATION'}</span>
-            <strong>{round?.map ?? 'TACTICAL MAP'} · {round?.scenarioLabel}</strong>
+            <strong>{activeRound?.map ?? 'TACTICAL MAP'} · {activeRound?.scenarioLabel}</strong>
           </div>
           <div className="match-radar-score">
             <b>{ourMaps}</b><span>BO3</span><b>{theirMaps}</b>
@@ -565,8 +578,8 @@ export function MatchRadar({
             </div>
 
             <div className="match-radar-context">
-              <span>{round?.homeSide === 'CT' ? 'HOME CT' : 'HOME T'}</span>
-              <b>{round?.scenarioLabel}</b>
+              <span>{activeRound?.homeSide === 'CT' ? 'HOME CT' : 'HOME T'}</span>
+              <b>{activeRound?.scenarioLabel}</b>
               <small>{recentUtility ? recentUtility.utility?.toUpperCase() + ' DEPLOYED' : plant && !defuse ? 'POST-PLANT ' + round.site : 'LIVE POSITIONING'}</small>
             </div>
 
@@ -581,7 +594,7 @@ export function MatchRadar({
 
           <aside className="match-radar-roster match-radar-roster-v2">
             <div className="radar-side-heading home">
-              <span>YOUR FIVE · {round?.homeSide}</span>
+              <span>YOUR FIVE · {activeRound?.homeSide}</span>
               <b>{homePlayers.filter((player) => player.alive).length}/5</b>
             </div>
             {homePlayers.map((player) => (
@@ -597,7 +610,7 @@ export function MatchRadar({
             ))}
 
             <div className="radar-side-heading away">
-              <span>{result.opponent.toUpperCase()} · {round?.homeSide === 'CT' ? 'T' : 'CT'}</span>
+              <span>{result.opponent.toUpperCase()} · {activeRound?.homeSide === 'CT' ? 'T' : 'CT'}</span>
               <b>{awayPlayers.filter((player) => player.alive).length}/5</b>
             </div>
             {awayPlayers.map((player) => (

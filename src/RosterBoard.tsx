@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type DragEvent, type SetStateAction } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type Dispatch, type DragEvent, type SetStateAction } from 'react'
 import {
   LINEUP_SLOTS,
   assignLineupSlot,
@@ -36,6 +36,10 @@ type Candidate = {
   fit: number
 }
 
+type PoolRole = 'all' | LineupSlot
+type PoolSource = 'all' | Candidate['source']
+type PoolSort = 'ovr' | 'form' | 'contract'
+
 function fitLabel(candidate: Candidate, slot: LineupSlot) {
   if (candidate.player.role === slot && candidate.fit >= 76) return 'BEST FIT'
   if (candidate.fit >= 70) return 'GOOD FIT'
@@ -60,14 +64,14 @@ function GameCard({
 }) {
   const ovr = overall(player)
   const tier = cardTier(ovr)
-  const role = player.role === 'Rifler' ? 'РИФ' : player.role === 'Support' ? 'САП' : player.role === 'Entry' ? 'ЕНТ' : player.role
+  const role = player.role === 'Rifler' ? 'RIF' : player.role === 'Support' ? 'SUP' : player.role === 'Entry' ? 'ENT' : player.role
 
   return (
     <button
       type="button"
       className={'visual-player-card compact game-roster-card tier-' + tier + (starter ? ' is-starter' : '')}
       onClick={onOpen}
-      aria-label={'Открыть профиль ' + player.alias}
+      aria-label={'Select ' + player.alias}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -92,10 +96,10 @@ function GameCard({
         <span>{player.team}</span>
       </div>
       <div className="visual-stats">
-        <span><b>{player.aim}</b>АИМ</span>
-        <span><b>{player.utility}</b>УТЛ</span>
-        <span><b>{player.gameSense}</b>ПОЗ</span>
-        <span><b>{player.clutch}</b>КЛА</span>
+        <span><b>{player.aim}</b>AIM</span>
+        <span><b>{player.utility}</b>UTL</span>
+        <span><b>{player.gameSense}</b>POS</span>
+        <span><b>{player.clutch}</b>CLU</span>
       </div>
       <div className="visual-live-state">
         <span><b>{player.form}</b>FORM</span>
@@ -103,6 +107,66 @@ function GameCard({
         <span className={player.fatigue >= 65 ? 'danger' : ''}><b>{player.fatigue}</b>FAT</span>
       </div>
       <div className="visual-rarity">{CARD_TIER_LABEL[tier]}</div>
+    </button>
+  )
+}
+
+function PoolCard({
+  entry,
+  starter,
+  selected,
+  onSelect,
+  onDragStart,
+  onDragEnd,
+}: {
+  entry: Candidate
+  starter: boolean
+  selected: boolean
+  onSelect: () => void
+  onDragStart?: (event: DragEvent<HTMLButtonElement>) => void
+  onDragEnd?: () => void
+}) {
+  const player = entry.player
+  const ovr = overall(player)
+  const tier = cardTier(ovr)
+
+  return (
+    <button
+      type="button"
+      className={'sim-pool-card tier-' + tier + (starter ? ' is-in-squad' : '') + (selected ? ' is-selected' : '')}
+      onClick={onSelect}
+      draggable={entry.source === 'roster' && player.contractWeeks > 0}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+    >
+      <div className="sim-pool-card-copy">
+        <div className="sim-pool-card-top">
+          <strong>{ovr}</strong>
+          <span>{ROLE_LABELS[player.role]}</span>
+        </div>
+        <div className="sim-pool-card-name">
+          <b>{player.alias}</b>
+          <span>{player.team}</span>
+        </div>
+        <div className="sim-pool-card-stats">
+          <span><b>{player.aim}</b>AIM</span>
+          <span><b>{player.utility}</b>UTL</span>
+          <span><b>{player.gameSense}</b>POS</span>
+        </div>
+      </div>
+      <div className="sim-pool-card-photo">
+        <PlayerPortrait
+          alias={player.alias}
+          playerId={player.profileId}
+          alt={player.realName + ' (' + player.alias + ')'}
+          draggable={false}
+        />
+      </div>
+      <div className="sim-pool-card-flags">
+        <span>{countryFlag(player.country)}</span>
+        <span>{entry.source === 'collection' ? 'COLLECTION' : starter ? 'IN SQUAD' : 'CLUB'}</span>
+      </div>
+      {starter && <div className="sim-pool-card-lock">IN SQUAD</div>}
     </button>
   )
 }
@@ -120,6 +184,11 @@ export function RosterBoard({
 }) {
   const [pickerSlot, setPickerSlot] = useState<LineupSlot | null>(null)
   const [dragOverSlot, setDragOverSlot] = useState<LineupSlot | null>(null)
+  const [poolQuery, setPoolQuery] = useState('')
+  const [poolRole, setPoolRole] = useState<PoolRole>('all')
+  const [poolSource, setPoolSource] = useState<PoolSource>('all')
+  const [poolSort, setPoolSort] = useState<PoolSort>('ovr')
+  const [selectedPoolKey, setSelectedPoolKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (!pickerSlot) return
@@ -133,22 +202,23 @@ export function RosterBoard({
   const rating = teamRating(state.roster, state.startingFive, state.lineupContinuity)
   const chem = chemistry(state.roster, state.startingFive, state.lineupContinuity)
   const starterIds = useMemo(() => new Set(state.startingFive), [state.startingFive])
-  const bench = useMemo(
-    () => state.roster.filter((player) => !starterIds.has(player.id)).sort((a, b) => overall(b) - overall(a)),
-    [state.roster, starterIds],
+  const activePlayers = useMemo(
+    () => state.startingFive.map((id) => state.roster.find((player) => player.id === id)).filter((player): player is Player => Boolean(player)),
+    [state.startingFive, state.roster],
   )
-  const activePlayers = useMemo(() => state.startingFive.map((id) => state.roster.find((player) => player.id === id)).filter((player): player is Player => Boolean(player)), [state.startingFive, state.roster])
-  const activeAverage = (selector: (player: Player) => number) => activePlayers.length ? Math.round(activePlayers.reduce((sum, player) => sum + selector(player), 0) / activePlayers.length) : 0
+  const payroll = useMemo(() => state.roster.reduce((sum, player) => sum + player.salary, 0), [state.roster])
+  const activeAverage = (selector: (player: Player) => number) =>
+    activePlayers.length
+      ? Math.round(activePlayers.reduce((sum, player) => sum + selector(player), 0) / activePlayers.length)
+      : 0
 
-  const candidates = useMemo<Candidate[]>(() => {
-    if (!pickerSlot) return []
-
+  const poolEntries = useMemo<Candidate[]>(() => {
     const rows: Candidate[] = state.roster.map((player) => ({
       key: 'roster:' + player.id,
       player,
       source: 'roster',
       cardId: player.acquiredCardId ?? null,
-      fit: lineupFitScore(player, pickerSlot),
+      fit: 0,
     }))
 
     const rosterAliases = new Set(state.roster.map((player) => player.alias.toLocaleLowerCase('en-US')))
@@ -163,27 +233,62 @@ export function RosterBoard({
 
     let previewIndex = 1000
     for (const card of bestOwnedByAlias.values()) {
-      const player = playerFromPackCard(card, previewIndex++)
       rows.push({
         key: 'collection:' + card.id,
-        player,
+        player: playerFromPackCard(card, previewIndex++),
         source: 'collection',
         cardId: card.id,
-        fit: lineupFitScore(player, pickerSlot),
+        fit: 0,
       })
     }
 
-    return rows.sort((a, b) =>
-      b.fit - a.fit ||
-      Number(b.player.role === pickerSlot) - Number(a.player.role === pickerSlot) ||
-      overall(b.player) - overall(a.player),
-    )
-  }, [pickerSlot, state.roster, state.packs.inventory])
+    return rows
+  }, [state.roster, state.packs.inventory])
+
+  const candidates = useMemo<Candidate[]>(() => {
+    if (!pickerSlot) return []
+    return poolEntries
+      .map((entry) => ({ ...entry, fit: lineupFitScore(entry.player, pickerSlot) }))
+      .sort((a, b) =>
+        b.fit - a.fit ||
+        Number(b.player.role === pickerSlot) - Number(a.player.role === pickerSlot) ||
+        overall(b.player) - overall(a.player),
+      )
+  }, [pickerSlot, poolEntries])
+
+  const filteredPool = useMemo(() => {
+    const query = poolQuery.trim().toLocaleLowerCase('en-US')
+    return poolEntries
+      .filter((entry) => {
+        const player = entry.player
+        if (query && ![player.alias, player.realName, player.team].some((value) => value.toLocaleLowerCase('en-US').includes(query))) return false
+        if (poolRole !== 'all' && player.role !== poolRole) return false
+        if (poolSource !== 'all' && entry.source !== poolSource) return false
+        return true
+      })
+      .sort((a, b) => {
+        if (poolSort === 'form') return b.player.form - a.player.form || overall(b.player) - overall(a.player)
+        if (poolSort === 'contract') return b.player.contractWeeks - a.player.contractWeeks || overall(b.player) - overall(a.player)
+        return overall(b.player) - overall(a.player)
+      })
+  }, [poolEntries, poolQuery, poolRole, poolSource, poolSort])
+
+  const selectedPoolEntry = useMemo(() => {
+    if (selectedPoolKey) {
+      const explicit = poolEntries.find((entry) => entry.key === selectedPoolKey)
+      if (explicit) return explicit
+    }
+    const firstStarter = poolEntries.find((entry) => starterIds.has(entry.player.id))
+    return firstStarter ?? poolEntries[0] ?? null
+  }, [poolEntries, selectedPoolKey, starterIds])
 
   const slotPlayer = (slot: LineupSlot) => {
     const id = state.lineupSlots?.[slot]
     return id ? state.roster.find((player) => player.id === id) ?? null : null
   }
+
+  const playerSlot = (playerId: string) =>
+    LINEUP_SLOTS.find((slot) => state.lineupSlots?.[slot] === playerId) ?? null
 
   const startDrag = (event: DragEvent<HTMLButtonElement>, playerId: string) => {
     event.dataTransfer.setData('text/player-id', playerId)
@@ -197,74 +302,95 @@ export function RosterBoard({
     setDragOverSlot(null)
   }
 
-  const placeCandidate = (candidate: Candidate) => {
-    if (!pickerSlot) return
-    if (candidate.source === 'collection' && state.roster.length >= 8) return
+  const promoteCollectionEntry = (current: GameState, entry: Candidate) => {
+    const card = current.packs.inventory.find((item) => item.id === entry.cardId)
+    if (!card) return { state: current, playerId: null as string | null }
+    const existing = current.roster.find(
+      (player) => player.alias.toLocaleLowerCase('en-US') === card.alias.toLocaleLowerCase('en-US'),
+    )
+    if (existing) return { state: current, playerId: existing.id }
+    if (current.roster.length >= 8) return { state: current, playerId: null as string | null }
 
-    const slot = pickerSlot
+    const promoted = {
+      ...playerFromPackCard(card, current.roster.length),
+      id: 'card-' + card.id,
+    }
+    return {
+      state: { ...current, roster: [...current.roster, promoted] },
+      playerId: promoted.id,
+    }
+  }
+
+  const fieldEntry = (entry: Candidate, slot: LineupSlot = entry.player.role) => {
     setState((current) => {
       let next = current
-      let playerId = candidate.player.id
+      let playerId: string | null = entry.player.id
 
-      if (candidate.source === 'collection') {
-        const card = current.packs.inventory.find((entry) => entry.id === candidate.cardId)
-        if (!card) return current
-
-        const existing = current.roster.find(
-          (player) => player.alias.toLocaleLowerCase('en-US') === card.alias.toLocaleLowerCase('en-US'),
-        )
-        if (existing) {
-          playerId = existing.id
-        } else {
-          if (current.roster.length >= 8) return current
-          const promoted = {
-            ...playerFromPackCard(card, current.roster.length),
-            id: 'card-' + card.id,
-          }
-          next = { ...current, roster: [...current.roster, promoted] }
-          playerId = promoted.id
-        }
+      if (entry.source === 'collection') {
+        const promoted = promoteCollectionEntry(current, entry)
+        next = promoted.state
+        playerId = promoted.playerId
       }
 
+      if (!playerId) return current
       return assignLineupSlot(next, slot, playerId)
     })
+  }
+
+  const placeCandidate = (candidate: Candidate) => {
+    if (!pickerSlot) return
+    fieldEntry(candidate, pickerSlot)
     setPickerSlot(null)
   }
 
+  const selectedPlayer = selectedPoolEntry?.player ?? null
+  const selectedIsStarter = selectedPlayer ? starterIds.has(selectedPlayer.id) : false
+  const selectedAssignedSlot = selectedPlayer ? playerSlot(selectedPlayer.id) : null
+  const selectedCanJoinRoster = selectedPoolEntry?.source !== 'collection' || state.roster.length < 8
+  const fatigueWarnings = activePlayers.filter((player) => player.fatigue >= 65).length
+  const expiringContracts = state.roster.filter((player) => player.contractWeeks > 0 && player.contractWeeks <= 2).length
+
   return (
-    <section className="sim-screen sim-roster">
+    <section className="sim-screen sim-roster sim-roster-v2">
       <div className="sim-screen-head sim-roster-head">
         <div>
-          <span className="eyebrow">ACTIVE LINEUP</span>
-          <h1>STARTING FIVE</h1>
+          <span className="eyebrow">CLUB OPERATIONS · ACTIVE LINEUP</span>
+          <h1>SQUAD</h1>
         </div>
-        <div className="sim-roster-rating">
-          <b>{rating}</b>
-          <span>OVR КОМАНДЫ</span>
-          <small>{chem} химия · {state.lineupContinuity} стабильность</small>
-        </div>
+        <button className="sim-roster-market-action" onClick={onOpenScout}>TRANSFER MARKET <span>→</span></button>
       </div>
 
-      <div className="sim-roster-toolbar">
-        <span><b>{state.startingFive.length}/5</b> START</span>
-        <span><b>{bench.length}</b> BENCH</span>
-        <button className="secondary" onClick={onOpenScout}>TRANSFER MARKET</button>
+      <div className="sim-squad-kpis">
+        <div><span>TEAM RATING</span><strong>{rating}</strong><small>{rating >= 70 ? 'CONTENDER' : rating >= 60 ? 'COMPETITIVE' : 'DEVELOPING'}</small></div>
+        <div className="chemistry">
+          <span>CHEMISTRY</span>
+          <strong>{chem}</strong>
+          <i><em style={{ width: Math.min(100, chem) + '%' }} /></i>
+        </div>
+        <div><span>CONTINUITY</span><strong>{state.lineupContinuity}</strong><small>LINEUP STABILITY</small></div>
+        <div><span>WEEKLY PAYROLL</span><strong>{payroll.toLocaleString('ru-RU')}</strong><small>CLUB CREDITS</small></div>
+        <div className={fatigueWarnings > 0 ? 'warning' : ''}><span>FATIGUE</span><strong>{fatigueWarnings}</strong><small>{fatigueWarnings ? 'PLAYERS AT RISK' : 'NO WARNINGS'}</small></div>
       </div>
 
-      <div className="sim-roster-body">
-      <div className="sim-lineup-stage">
-        <div className="sim-lineup-head">
-          <div><span>STARTING FIVE</span></div>
-          <div className="sim-lineup-chem"><b>{chem}</b><span>CHEM</span></div>
+      <section className="sim-squad-stage">
+        <div className="sim-squad-stage-head">
+          <div>
+            <span>STARTING FIVE</span>
+            <small>Drag club players into roles or use REPLACE.</small>
+          </div>
+          <div className="sim-squad-stage-summary">
+            <span><b>{state.startingFive.length}/5</b> ACTIVE</span>
+            <span><b>{expiringContracts}</b> EXPIRING</span>
+          </div>
         </div>
 
-        <div className="sim-lineup-grid">
+        <div className="sim-squad-lineup-row">
           {LINEUP_SLOTS.map((slot) => {
             const player = slotPlayer(slot)
             return (
               <article
                 key={slot}
-                className={'sim-lineup-slot ' + (player ? 'is-filled ' : 'is-empty ') + (dragOverSlot === slot ? 'is-drop-target' : '')}
+                className={'sim-squad-slot ' + (player ? 'is-filled ' : 'is-empty ') + (dragOverSlot === slot ? 'is-drop-target' : '')}
                 onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move' }}
                 onDragEnter={() => setDragOverSlot(slot)}
                 onDragLeave={(event) => {
@@ -272,9 +398,9 @@ export function RosterBoard({
                 }}
                 onDrop={(event) => dropIntoSlot(event, slot)}
               >
-                <div className="sim-lineup-role">
+                <div className="sim-squad-role">
                   <span>{ROLE_LABELS[slot]}</span>
-                  <small>{player ? (player.role === slot ? 'ROLE MATCH' : 'OFF-ROLE') : 'EMPTY SLOT'}</small>
+                  <small>{player ? (player.role === slot ? 'ROLE MATCH' : 'OFF-ROLE') : 'VACANT'}</small>
                 </div>
 
                 {player ? (
@@ -283,76 +409,149 @@ export function RosterBoard({
                       player={player}
                       starter
                       draggable
-                      onOpen={() => onOpenPlayer(player)}
+                      onOpen={() => setSelectedPoolKey('roster:' + player.id)}
                       onDragStart={(event) => startDrag(event, player.id)}
                       onDragEnd={() => setDragOverSlot(null)}
                     />
-                    <div className="sim-lineup-actions">
-                      <button type="button" onClick={() => setPickerSlot(slot)}>Заменить</button>
-                      <button type="button" className="text-button" onClick={() => setState((current) => clearLineupSlot(current, slot))}>В запас</button>
-                    </div>
+                    <button className="sim-squad-replace" type="button" onClick={() => setPickerSlot(slot)}>REPLACE</button>
                   </>
                 ) : (
-                  <button type="button" className="sim-lineup-empty-card" onClick={() => setPickerSlot(slot)}>
-                    <span className="sim-lineup-empty-plus">+</span>
-                    <strong>Добавить {ROLE_LABELS[slot]}</strong>
+                  <button type="button" className="sim-squad-empty" onClick={() => setPickerSlot(slot)}>
+                    <span>+</span>
+                    <b>ADD PLAYER</b>
+                    <small>{ROLE_LABELS[slot]}</small>
                   </button>
                 )}
               </article>
             )
           })}
-        </div>
-      </div>
-      <aside className="sim-roster-analysis">
-        <div className="sim-analysis-head"><span>OVERVIEW & STATS</span><b>{rating}</b></div>
-        <div className="squad-radar">
-          <div className="squad-radar-shape" style={{ '--aim': activeAverage((player) => player.aim) + '%', '--pos': activeAverage((player) => player.gameSense) + '%', '--utl': activeAverage((player) => player.utility) + '%', '--clu': activeAverage((player) => player.clutch) + '%' } as React.CSSProperties} />
-          <span className="radar-aim">AIM</span><span className="radar-pos">POS</span><span className="radar-utl">UTL</span><span className="radar-clu">CLU</span>
-        </div>
-        <div className="sim-analysis-stats">
-          <span><b>{chem}</b> CHEMISTRY</span>
-          <span><b>{state.lineupContinuity}</b> CONTINUITY</span>
-          <span><b>{activeAverage((player) => player.form)}</b> FORM</span>
-          <span><b>{activeAverage((player) => player.morale)}</b> MORALE</span>
-          <span><b>{activeAverage((player) => player.fatigue)}</b> FATIGUE</span>
-        </div>
-      </aside>
-      </div>
 
-      <div className="sim-bench">
-        <div className="sim-bench-head">
-          <div><span>BENCH / CLUB CARDS</span></div>
-          <b>{bench.length}</b>
+          <article className="sim-staff-slot">
+            <div className="sim-squad-role"><span>COACH</span><small>STAFF SLOT</small></div>
+            <div className="sim-staff-card">
+              <span>◎</span>
+              <b>NO COACH</b>
+              <small>Staff system will use this slot.</small>
+            </div>
+            <button type="button" disabled>LOCKED</button>
+          </article>
         </div>
+      </section>
 
-        {bench.length > 0 ? (
-          <div className="sim-bench-grid">
-            {bench.map((player) => (
-              <article className="sim-bench-card" key={player.id}>
-                <GameCard
-                  player={player}
-                  draggable={player.contractWeeks > 0}
-                  onOpen={() => onOpenPlayer(player)}
-                  onDragStart={(event) => startDrag(event, player.id)}
-                  onDragEnd={() => setDragOverSlot(null)}
-                />
-                <div className="sim-bench-meta">
-                  <span>{ROLE_LABELS[player.role]}</span>
-                  <span>{player.contractWeeks > 0 ? player.contractWeeks + ' нед.' : 'КОНТРАКТ ИСТЁК'}</span>
-                </div>
-                <div className="sim-bench-actions">
-                  <button type="button" onClick={() => setState((current) => restPlayer(current, player.id))} disabled={state.staffEnergy < 1}>Отдых</button>
-                  <button type="button" onClick={() => setState((current) => trainPlayer(current, player.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>Трен.</button>
-                  <button type="button" onClick={() => setState((current) => renewContract(current, player.id))} disabled={state.credits < player.salary * 4}>Контракт</button>
-                  <button type="button" className="release" onClick={() => setState((current) => releasePlayer(current, player.id))} disabled={state.roster.length <= 5 || state.credits < player.salary}>Убрать</button>
-                </div>
-              </article>
-            ))}
+      <section className="sim-player-pool">
+        <div className="sim-player-pool-head">
+          <div>
+            <span>PLAYER POOL</span>
+            <b>{poolEntries.length}</b>
+            <small>{state.roster.length} club · {poolEntries.filter((entry) => entry.source === 'collection').length} collection</small>
           </div>
-        ) : (
-          <div className="sim-empty">Все доступные игроки сейчас стоят в стартовой пятёрке.</div>
-        )}
-      </div>
+
+          <div className="sim-pool-filters">
+            <input value={poolQuery} onChange={(event) => setPoolQuery(event.target.value)} placeholder="Search player, team…" />
+            <select value={poolRole} onChange={(event) => setPoolRole(event.target.value as PoolRole)}>
+              <option value="all">ALL ROLES</option>
+              {LINEUP_SLOTS.map((slot) => <option key={slot} value={slot}>{ROLE_LABELS[slot]}</option>)}
+            </select>
+            <select value={poolSource} onChange={(event) => setPoolSource(event.target.value as PoolSource)}>
+              <option value="all">ALL SOURCES</option>
+              <option value="roster">CLUB</option>
+              <option value="collection">COLLECTION</option>
+            </select>
+            <select value={poolSort} onChange={(event) => setPoolSort(event.target.value as PoolSort)}>
+              <option value="ovr">SORT: OVR</option>
+              <option value="form">SORT: FORM</option>
+              <option value="contract">SORT: CONTRACT</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="sim-player-pool-body">
+          <div className="sim-player-pool-grid">
+            {filteredPool.length > 0 ? filteredPool.map((entry) => (
+              <PoolCard
+                key={entry.key}
+                entry={entry}
+                starter={starterIds.has(entry.player.id)}
+                selected={selectedPoolEntry?.key === entry.key}
+                onSelect={() => setSelectedPoolKey(entry.key)}
+                onDragStart={entry.source === 'roster' ? (event) => startDrag(event, entry.player.id) : undefined}
+                onDragEnd={() => setDragOverSlot(null)}
+              />
+            )) : (
+              <div className="sim-pool-empty">
+                <strong>NO PLAYERS FOUND</strong>
+                <span>Change filters or search query.</span>
+              </div>
+            )}
+          </div>
+
+          <aside className="sim-player-inspector">
+            {selectedPoolEntry && selectedPlayer ? (
+              <>
+                <div className={'sim-inspector-hero tier-' + cardTier(overall(selectedPlayer))}>
+                  <div>
+                    <span>{selectedPoolEntry.source === 'collection' ? 'COLLECTION CARD' : selectedIsStarter ? 'STARTING FIVE' : 'CLUB PLAYER'}</span>
+                    <strong>{overall(selectedPlayer)}</strong>
+                  </div>
+                  <PlayerPortrait
+                    alias={selectedPlayer.alias}
+                    playerId={selectedPlayer.profileId}
+                    alt={selectedPlayer.alias}
+                    draggable={false}
+                  />
+                </div>
+
+                <div className="sim-inspector-name">
+                  <span>{countryFlag(selectedPlayer.country)} {selectedPlayer.country} · {ROLE_LABELS[selectedPlayer.role]}</span>
+                  <h2>{selectedPlayer.alias}</h2>
+                  <p>{selectedPlayer.realName} · {selectedPlayer.team}</p>
+                </div>
+
+                <div className="sim-inspector-stats">
+                  <span><b>{selectedPlayer.aim}</b>AIM</span>
+                  <span><b>{selectedPlayer.utility}</b>UTL</span>
+                  <span><b>{selectedPlayer.gameSense}</b>POS</span>
+                  <span><b>{selectedPlayer.clutch}</b>CLU</span>
+                </div>
+
+                <div className="sim-inspector-state">
+                  <span><b>{selectedPlayer.form}</b>FORM</span>
+                  <span><b>{selectedPlayer.morale}</b>MORALE</span>
+                  <span className={selectedPlayer.fatigue >= 65 ? 'danger' : ''}><b>{selectedPlayer.fatigue}</b>FATIGUE</span>
+                  <span><b>{selectedPlayer.contractWeeks}</b>WEEKS</span>
+                </div>
+
+                {selectedPoolEntry.source === 'roster' ? (
+                  <>
+                    <div className="sim-inspector-primary-actions">
+                      {selectedIsStarter && selectedAssignedSlot ? (
+                        <button onClick={() => setState((current) => clearLineupSlot(current, selectedAssignedSlot))}>MOVE TO BENCH</button>
+                      ) : (
+                        <button onClick={() => fieldEntry(selectedPoolEntry)}>FIELD AS {ROLE_LABELS[selectedPlayer.role]}</button>
+                      )}
+                      <button onClick={() => onOpenPlayer(selectedPlayer)}>PROFILE</button>
+                    </div>
+                    <div className="sim-inspector-club-actions">
+                      <button onClick={() => setState((current) => restPlayer(current, selectedPlayer.id))} disabled={state.staffEnergy < 1}>REST</button>
+                      <button onClick={() => setState((current) => trainPlayer(current, selectedPlayer.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>TRAIN</button>
+                      <button onClick={() => setState((current) => renewContract(current, selectedPlayer.id))} disabled={state.credits < selectedPlayer.salary * 4}>RENEW</button>
+                      <button className="danger" onClick={() => setState((current) => releasePlayer(current, selectedPlayer.id))} disabled={state.roster.length <= 5 || state.credits < selectedPlayer.salary}>RELEASE</button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="sim-inspector-primary-actions collection">
+                    <button disabled={!selectedCanJoinRoster || selectedPlayer.contractWeeks <= 0} onClick={() => fieldEntry(selectedPoolEntry)}>
+                      {selectedCanJoinRoster ? 'ADD & FIELD AS ' + ROLE_LABELS[selectedPlayer.role] : 'ROSTER 8/8'}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="sim-inspector-empty">SELECT A PLAYER</div>
+            )}
+          </aside>
+        </div>
+      </section>
 
       {pickerSlot && (
         <div className="lineup-picker-backdrop" role="presentation" onMouseDown={() => setPickerSlot(null)}>
@@ -360,9 +559,9 @@ export function RosterBoard({
             <div className="lineup-picker-head">
               <div>
                 <span className="eyebrow">SLOT PICKER · {ROLE_LABELS[pickerSlot]}</span>
-                <h2 id="lineup-picker-title">Выбери карту для слота.</h2>
+                <h2 id="lineup-picker-title">Choose a player for this role.</h2>
               </div>
-              <button type="button" className="lineup-picker-close" onClick={() => setPickerSlot(null)} aria-label="Закрыть">×</button>
+              <button type="button" className="lineup-picker-close" onClick={() => setPickerSlot(null)} aria-label="Close">×</button>
             </div>
 
             <div className="lineup-picker-grid">
@@ -371,13 +570,13 @@ export function RosterBoard({
                 return (
                   <article className="lineup-picker-card" key={candidate.key}>
                     <div className="lineup-picker-rank"><b>#{index + 1}</b><span className={'fit-' + fitLabel(candidate, pickerSlot).toLowerCase().replace(' ', '-')}>{fitLabel(candidate, pickerSlot)}</span></div>
-                    <GameCard player={candidate.player} starter={starterIds.has(candidate.player.id)} onOpen={() => onOpenPlayer(candidate.player)} />
+                    <GameCard player={candidate.player} starter={starterIds.has(candidate.player.id)} onOpen={() => setSelectedPoolKey(candidate.key)} />
                     <div className="lineup-picker-info">
                       <span><b>{candidate.fit}</b> FIT</span>
-                      <span>{candidate.source === 'roster' ? (starterIds.has(candidate.player.id) ? 'СТАРТ' : 'РОСТЕР') : 'КОЛЛЕКЦИЯ'}</span>
+                      <span>{candidate.source === 'roster' ? (starterIds.has(candidate.player.id) ? 'START' : 'CLUB') : 'COLLECTION'}</span>
                     </div>
                     <button type="button" className="primary lineup-picker-place" onClick={() => placeCandidate(candidate)} disabled={disabled || candidate.player.contractWeeks <= 0}>
-                      {disabled ? 'Ростер 8/8' : 'Поставить в ' + ROLE_LABELS[pickerSlot]}
+                      {disabled ? 'ROSTER 8/8' : 'PLACE AS ' + ROLE_LABELS[pickerSlot]}
                     </button>
                   </article>
                 )

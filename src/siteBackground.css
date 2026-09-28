@@ -8,7 +8,6 @@ body::before {
   position: fixed;
   inset: -16px;
   background: url('./assets/ui/site-background.webp') center center / cover no-repeat;
-  opacity: 0.3;
   filter: blur(10px);
   pointer-events: none;
   z-index: 0;

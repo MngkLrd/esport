@@ -7909,3 +7909,70 @@ button.primary:hover,
 @media (max-width:800px){
   .welcome-card-grid{grid-template-columns:repeat(auto-fit,minmax(122px,145px))}
 }
+
+
+/* CARD RARITY SEMANTICS -------------------------------------------------
+   Pack rarity and rating tier are separate concepts. Uncommon keeps the
+   supplied green artwork; Rare gets its own blue treatment instead of
+   silently reusing Uncommon. */
+.visual-player-card.tier-uncommon {
+  --rarity-front: url('./assets/cards/uncommon_front.webp');
+  --rarity-back: url('./assets/cards/uncommon_back.webp');
+  --card-text: #ffffff;
+  background-color: #07101f;
+  background-image:
+    linear-gradient(180deg, rgba(3,7,16,.02) 0%, rgba(3,7,16,.04) 46%, rgba(3,7,16,.34) 100%),
+    var(--rarity-front);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-color: rgba(173,255,119,.36);
+  color: var(--card-text);
+}
+.visual-player-card.tier-uncommon::after { background:none; }
+.visual-player-card.tier-uncommon::before {
+  border-color:rgba(215,255,190,.24);
+  box-shadow:inset 0 0 22px rgba(0,0,0,.16);
+}
+.visual-player-card.tier-uncommon .visual-photo img {
+  mix-blend-mode:normal;
+  opacity:1;
+  filter:saturate(.96) contrast(1.04) drop-shadow(0 10px 12px rgba(0,0,0,.28));
+}
+.visual-player-card.tier-uncommon .visual-card-top,
+.visual-player-card.tier-uncommon .visual-country,
+.visual-player-card.tier-uncommon .visual-identity,
+.visual-player-card.tier-uncommon .visual-stats {
+  text-shadow:0 1px 3px rgba(0,0,0,.88);
+}
+.visual-player-card.tier-uncommon .visual-identity {
+  border-color:rgba(255,255,255,.24);
+  background:linear-gradient(90deg,transparent,rgba(2,5,12,.62) 17%,rgba(2,5,12,.62) 83%,transparent);
+}
+.visual-player-card.tier-uncommon.show-back {
+  background-image:var(--rarity-back);
+}
+
+/* There is no dedicated Rare artwork asset yet. Keep it visually distinct
+   from Uncommon with a blue treatment rather than lying with the green art. */
+.visual-player-card.tier-rare {
+  --rarity-front:url('./assets/cards/common_front.webp');
+  --rarity-back:url('./assets/cards/common_back.webp');
+  --card-text:#ffffff;
+  background-color:#09142b;
+  background-image:
+    linear-gradient(180deg,rgba(13,43,108,.24),rgba(10,26,74,.48)),
+    var(--rarity-front);
+  background-blend-mode:color,normal;
+  border-color:rgba(100,156,255,.62);
+}
+.visual-player-card.tier-rare::before {
+  border-color:rgba(143,186,255,.32);
+  box-shadow:inset 0 0 26px rgba(20,74,181,.18);
+}
+.visual-player-card.tier-rare.show-back {
+  background-image:
+    linear-gradient(180deg,rgba(13,43,108,.28),rgba(10,26,74,.48)),
+    var(--rarity-back);
+  background-blend-mode:color,normal;
+}

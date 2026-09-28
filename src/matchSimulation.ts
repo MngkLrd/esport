@@ -542,4 +542,4 @@ export const simulationFrameAt = (round: SimRound, time: number) => {
 }
 
 export const radarAssetUrl = (mapKey: string) =>
-  import.meta.env.BASE_URL + 'maps/' + mapKey + '.png'
+  '/esport/maps/' + mapKey + '.png'

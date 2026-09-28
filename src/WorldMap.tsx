@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { geoEqualEarth, geoPath } from 'd3-geo'
+import { useMemo, useRef, useState } from 'react'
+import { geoCentroid, geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
 import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
@@ -27,6 +27,27 @@ const projection = geoEqualEarth()
   .fitExtent([[20, 20], [MAP_WIDTH - 20, MAP_HEIGHT - 20]], worldFeature as never)
 const worldPath = geoPath(projection)
 
+const CIS_COUNTRY_IDS = new Set([
+  '31', '51', '112', '268', '398', '417', '498', '643', '762', '795', '804', '860',
+])
+
+const featureRegion = (geo: { id?: string | number; type: 'Feature'; geometry: unknown }) => {
+  const id = String(geo.id ?? '')
+  if (CIS_COUNTRY_IDS.has(id)) return 'CIS' as const
+  const [lon, lat] = geoCentroid(geo as never)
+  if (lon < -25) return 'Americas' as const
+  if (lon > 45) return 'Asia' as const
+  if (lat >= 33 && lon >= -25 && lon <= 45) return 'Europe' as const
+  return 'Other' as const
+}
+
+const REGION_VIEW: Record<Exclude<'All' | TournamentRegion, 'All'>, { center: [number, number]; zoom: number }> = {
+  Europe: { center: [15, 52], zoom: 4.2 },
+  Americas: { center: [-78, 15], zoom: 2.7 },
+  Asia: { center: [95, 32], zoom: 2.7 },
+  CIS: { center: [58, 51], zoom: 3.5 },
+}
+
 
 export function WorldMap({
   state,
@@ -41,6 +62,9 @@ export function WorldMap({
   const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
   const [format, setFormat] = useState<'All' | EventFormat>('All')
   const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'eu-open-1')
+  const [zoom, setZoom] = useState(2)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
   const payroll = weeklyPayroll(state)
   const level = managerLevelProgress(state.managerXp).level
@@ -52,12 +76,74 @@ export function WorldMap({
     ),
     [region, circuit, format],
   )
+  const visibleCountries = useMemo(
+    () => region === 'All'
+      ? worldFeature.features
+      : worldFeature.features.filter((geo) => featureRegion(geo as never) === region),
+    [region],
+  )
   const selected = tournamentForId(selectedId) ?? visible[0] ?? TOURNAMENTS[0]
   const active = tournamentForId(state.activeEventId)
   const booking = canBookTournament(state, selected.id)
   const booked = state.activeEventId === selected.id
   const eventCost = tournamentEntryCost(selected)
   const weeklyOps = payroll + eventCost
+
+  const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
+    setRegion(nextRegion)
+    if (nextRegion === 'All') {
+      setZoom(2)
+      setPan({ x: 0, y: 0 })
+      return
+    }
+    const view = REGION_VIEW[nextRegion]
+    const point = projection(view.center) ?? [MAP_WIDTH / 2, MAP_HEIGHT / 2]
+    const nextZoom = view.zoom
+    setZoom(nextZoom)
+    setPan({
+      x: -nextZoom * (point[0] - MAP_WIDTH / 2),
+      y: -nextZoom * (point[1] - MAP_HEIGHT / 2),
+    })
+  }
+
+  const handleWheel = (event: React.WheelEvent<SVGSVGElement>) => {
+    event.preventDefault()
+    const nextZoom = Math.max(1.8, Math.min(6, zoom * (event.deltaY > 0 ? .88 : 1.14)))
+    if (nextZoom === zoom) return
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const pointerX = (event.clientX - rect.left) / rect.width * MAP_WIDTH
+    const pointerY = (event.clientY - rect.top) / rect.height * MAP_HEIGHT
+    const worldX = MAP_WIDTH / 2 + (pointerX - MAP_WIDTH / 2 - pan.x) / zoom
+    const worldY = MAP_HEIGHT / 2 + (pointerY - MAP_HEIGHT / 2 - pan.y) / zoom
+
+    setPan({
+      x: pointerX - MAP_WIDTH / 2 - nextZoom * (worldX - MAP_WIDTH / 2),
+      y: pointerY - MAP_HEIGHT / 2 - nextZoom * (worldY - MAP_HEIGHT / 2),
+    })
+    setZoom(nextZoom)
+  }
+
+  const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragRef.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y }
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (!dragRef.current) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const scaleX = MAP_WIDTH / rect.width
+    const scaleY = MAP_HEIGHT / rect.height
+    setPan({
+      x: dragRef.current.panX + (event.clientX - dragRef.current.x) * scaleX,
+      y: dragRef.current.panY + (event.clientY - dragRef.current.y) * scaleY,
+    })
+  }
+
+  const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    dragRef.current = null
+  }
 
   return (
     <section className="screen fifa-world-screen">
@@ -76,7 +162,7 @@ export function WorldMap({
         <div>
           <span>REGION</span>
           {REGIONS.map((item) => (
-            <button key={item} className={region === item ? 'active' : ''} onClick={() => setRegion(item)}>
+            <button key={item} className={region === item ? 'active' : ''} onClick={() => focusRegion(item)}>
               {item === 'All' ? 'ALL' : item.toUpperCase()}
             </button>
           ))}
@@ -106,18 +192,24 @@ export function WorldMap({
             className="world-geo-map"
             role="img"
             aria-label="Мировая карта турнирного circuit"
+            onWheel={handleWheel}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
           >
-            <g className="world-country-layer">
-              {worldFeature.features.map((geo, index) => (
-                <path
-                  key={index}
-                  d={worldPath(geo as never) ?? ''}
-                  className="world-country"
-                />
-              ))}
-            </g>
+            <g transform={'translate(' + pan.x + ' ' + pan.y + ') translate(' + MAP_WIDTH / 2 + ' ' + MAP_HEIGHT / 2 + ') scale(' + zoom + ') translate(' + (-MAP_WIDTH / 2) + ' ' + (-MAP_HEIGHT / 2) + ')'}>
+              <g className="world-country-layer">
+                {visibleCountries.map((geo, index) => (
+                  <path
+                    key={String((geo as { id?: string | number }).id ?? index)}
+                    d={worldPath(geo as never) ?? ''}
+                    className="world-country"
+                  />
+                ))}
+              </g>
 
-            {visible.map((event) => {
+              {visible.map((event) => {
               const locked = !canBookTournament(state, event.id).ok && event.id !== state.activeEventId
               const isSelected = selected.id === event.id
               const isBooked = state.activeEventId === event.id
@@ -151,6 +243,7 @@ export function WorldMap({
                 </g>
               )
             })}
+            </g>
           </svg>
 
           <div className="world-map-legend">

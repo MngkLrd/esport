@@ -1,8 +1,8 @@
 import { hltvSnapshotForAlias } from './cardStats'
-import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 import type { PackCard } from './packState'
 import type { Player } from './game'
+import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 
 const ROLE_LABELS: Record<NonNullable<PackCard['role']>, string> = {
   IGL: 'IGL',
@@ -37,22 +37,29 @@ export function CardDetails({
       >
         <button className="card-detail-close" onClick={onClose} aria-label="Закрыть">×</button>
 
-        <div className="card-detail-hero">
-          <div className="card-detail-rating">
-            <strong>{card.power}</strong>
-            <span>{card.role ? ROLE_LABELS[card.role] : 'PRO'}</span>
-          </div>
-          <div className="card-detail-edition">{card.edition}</div>
-          <div className="card-detail-portrait">
-            <span>{card.alias.slice(0, 3).toUpperCase()}</span>
-            <PlayerPortrait
+        <div className="card-detail-hero card-detail-hero-shared">
+          <div className="card-detail-card-wrap">
+            <CollectiblePlayerCard
+              rating={card.power}
+              tier={tierForPackRarity(card.rarity)}
+              role={card.role}
               alias={card.alias}
-              playerId={card.profileId}
-              alt={card.alias}
+              team={card.team}
+              country={card.country}
+              profileId={card.profileId}
+              stats={card.cardStats ? {
+                aim: card.cardStats.aim,
+                utility: card.cardStats.utility,
+                positioning: card.cardStats.positioning,
+                clutch: card.cardStats.clutch,
+              } : null}
               loading="eager"
+              className="card-detail-shared-card"
+              badge={card.edition}
             />
           </div>
           <div className="card-detail-name">
+            <div className="card-detail-edition">{card.rarity.toUpperCase()} · {card.edition}</div>
             <h2>{card.alias}</h2>
             {card.realName && <p>{card.realName}</p>}
           </div>

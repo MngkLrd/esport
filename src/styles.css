@@ -4210,7 +4210,11 @@ button.primary:hover,
   width: 100%;
   height: 100%;
   min-height: 590px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+.world-geo-map:active { cursor: grabbing; }
 .world-country {
   fill: #22294b;
   stroke: #4a5279;
@@ -4311,19 +4315,18 @@ button.primary:hover,
 
 /* universal screen back affordance */
 .screen-back-button {
-  position: fixed;
-  left: 18px;
-  top: 88px;
-  z-index: 52;
+  position: relative;
+  z-index: 2;
   min-height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
+  width: max-content;
+  margin: 12px 22px 0;
   padding: 0 11px;
   border: 1px solid rgba(145,159,255,.2);
-  background: rgba(8,11,31,.82);
+  background: rgba(8,11,31,.72);
   color: #a5afc9;
-  backdrop-filter: blur(12px);
   cursor: pointer;
   font: 900 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .09em;
@@ -4585,5 +4588,21 @@ button.primary:hover,
   .match-radar-main { grid-template-columns: 1fr; }
   .match-radar-roster { display: none; }
   .match-radar-shell { height: min(760px, 94vh); }
-  .screen-back-button { top: 82px; left: 10px; }
+  .screen-back-button { margin: 10px 12px 0; }
+}
+
+
+.world-map-stage-v2::after {
+  content: 'DRAG TO PAN · WHEEL TO ZOOM';
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  padding: 7px 9px;
+  border: 1px solid rgba(145,159,255,.12);
+  background: rgba(5,8,24,.58);
+  color: #687390;
+  font: 800 7px/1 Arial, sans-serif;
+  letter-spacing: .1em;
+  pointer-events: none;
 }

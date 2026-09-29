@@ -4,7 +4,7 @@ import { collectPackCards, createPackState, type PackCard, type PackRarity, type
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
-import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -606,7 +606,7 @@ const normalizedWorld = (
   const source = raw && typeof raw === 'object' && (raw as { version?: number }).version === 1
     ? raw as WorldState
     : createWorldState()
-  return reconcileWorldWithClubRoster(source, roster, now, seed)
+  return reconcileWorldWithClubRoster(refreshWorldIdentityMetadata(source), roster, now, seed)
 }
 
 export const migrateState = (raw: unknown): GameState => {
@@ -630,7 +630,7 @@ export const migrateState = (raw: unknown): GameState => {
       typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 50,
     )
     const clubKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
-    const activeTournament = parsed.version === 11 && parsed.activeTournament && typeof parsed.activeTournament === 'object'
+    const activeTournament = (parsed.version === 12 || parsed.version === 11) && parsed.activeTournament && typeof parsed.activeTournament === 'object'
       ? refreshTournamentTeamsFromWorld(parsed.activeTournament as TournamentRun, world, clubKeys)
       : legacyEvent
         ? createTournamentRun(

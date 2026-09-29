@@ -193,7 +193,7 @@
   .sim-practice{grid-template-rows:36px minmax(0,1fr)!important;gap:7px}
   .sim-roster-v2{grid-template-rows:36px 54px minmax(300px,.98fr) minmax(220px,.78fr)!important;gap:7px}
   .sim-market{grid-template-rows:36px minmax(0,1fr)!important;gap:7px}
-  .sim-packs{grid-template-rows:36px 36px minmax(0,1fr)!important;gap:6px}
+  .sim-packs{grid-template-rows:36px minmax(0,1fr)!important;gap:6px}
   .sim-profile{grid-template-rows:36px minmax(0,1fr) 60px!important;gap:7px}
   .sim-inbox{grid-template-rows:36px auto minmax(0,1fr) 34px!important;gap:7px}
 

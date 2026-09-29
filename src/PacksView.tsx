@@ -422,13 +422,23 @@ export function PacksView({
 
             {!queue.length ? (
               <>
-                <div className="pack-purchase-head">
-                  <span>PLAYER PACK</span>
-                  <h2>{selectedPack.name}</h2>
-                  <p>{selectedPack.description}</p>
-                </div>
+                <div className="pack-purchase-toolbar">
+                  <div className="pack-fast-row">
+                    {QUANTITIES.map((count) => (
+                      <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
+                    ))}
+                  </div>
 
-                <div className="pack-purchase-art"><PackArtwork variant={selectedPack.id} title={selectedPack.name} kicker={selectedPack.eyebrow} /></div>
+                  <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
+                    {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
+                  </button>
+
+                  <div className="pack-purchase-cost">
+                    <b>{(selectedPack.price * quantity).toLocaleString('ru-RU')}</b>
+                    <span>PACK TOKENS</span>
+                    {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
+                  </div>
+                </div>
 
                 <div className="pack-pool-preview">
                   <div className="pack-pool-preview-head">
@@ -479,22 +489,11 @@ export function PacksView({
                   </div>
                 </div>
 
-                <div className="pack-fast-row">
-                  {QUANTITIES.map((count) => (
-                    <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
-                  ))}
-                </div>
-
-                <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
-                  {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
-                </button>
-                <div className="pack-spin-price">{(selectedPack.price * quantity).toLocaleString('ru-RU')} PACK TOKENS</div>
-                {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
               </>
             ) : (
               <>
                 <div className="pack-spin-topline">
-                  <span>{selectedPack.name}</span>
+                  <span>ОТКРЫТИЕ</span>
                   <b>{queueIndex + 1}/{queue.length}</b>
                 </div>
 

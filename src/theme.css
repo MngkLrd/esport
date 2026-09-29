@@ -6,32 +6,32 @@
    ========================================================================== */
 
 :root {
-  --ui-bg-0:#060a10;
-  --ui-bg-1:#0a111a;
-  --ui-bg-2:#111b27;
-  --ui-panel:#101923;
-  --ui-panel-raised:#172330;
-  --ui-panel-deep:#0a1119;
+  --ui-bg-0:#08090b;
+  --ui-bg-1:#0e1114;
+  --ui-bg-2:#15191d;
+  --ui-panel:#14181b;
+  --ui-panel-raised:#1b2024;
+  --ui-panel-deep:#0e1114;
 
-  --ui-text:#f4f1e9;
-  --ui-muted:#9aa6b4;
-  --ui-soft:#6d7886;
+  --ui-text:#f2efe8;
+  --ui-muted:#a39d93;
+  --ui-soft:#77736d;
 
-  --ui-accent:#e7a94d;
-  --ui-accent-2:#6f8eae;
-  --ui-positive:#7fcf8b;
-  --ui-danger:#df707b;
-  --ui-warn:#f0b45e;
+  --ui-accent:#dda04a;
+  --ui-accent-2:#8b7658;
+  --ui-positive:#75c98a;
+  --ui-danger:#d86f76;
+  --ui-warn:#e8ad58;
 
-  --ui-bg-rgb:6 10 16;
-  --ui-panel-rgb:16 25 35;
-  --ui-panel-raised-rgb:23 35 48;
-  --ui-line-rgb:94 116 139;
-  --ui-accent-rgb:231 169 77;
-  --ui-accent-2-rgb:111 142 174;
-  --ui-positive-rgb:127 207 139;
-  --ui-danger-rgb:223 112 123;
-  --ui-warn-rgb:240 180 94;
+  --ui-bg-rgb:8 9 11;
+  --ui-panel-rgb:20 24 27;
+  --ui-panel-raised-rgb:27 32 36;
+  --ui-line-rgb:111 104 94;
+  --ui-accent-rgb:221 160 74;
+  --ui-accent-2-rgb:139 118 88;
+  --ui-positive-rgb:117 201 138;
+  --ui-danger-rgb:216 111 118;
+  --ui-warn-rgb:232 173 88;
 
   --ui-line:rgb(var(--ui-line-rgb) / .25);
   --ui-line-strong:rgb(var(--ui-line-rgb) / .48);

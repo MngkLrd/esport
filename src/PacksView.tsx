@@ -3,6 +3,8 @@ import {
   PACKS,
   RARITY_LABEL,
   hydratePackState,
+  packPoolCount,
+  packPoolPreview,
 } from './packs'
 import {
   cardKey,
@@ -23,6 +25,7 @@ import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCar
 
 const SPIN_MS = 6000
 const QUANTITIES = [1, 3, 5, 10] as const
+const PREVIEW_RARITIES: PackRarity[] = ['legendary', 'epic', 'rare', 'uncommon', 'common']
 
 const ROLE_LABELS: Record<NonNullable<PackCard['role']>, string> = {
   IGL: 'IGL',
@@ -171,6 +174,23 @@ export function PacksView({
     if (packCardCount(viewState, roll.winner) > 0) return true
     return queue.slice(0, queueIndex).some((entry) => entry.winner.alias.toLowerCase() === roll.winner.alias.toLowerCase())
   }, [roll, queue, queueIndex, viewState])
+
+  const poolPreview = useMemo(() => {
+    if (!selectedPack) return []
+    return PREVIEW_RARITIES
+      .filter((rarity) => selectedPack.weights[rarity] > 0)
+      .map((rarity) => {
+        const cards = packPoolPreview(rarity, 3)
+        const total = packPoolCount(rarity)
+        return {
+          rarity,
+          cards,
+          total,
+          hidden: Math.max(0, total - cards.length),
+          chance: selectedPack.weights[rarity],
+        }
+      })
+  }, [selectedPack])
 
   useEffect(() => {
     if (!spinning) return
@@ -409,6 +429,55 @@ export function PacksView({
                 </div>
 
                 <div className="pack-purchase-art"><PackArtwork variant={selectedPack.id} title={selectedPack.name} kicker={selectedPack.eyebrow} /></div>
+
+                <div className="pack-pool-preview">
+                  <div className="pack-pool-preview-head">
+                    <div>
+                      <span>ИГРОКИ В ПУЛЕ</span>
+                      <strong>Кого можно выбить</strong>
+                    </div>
+                    <small>Показываем по 3 примера каждой редкости. Остальной пул не ограничен.</small>
+                  </div>
+
+                  <div className="pack-pool-groups">
+                    {poolPreview.map(({ rarity, cards, total, hidden, chance }) => (
+                      <section className={'pack-pool-group rarity-' + rarity} key={rarity}>
+                        <header>
+                          <div>
+                            <b>{RARITY_LABEL[rarity]}</b>
+                            <span>{chance}% DROP</span>
+                          </div>
+                          <small>{total} игроков</small>
+                        </header>
+
+                        <div className="pack-pool-row">
+                          {cards.map((card) => (
+                            <CollectiblePlayerCard
+                              key={card.id}
+                              rating={card.power}
+                              tier={tierForPackRarity(card.rarity)}
+                              role={card.role}
+                              alias={card.alias}
+                              team={card.team}
+                              country={card.country}
+                              profileId={card.profileId}
+                              stats={packStats(card)}
+                              className="pack-pool-preview-card"
+                              badge={RARITY_LABEL[card.rarity]}
+                            />
+                          ))}
+                          {hidden > 0 && (
+                            <div className={'pack-pool-more rarity-' + rarity}>
+                              <strong>+{hidden}</strong>
+                              <span>ИГРОКОВ</span>
+                              <small>{RARITY_LABEL[rarity]}</small>
+                            </div>
+                          )}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="pack-fast-row">
                   {QUANTITIES.map((count) => (

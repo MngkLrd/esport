@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   activeTournamentMatch,
   canPlayMatch,
@@ -47,6 +47,7 @@ import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 import { metadataForAlias } from './playerMetadata'
+import { careerObjectives, completedCareerObjectiveIds, onboardingStep } from './progression'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -324,6 +325,11 @@ function App() {
     veto: LobbyVetoAction[]
   } | null>(null)
   const [worldFocusId, setWorldFocusId] = useState<string | null>(null)
+  const [tutorialDismissed, setTutorialDismissed] = useState(() =>
+    window.localStorage.getItem('eam:tutorial:' + state.saveId) === 'dismissed',
+  )
+  const [progressToast, setProgressToast] = useState<{ title: string; reward: string } | null>(null)
+  const completedObjectivesRef = useRef<Set<string> | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
   const rating = useMemo(
@@ -354,10 +360,40 @@ function App() {
   )
   const unreadNews = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
   const unread = Math.min(9, unreadNews + (state.pendingDecision ? 1 : 0))
+  const coachStep = useMemo(
+    () => tutorialDismissed ? null : onboardingStep(state),
+    [state, tutorialDismissed],
+  )
 
   useEffect(() => {
     saveRepository.save(state)
   }, [state])
+
+  useEffect(() => {
+    setTutorialDismissed(window.localStorage.getItem('eam:tutorial:' + state.saveId) === 'dismissed')
+    completedObjectivesRef.current = completedCareerObjectiveIds(state)
+  }, [state.saveId])
+
+  useEffect(() => {
+    const current = completedCareerObjectiveIds(state)
+    const previous = completedObjectivesRef.current
+
+    if (previous) {
+      const newlyCompleted = [...current].filter((id) => !previous.has(id))
+      if (newlyCompleted.length > 0) {
+        const objective = careerObjectives(state).find((entry) => entry.id === newlyCompleted[0])
+        if (objective) setProgressToast({ title: objective.title, reward: objective.rewardLabel })
+      }
+    }
+
+    completedObjectivesRef.current = current
+  }, [state])
+
+  useEffect(() => {
+    if (!progressToast) return
+    const timer = window.setTimeout(() => setProgressToast(null), 2800)
+    return () => window.clearTimeout(timer)
+  }, [progressToast])
 
   useEffect(() => {
     if (!transition) return
@@ -380,6 +416,16 @@ function App() {
   const openWorldEvent = (eventId?: string) => {
     setWorldFocusId(eventId ?? null)
     openTab('World')
+  }
+
+  const dismissTutorial = () => {
+    window.localStorage.setItem('eam:tutorial:' + state.saveId, 'dismissed')
+    setTutorialDismissed(true)
+  }
+
+  const openCoachStep = () => {
+    if (!coachStep) return
+    openTab(coachStep.target)
   }
 
   const finishPendingMatch = useCallback(() => {
@@ -845,6 +891,29 @@ function App() {
           initialVeto={pendingMatch.veto}
           onContinue={finishPendingMatch}
         />
+      )}
+
+      {state.welcomeComplete && coachStep && !pendingMatch && (
+        <aside className="career-coach" aria-live="polite">
+          <div className="career-coach-progress">
+            <span>ROOKIE PATH</span>
+            <b>{coachStep.index}/{coachStep.total}</b>
+          </div>
+          <strong>{coachStep.title}</strong>
+          <p>{coachStep.body}</p>
+          <div>
+            <button onClick={openCoachStep}>{coachStep.action} <span>→</span></button>
+            <button className="career-coach-skip" onClick={dismissTutorial}>SKIP TUTORIAL</button>
+          </div>
+        </aside>
+      )}
+
+      {progressToast && (
+        <div className="career-progress-toast" role="status">
+          <span>OBJECTIVE COMPLETE</span>
+          <strong>{progressToast.title}</strong>
+          <b>{progressToast.reward}</b>
+        </div>
       )}
     </div>
   )

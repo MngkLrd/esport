@@ -641,8 +641,8 @@ body{
   grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
   border:1px solid var(--sim-line-strong);
   background:
-    linear-gradient(110deg,rgba(70,56,150,.20),transparent 38%),
-    rgba(9,14,35,.92);
+    linear-gradient(110deg,rgb(var(--ui-accent-rgb) / .08),transparent 38%),
+    rgba(12,13,14,.94);
   box-shadow:var(--sim-shadow)
 }
 .sim-event-banner-main,.sim-event-banner-match{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 14px}
@@ -652,11 +652,11 @@ body{
   color:var(--sim-cyan);font:900 9px/1 Arial,sans-serif;letter-spacing:.09em
 }
 .sim-event-banner-main h1{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:1000 22px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif}
-.sim-event-banner-main p,.sim-event-banner-match small{margin:0;color:#76829f;font-size:9px}
+.sim-event-banner-main p,.sim-event-banner-match small{margin:0;color:#8c867e;font-size:9px}
 .sim-event-banner-status{min-width:100px;display:grid;gap:3px;justify-items:end}
 .sim-event-banner-status strong{font-size:13px}.sim-event-banner-status span{color:#8b867e;font-size:8px}
 .sim-event-banner-match strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px}
-.sim-event-banner-match strong i{color:#6d7998;font-style:normal;font-size:10px}
+.sim-event-banner-match strong i{color:#807970;font-style:normal;font-size:10px}
 .sim-event-banner-actions{display:flex;gap:6px;align-items:center}
 .sim-event-banner-actions .secondary{min-height:36px;font-size:9px;padding-inline:10px}
 .sim-event-banner-actions .sim-primary-action{min-width:185px;min-height:36px}
@@ -669,7 +669,7 @@ body{
   border-bottom:1px solid rgb(var(--ui-line-rgb) / .10)
 }
 .sim-match-head>div:first-child{min-width:0}
-.sim-match-head .eyebrow{color:#7d89a7;font-size:9px}
+.sim-match-head .eyebrow{color:#8f8980;font-size:9px}
 .sim-match-head h1{margin:3px 0 0;font:1000 clamp(25px,2.2vw,34px)/.92 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-match-prize{display:grid;justify-items:end;gap:2px}
 .sim-match-prize span,.sim-match-prize small{color:#8b867e;font-size:9px}
@@ -685,7 +685,7 @@ body{
   background:
     linear-gradient(90deg,rgba(121,101,76,.05) 1px,transparent 1px),
     linear-gradient(rgba(121,101,76,.05) 1px,transparent 1px),
-    rgba(7,12,31,.72);
+    rgba(11,12,13,.84);
   background-size:46px 46px
 }
 .sim-team-deck{
@@ -704,12 +704,12 @@ body{
 .sim-team-name,.sim-team-away>h2{grid-column:1;grid-row:2;margin:5px 0 3px;font:1000 19px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-team-meta,.sim-team-away>p{
   grid-column:1;grid-row:3;margin:0;display:flex;flex-wrap:wrap;gap:5px 10px;
-  color:#7c88a5;font:900 9px/1.25 Arial,sans-serif
+  color:#8d877f;font:900 9px/1.25 Arial,sans-serif
 }
 .sim-team-edit{
   grid-column:1;grid-row:4;align-self:end;
   min-height:31px;margin:0;padding:0 10px;
-  border:1px solid var(--sim-line);background:transparent;color:#9aa6c2;cursor:pointer;font:900 9px/1 Arial,sans-serif
+  border:1px solid var(--sim-line);background:transparent;color:#aaa39a;cursor:pointer;font:900 9px/1 Arial,sans-serif
 }
 .sim-team-edit:hover{border-color:var(--sim-cyan);color:#fff}
 .sim-match-roster{
@@ -786,10 +786,10 @@ body{
   display:grid;gap:4px;align-content:center;
   padding:8px 10px;
   border:1px solid var(--sim-line);
-  background:rgba(15,22,50,.75)
+  background:rgba(18,19,19,.86)
 }
-.sim-match-format span{color:#e6edff;font:900 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
-.sim-match-format small{color:#72809e;font-size:9px}
+.sim-match-format span{color:#eee9df;font:900 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
+.sim-match-format small{color:#837d75;font-size:9px}
 .sim-match-format.is-muted{opacity:.68}
 .sim-match-launch{min-width:0;display:grid;grid-template-rows:auto auto auto;gap:4px;padding-left:10px;border-left:1px solid var(--sim-line)}
 .sim-match-launch .control-label{font-size:9px}
@@ -799,9 +799,9 @@ body{
   flex:0 0 24px;
   min-height:24px;
   display:flex;align-items:center;gap:12px;
-  padding:0 4px;color:#7785a1;font-size:9px
+  padding:0 4px;color:#89837b;font-size:9px
 }
-.sim-match-recap b{color:#cbd4e8}.sim-match-recap .text-button{margin-left:auto;font-size:9px}
+.sim-match-recap b{color:#d6d0c5}.sim-match-recap .text-button{margin-left:auto;font-size:9px}
 
 /* COMPACT CARD GEOMETRY ------------------------------------------------- */
 
@@ -996,21 +996,21 @@ body{
   padding:9px 11px;
   border:1px solid rgb(var(--ui-line-rgb) / .15);
   background:
-    linear-gradient(180deg,rgba(26,35,73,.66),rgba(10,16,38,.74));
+    linear-gradient(180deg,rgba(29,29,27,.86),rgba(13,14,15,.90));
 }
 .sim-squad-kpis span{
   grid-column:1/-1;
-  color:#75819e;
+  color:#8d877f;
   font:900 8px/1 Arial,sans-serif;
   letter-spacing:.10em;
 }
 .sim-squad-kpis strong{
-  color:#f5f8ff;
+  color:#f1ede5;
   font:1000 22px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
 .sim-squad-kpis small{
   align-self:end;
-  color:#66728e;
+  color:#78726b;
   font:800 7px/1.15 Arial,sans-serif;
 }
 .sim-squad-kpis .chemistry{
@@ -1022,16 +1022,16 @@ body{
   height:5px;
   margin-top:6px;
   overflow:hidden;
-  background:#202947;
+  background:#28241f;
 }
 .sim-squad-kpis .chemistry em{
   display:block;
   height:100%;
-  background:linear-gradient(90deg,var(--sim-violet),var(--sim-cyan));
+  background:linear-gradient(90deg,var(--ui-accent-2),var(--ui-accent));
 }
 .sim-squad-kpis .warning{
   border-color:rgb(var(--ui-warn-rgb) / .25);
-  background:linear-gradient(180deg,rgba(87,50,34,.28),rgba(14,17,34,.72));
+  background:linear-gradient(180deg,rgba(87,50,34,.28),rgba(16,16,15,.82));
 }
 .sim-squad-kpis .warning strong{color:var(--sim-warn)}
 
@@ -1070,17 +1070,17 @@ body{
   letter-spacing:.12em;
 }
 .sim-squad-stage-head>div:first-child>small{
-  color:#6d7995;
+  color:#7f7971;
   font:800 8px/1 Arial,sans-serif;
 }
 .sim-squad-stage-summary{
   display:flex;
   align-items:center;
   gap:13px;
-  color:#6f7d99;
+  color:#827c74;
   font:900 8px/1 Arial,sans-serif;
 }
-.sim-squad-stage-summary b{color:#f2f6ff;font-size:11px}
+.sim-squad-stage-summary b{color:#eeeae2;font-size:11px}
 
 .sim-squad-lineup-row{
   min-width:0;
@@ -1111,12 +1111,12 @@ body{
   padding:0 2px;
 }
 .sim-squad-role span{
-  color:#e9efff;
+  color:#eee9df;
   font:1000 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   letter-spacing:.07em;
 }
 .sim-squad-role small{
-  color:#61708d;
+  color:#726d66;
   font:900 6px/1 Arial,sans-serif;
   letter-spacing:.09em;
 }
@@ -1188,8 +1188,8 @@ body{
 .sim-squad-replace{
   min-height:28px;
   border:1px solid rgb(var(--ui-line-rgb) / .18);
-  background:rgba(13,20,45,.82);
-  color:#8f9bb8;
+  background:rgba(17,18,18,.90);
+  color:#9c958b;
   cursor:pointer;
   font:900 8px/1 Arial,sans-serif;
   letter-spacing:.09em;
@@ -1203,14 +1203,14 @@ body{
   place-items:center;
   align-content:center;
   gap:7px;
-  border:1px dashed #465473;
-  background:rgba(12,19,43,.64);
-  color:#75839f;
+  border:1px dashed #5a554e;
+  background:rgba(16,17,17,.74);
+  color:#8d877f;
   cursor:pointer;
 }
 .sim-squad-empty span{
   width:48px;height:48px;display:grid;place-items:center;
-  border:1px solid #52607d;border-radius:50%;
+  border:1px solid #675f54;border-radius:50%;
   color:var(--sim-cyan);font-size:29px
 }
 .sim-squad-empty b{font-size:9px}.sim-squad-empty small{font-size:7px}
@@ -1226,17 +1226,17 @@ body{
   border:1px dashed rgb(var(--ui-line-rgb) / .20);
   background:
     radial-gradient(circle at 50% 28%,rgb(var(--ui-line-rgb) / .07),transparent 35%),
-    rgba(6,11,27,.72);
-  color:#63708b;
+    rgba(13,14,15,.78);
+  color:#756f68;
 }
-.sim-staff-card>span{font-size:32px;color:#7c8ba8}
-.sim-staff-card b{font-size:10px;color:#8d99b4}
+.sim-staff-card>span{font-size:32px;color:#8b857d}
+.sim-staff-card b{font-size:10px;color:#9a9389}
 .sim-staff-card small{max-width:100px;text-align:center;font-size:7px;line-height:1.3}
 .sim-staff-slot>button{
   min-height:28px;
   border:1px solid rgb(var(--ui-line-rgb) / .12);
   background:rgba(255,255,255,.015);
-  color:#4f5a72;
+  color:#68635d;
   font:900 8px/1 Arial,sans-serif;
 }
 
@@ -1272,7 +1272,7 @@ body{
 .sim-player-pool-head>div:first-child>small{
   grid-column:1/-1;
   margin-top:3px;
-  color:#677490;
+  color:#78726b;
   font-size:7px;
 }
 .sim-pool-filters{
@@ -1287,8 +1287,8 @@ body{
   min-width:0;
   min-height:32px;
   border:1px solid rgb(var(--ui-line-rgb) / .17);
-  background:#0b122c;
-  color:#aeb9d2;
+  background:#111315;
+  color:#b7b0a6;
   padding:0 9px;
   outline:0;
   font:800 8px/1 Arial,sans-serif;
@@ -1325,7 +1325,7 @@ body{
   grid-template-columns:minmax(0,1fr) 46%;
   overflow:hidden;
   border:1px solid color-mix(in srgb,var(--pool-accent) 54%,rgb(var(--ui-line-rgb) / .18));
-  background:#081025;
+  background:#0f1112;
   color:#f4f7ff;
   text-align:left;
   cursor:pointer;
@@ -1351,8 +1351,8 @@ body{
   z-index:1;
   pointer-events:none;
   background:
-    linear-gradient(90deg,rgba(3,7,18,.94) 0%,rgba(3,7,18,.84) 36%,rgba(3,7,18,.46) 58%,rgba(3,7,18,.16) 100%),
-    linear-gradient(180deg,rgba(3,7,18,.04) 0%,rgba(3,7,18,.10) 54%,rgba(3,7,18,.48) 100%);
+    linear-gradient(90deg,rgba(8,9,10,.96) 0%,rgba(8,9,10,.86) 36%,rgba(8,9,10,.48) 58%,rgba(8,9,10,.18) 100%),
+    linear-gradient(180deg,rgba(8,9,10,.04) 0%,rgba(8,9,10,.10) 54%,rgba(8,9,10,.50) 100%);
 }
 .sim-pool-card.tier-silver{--pool-accent:#c7ced7;--pool-art:url('./assets/cards/common_front.webp')}
 .sim-pool-card.tier-rare{--pool-accent:#79d34f;--pool-art:url('./assets/cards/uncommon_front.webp')}
@@ -1377,10 +1377,10 @@ body{
 }
 .sim-pool-card-top{display:flex;align-items:baseline;gap:7px}
 .sim-pool-card-top strong{color:#fff;font:1000 20px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif}
-.sim-pool-card-top span{color:#c9d2e6;font:900 7px/1 Arial,sans-serif;letter-spacing:.08em;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.sim-pool-card-top span{color:#d1cbc1;font:900 7px/1 Arial,sans-serif;letter-spacing:.08em;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-name{min-width:0;display:grid;gap:2px;margin-top:8px}
 .sim-pool-card-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#aebbd2;font-size:7px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b7b0a7;font-size:7px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-stats{
   margin-top:auto;
   display:grid;
@@ -1390,7 +1390,7 @@ body{
 .sim-pool-card-stats span{
   display:grid;
   gap:1px;
-  color:#b3bfd5;
+  color:#bbb4aa;
   font:800 6px/1 Arial,sans-serif;
 }
 .sim-pool-card-stats b{color:#fff;font-size:9px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
@@ -1419,7 +1419,7 @@ body{
   display:flex;
   align-items:center;
   gap:5px;
-  color:#99a6c2;
+  color:#a8a198;
   font:900 6px/1 Arial,sans-serif;
   letter-spacing:.06em;
 }
@@ -1428,7 +1428,7 @@ body{
   left:0;right:0;bottom:0;
   z-index:4;
   padding:5px;
-  background:rgba(4,8,20,.78);
+  background:rgba(8,9,10,.82);
   color:#fff;
   text-align:center;
   font:1000 7px/1 Arial,sans-serif;
@@ -1454,7 +1454,7 @@ body{
   flex-direction:column;
   overflow:hidden;
   border:1px solid rgb(var(--ui-line-rgb) / .20);
-  background:linear-gradient(160deg,rgba(24,33,72,.88),rgba(7,12,30,.96));
+  background:linear-gradient(160deg,rgba(27,27,25,.92),rgba(10,11,12,.97));
 }
 .sim-inspector-hero{
   --inspector-accent:#4c9ee8;
@@ -1525,8 +1525,8 @@ body{
 .sim-inspector-club-actions button{
   min-height:30px;
   border:1px solid rgb(var(--ui-line-rgb) / .18);
-  background:#0c1530;
-  color:#9da9c4;
+  background:#121415;
+  color:#aaa39a;
   cursor:pointer;
   font:900 7px/1 Arial,sans-serif;
   letter-spacing:.06em;
@@ -1534,7 +1534,7 @@ body{
 .sim-inspector-primary-actions button:first-child{
   border-color:rgb(var(--ui-accent-rgb) / .30);
   background:rgb(var(--ui-accent-rgb) / .07);
-  color:#eefcff;
+  color:#f1ece3;
 }
 .sim-inspector-club-actions{
   margin-top:auto;
@@ -1567,7 +1567,7 @@ body{
   display:grid;
   grid-template-columns:280px minmax(0,1fr);
   border:1px solid var(--sim-line-strong);
-  background:rgba(8,13,33,.82);
+  background:rgba(12,13,14,.88);
   box-shadow:var(--sim-shadow)
 }
 .sim-market-body.has-results{grid-template-columns:240px minmax(0,1fr)}
@@ -1576,10 +1576,10 @@ body{
   padding:15px;
   overflow-y:auto;
   border-right:1px solid var(--sim-line);
-  background:linear-gradient(180deg,rgba(19,27,61,.86),rgba(8,13,33,.90))
+  background:linear-gradient(180deg,rgba(27,27,25,.92),rgba(12,13,14,.95))
 }
 .sim-market-brief-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:11px;margin-bottom:13px;border-bottom:1px solid rgb(var(--ui-line-rgb) / .12)}
-.sim-market-brief-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-market-brief-head b{color:#47536d;font-size:23px}
+.sim-market-brief-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-market-brief-head b{color:#625c54;font-size:23px}
 .sim-market .market-field{gap:7px;margin-bottom:13px}
 .sim-market .market-field>span{font-size:9px}
 .sim-market .market-field>span b{font-size:10px}
@@ -1602,7 +1602,7 @@ body{
 .sim-market-results-head>div{display:grid;gap:4px}
 .sim-market-results-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-market-results-head strong{font-size:17px}.sim-market-results-head small{color:#8c877f;font-size:9px}
 .sim-market-empty{display:grid;place-items:center;align-content:center;text-align:center}
-.sim-market-empty-mark{width:58px;height:58px;display:grid;place-items:center;border:1px dashed #42506d;border-radius:50%;color:var(--sim-cyan);font-size:32px}
+.sim-market-empty-mark{width:58px;height:58px;display:grid;place-items:center;border:1px dashed #5d574f;border-radius:50%;color:var(--sim-cyan);font-size:32px}
 .sim-market-empty h2{margin:15px 0 0;font-size:20px}
 .sim-market-grid{
   min-height:0;
@@ -1612,7 +1612,7 @@ body{
   overflow-y:auto;
   padding:13px 2px 4px
 }
-.sim-market .market-candidate{padding:6px;border:1px solid rgb(var(--ui-line-rgb) / .16);background:#091027}
+.sim-market .market-candidate{padding:6px;border:1px solid rgb(var(--ui-line-rgb) / .16);background:#101213}
 .sim-market .market-card-visual:hover,.sim-market .market-card-visual:focus-visible{border-color:var(--sim-cyan);box-shadow:0 15px 35px rgba(0,0,0,.26)}
 .sim-market .market-card-top span,.sim-market .market-card-country span,.sim-market .market-card-name span,.sim-market .market-card-stats span{font-size:7px}
 .sim-market .market-card-stats b{font-size:10px}
@@ -1633,7 +1633,7 @@ body{
   border-bottom:1px solid rgb(var(--ui-line-rgb) / .16)
 }
 .sim-subnav button{
-  min-width:140px;border:0;border-bottom:2px solid transparent;background:transparent;color:#75819f;cursor:pointer;font:900 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+  min-width:140px;border:0;border-bottom:2px solid transparent;background:transparent;color:#8e887f;cursor:pointer;font:900 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
 }
 .sim-subnav button.active{border-bottom-color:var(--sim-cyan);color:#fff}.sim-subnav button span{color:var(--sim-cyan)}
 
@@ -1650,8 +1650,8 @@ body{
   overflow:hidden;
   border:1px solid color-mix(in srgb,var(--pack-accent) 35%,rgb(var(--ui-line-rgb) / .32));
   background:
-    radial-gradient(circle at 22% 35%,color-mix(in srgb,var(--pack-accent) 22%,transparent),transparent 35%),
-    linear-gradient(145deg,#111936,#071025 62%);
+    radial-gradient(circle at 22% 35%,color-mix(in srgb,var(--pack-accent) 10%,transparent),transparent 35%),
+    linear-gradient(145deg,#1a1b1a,#0d0f10 62%);
   box-shadow:var(--sim-shadow)
 }
 .sim-pack-hero-art{min-width:0;min-height:0;display:grid;place-items:center;padding:28px;overflow:hidden}
@@ -1670,12 +1670,12 @@ body{
 }
 .sim-pack-hero-copy>span{color:var(--pack-accent);font:900 10px/1 Arial,sans-serif;letter-spacing:.12em}
 .sim-pack-hero-copy h2{margin:11px 0 9px;font:1000 clamp(34px,3.2vw,54px)/.92 'Cyril UI','Noto Sans',system-ui,sans-serif;letter-spacing:-.045em}
-.sim-pack-hero-copy p{max-width:530px;margin:0;color:#8b98b5;font-size:12px;line-height:1.5}
+.sim-pack-hero-copy p{max-width:530px;margin:0;color:#9f988f;font-size:12px;line-height:1.5}
 .sim-pack-odds{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:20px 0}
 .sim-pack-odds div{display:grid;gap:5px;padding:10px;border:1px solid rgb(var(--ui-line-rgb) / .15);background:rgba(255,255,255,.018)}
-.sim-pack-odds small{color:#72809d;font-size:8px}.sim-pack-odds b{font-size:18px}
+.sim-pack-odds small{color:#827c74;font-size:8px}.sim-pack-odds b{font-size:18px}
 .sim-pack-price{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:end;margin-bottom:14px}
-.sim-pack-price small{grid-column:1/-1;color:#6e7b98;font-size:8px}.sim-pack-price strong{font-size:28px}.sim-pack-price span{color:#8490ac;font-size:9px;padding-bottom:3px}
+.sim-pack-price small{grid-column:1/-1;color:#7c766f;font-size:8px}.sim-pack-price strong{font-size:28px}.sim-pack-price span{color:#918a81;font-size:9px;padding-bottom:3px}
 .sim-pack-hero-copy .sim-primary-action{max-width:360px}
 
 .sim-pack-selector{
@@ -1683,7 +1683,7 @@ body{
   display:grid;
   grid-template-rows:42px repeat(4,minmax(0,1fr));
   border:1px solid var(--sim-line-strong);
-  background:rgba(8,13,33,.90)
+  background:rgba(12,13,14,.94)
 }
 .sim-pack-selector-head{display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid rgb(var(--ui-line-rgb) / .14)}
 .sim-pack-selector-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-pack-selector-head b{font-size:15px}
@@ -1695,7 +1695,7 @@ body{
   align-items:center;
   padding:10px;
   border:0;border-bottom:1px solid rgb(var(--ui-line-rgb) / .10);
-  background:transparent;color:#8c98b4;text-align:left;cursor:pointer
+  background:transparent;color:#9b948b;text-align:left;cursor:pointer
 }
 .sim-pack-selector>button:hover,.sim-pack-selector>button.active{background:rgba(255,255,255,.03);color:#fff}
 .sim-pack-selector>button.active{box-shadow:inset 3px 0 0 var(--sim-cyan)}

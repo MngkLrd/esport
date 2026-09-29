@@ -30,6 +30,7 @@ import { createBrowserSaveRepository } from './saveRepository'
 import { rollWelcomePack } from './welcomePack'
 import { PlayerPortrait } from './PlayerPortrait'
 import { MatchRadar } from './MatchRadar'
+import { MatchLobby, type LobbyVetoAction } from './MatchLobby'
 import { RosterBoard } from './RosterBoard'
 import { tournamentForId, tournamentMode } from './events'
 import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
@@ -315,7 +316,13 @@ function App() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
-  const [pendingMatch, setPendingMatch] = useState<{ nextState: GameState; result: MatchResult; returnTab: Tab } | null>(null)
+  const [pendingMatch, setPendingMatch] = useState<{
+    nextState: GameState
+    result: MatchResult
+    returnTab: Tab
+    stage: 'lobby' | 'simulation' | 'result'
+    veto: LobbyVetoAction[]
+  } | null>(null)
   const [worldFocusId, setWorldFocusId] = useState<string | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
@@ -384,13 +391,47 @@ function App() {
     })
   }, [])
 
+  const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[]) => {
+    setPendingMatch((current) => {
+      if (!current) return null
+      const remappedResult: MatchResult = {
+        ...current.result,
+        maps: current.result.maps.map((map, index) => ({
+          ...map,
+          map: maps[index] ?? map.map,
+        })),
+      }
+      const nextState: GameState = {
+        ...current.nextState,
+        history: current.nextState.history.map((entry, index) => index === 0 ? remappedResult : entry),
+      }
+      return {
+        ...current,
+        nextState,
+        result: remappedResult,
+        veto,
+        stage: 'simulation',
+      }
+    })
+  }, [])
+
+  const completePendingSimulation = useCallback(() => {
+    setPendingMatch((current) => current ? { ...current, stage: 'result' } : null)
+  }, [])
+
   const play = (mode: MatchMode) => {
     const gate = canPlayMatch(state, mode)
     if (!gate.ok || pendingMatch) return
     const result = executeGameCommand(state, { type: 'PLAY_MATCH', mode, tactic })
     const match = result.state.history[0]
     if (result.state === state || !match) return
-    setPendingMatch({ nextState: result.state, result: match, returnTab: mode === 'practice' ? 'Training' : result.state.activeTournament ? 'Play' : 'HQ' })
+    setPendingMatch({
+      nextState: result.state,
+      result: match,
+      returnTab: mode === 'practice' ? 'Training' : result.state.activeTournament ? 'Play' : 'HQ',
+      stage: 'lobby',
+      veto: [],
+    })
   }
 
   const reset = () => {
@@ -778,12 +819,31 @@ function App() {
         )}
       </main>
 
-      {pendingMatch && (
+      {pendingMatch?.stage === 'lobby' && (
+        <MatchLobby
+          result={pendingMatch.result}
+          starters={starters}
+          phase="prematch"
+          onStart={startPendingSeries}
+        />
+      )}
+
+      {pendingMatch?.stage === 'simulation' && (
         <MatchRadar
           result={pendingMatch.result}
           starters={starters}
-          onComplete={finishPendingMatch}
-          onSkip={finishPendingMatch}
+          onComplete={completePendingSimulation}
+          onSkip={completePendingSimulation}
+        />
+      )}
+
+      {pendingMatch?.stage === 'result' && (
+        <MatchLobby
+          result={pendingMatch.result}
+          starters={starters}
+          phase="result"
+          initialVeto={pendingMatch.veto}
+          onContinue={finishPendingMatch}
         />
       )}
     </div>

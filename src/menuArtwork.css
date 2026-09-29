@@ -1,7 +1,7 @@
 /* Fast artwork pass: home hero + packs screen */
 
 .app-main-hq .fifa-mode-hero{
-  background-color:#070d18;
+  background-color:var(--ui-bg-0);
   background-image:url('./assets/ui/home-hero-arena.jpg');
   background-position:center center;
   background-size:cover;
@@ -9,9 +9,9 @@
 }
 
 .app-main-hq .fifa-transfer-tile{
-  background-color:#070d18;
+  background-color:var(--ui-bg-0);
   background-image:
-    linear-gradient(90deg,rgba(5,9,22,.90) 0%,rgba(5,9,22,.40) 58%,rgba(5,9,22,.08) 100%),
+    linear-gradient(90deg,rgb(var(--ui-bg-rgb) / .90) 0%,rgb(var(--ui-bg-rgb) / .40) 58%,rgb(var(--ui-bg-rgb) / .08) 100%),
     url('./assets/ui/packs-arena.jpg');
   background-position:center center;
   background-size:cover;
@@ -19,9 +19,9 @@
 }
 
 .app-main-hq .fifa-packs-tile{
-  background-color:#070d18;
+  background-color:var(--ui-bg-0);
   background-image:
-    linear-gradient(90deg,rgba(5,9,22,.82) 0%,rgba(5,9,22,.24) 54%,rgba(5,9,22,.04) 100%),
+    linear-gradient(90deg,rgb(var(--ui-bg-rgb) / .82) 0%,rgb(var(--ui-bg-rgb) / .24) 54%,rgb(var(--ui-bg-rgb) / .04) 100%),
     url('./assets/ui/packs-showcase-hq.jpg');
   background-position:center center;
   background-size:cover;
@@ -29,9 +29,9 @@
 }
 
 .app-main-hq .fifa-squad-tile{
-  background-color:#070d18;
+  background-color:var(--ui-bg-0);
   background-image:
-    linear-gradient(90deg,rgba(5,9,22,.88) 0%,rgba(5,9,22,.28) 56%,rgba(5,9,22,.04) 100%),
+    linear-gradient(90deg,rgb(var(--ui-bg-rgb) / .88) 0%,rgb(var(--ui-bg-rgb) / .28) 56%,rgb(var(--ui-bg-rgb) / .04) 100%),
     url('./assets/ui/squad-room-hq.jpg');
   background-position:center center;
   background-size:cover;
@@ -39,9 +39,9 @@
 }
 
 .app-main-hq .fifa-practice-tile{
-  background-color:#070d18;
+  background-color:var(--ui-bg-0);
   background-image:
-    linear-gradient(90deg,rgba(5,9,22,.82) 0%,rgba(5,9,22,.24) 50%,rgba(5,9,22,.02) 100%),
+    linear-gradient(90deg,rgb(var(--ui-bg-rgb) / .82) 0%,rgb(var(--ui-bg-rgb) / .24) 50%,rgb(var(--ui-bg-rgb) / .02) 100%),
     url('./assets/ui/practice-ground-hq.jpg');
   background-position:center center;
   background-size:cover;

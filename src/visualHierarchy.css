@@ -3,14 +3,14 @@
    rewriting every feature stylesheet. */
 
 :root{
-  --game-line:rgba(126,151,226,.34);
-  --game-line-soft:rgba(126,151,226,.20);
-  --game-panel:rgba(8,14,35,.90);
-  --game-panel-raised:rgba(14,22,50,.92);
-  --game-cyan:var(--sim-cyan,#29e7ff);
-  --game-violet:var(--sim-violet,#745cff);
-  --game-mint:var(--sim-mint,#58ffd2);
-  --game-warn:var(--sim-warn,#ffb766);
+  --game-line:var(--ui-line-strong);
+  --game-line-soft:var(--ui-line);
+  --game-panel:rgb(var(--ui-panel-rgb) / .90);
+  --game-panel-raised:rgb(var(--ui-panel-raised-rgb) / .92);
+  --game-cyan:var(--ui-accent);
+  --game-violet:var(--ui-accent-2);
+  --game-mint:var(--ui-positive);
+  --game-warn:var(--ui-warn);
 }
 
 .fifa-screen-title{gap:9px}
@@ -61,23 +61,23 @@
 .sim-pack-selector,
 .sim-inbox-season{
   box-shadow:
-    inset 3px 0 0 rgba(41,231,255,.42),
+    inset 3px 0 0 rgb(var(--ui-accent-rgb) / .42),
     0 16px 34px rgba(0,0,0,.16);
 }
-.sim-market-brief{box-shadow:inset 3px 0 0 rgba(116,92,255,.46)}
-.sim-profile-overview{box-shadow:inset 3px 0 0 rgba(116,92,255,.48)}
+.sim-market-brief{box-shadow:inset 3px 0 0 rgb(var(--ui-accent-2-rgb) / .46)}
+.sim-profile-overview{box-shadow:inset 3px 0 0 rgb(var(--ui-accent-2-rgb) / .48)}
 
 .sim-segmented,
 .sim-world-filters,
 .sim-subnav{
   border-color:var(--game-line-soft)!important;
-  background:linear-gradient(180deg,rgba(20,29,62,.78),rgba(8,14,35,.80));
+  background:linear-gradient(180deg,rgb(var(--ui-panel-raised-rgb) / .78),rgb(var(--ui-bg-rgb) / .80));
 }
 .sim-subnav{
   border:1px solid var(--game-line-soft);
   padding:0 4px;
 }
-.sim-subnav button.active{background:rgba(41,231,255,.055)}
+.sim-subnav button.active{background:rgb(var(--ui-accent-rgb) / .055)}
 
 .sim-event-stats>div,
 .sim-event-details>div,
@@ -86,22 +86,22 @@
 .sim-milestones article,
 .sim-squad-kpis>div{
   border-color:var(--game-line-soft)!important;
-  background-color:rgba(15,23,52,.70);
+  background-color:rgb(var(--ui-panel-rgb) / .70);
 }
-.sim-event-stats>div{box-shadow:inset 0 2px 0 rgba(41,231,255,.34)}
-.sim-event-details>div{box-shadow:inset 0 1px 0 rgba(116,92,255,.32)}
-.sim-practice-rules span:nth-child(1){box-shadow:inset 0 2px 0 rgba(41,231,255,.52)}
-.sim-practice-rules span:nth-child(2){box-shadow:inset 0 2px 0 rgba(116,92,255,.58)}
-.sim-practice-rules span:nth-child(3){box-shadow:inset 0 2px 0 rgba(88,255,210,.52)}
-.sim-practice-rules span:nth-child(4){box-shadow:inset 0 2px 0 rgba(255,183,102,.55)}
+.sim-event-stats>div{box-shadow:inset 0 2px 0 rgb(var(--ui-accent-rgb) / .34)}
+.sim-event-details>div{box-shadow:inset 0 1px 0 rgb(var(--ui-accent-2-rgb) / .32)}
+.sim-practice-rules span:nth-child(1){box-shadow:inset 0 2px 0 rgb(var(--ui-accent-rgb) / .52)}
+.sim-practice-rules span:nth-child(2){box-shadow:inset 0 2px 0 rgb(var(--ui-accent-2-rgb) / .58)}
+.sim-practice-rules span:nth-child(3){box-shadow:inset 0 2px 0 rgb(var(--ui-positive-rgb) / .52)}
+.sim-practice-rules span:nth-child(4){box-shadow:inset 0 2px 0 rgb(var(--ui-warn-rgb) / .55)}
 .sim-pack-odds div{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--pack-accent) 68%,transparent)}
-.sim-milestones article.complete{box-shadow:inset 3px 0 0 rgba(41,231,255,.48)}
+.sim-milestones article.complete{box-shadow:inset 3px 0 0 rgb(var(--ui-accent-rgb) / .48)}
 
-.sim-squad-kpis>div:nth-child(1){box-shadow:inset 0 2px 0 rgba(41,231,255,.52)}
-.sim-squad-kpis>div:nth-child(2){box-shadow:inset 0 2px 0 rgba(116,92,255,.58)}
-.sim-squad-kpis>div:nth-child(3){box-shadow:inset 0 2px 0 rgba(88,255,210,.48)}
-.sim-squad-kpis>div:nth-child(4){box-shadow:inset 0 2px 0 rgba(255,183,102,.50)}
-.sim-squad-kpis>div:nth-child(5){box-shadow:inset 0 2px 0 rgba(255,104,126,.44)}
+.sim-squad-kpis>div:nth-child(1){box-shadow:inset 0 2px 0 rgb(var(--ui-accent-rgb) / .52)}
+.sim-squad-kpis>div:nth-child(2){box-shadow:inset 0 2px 0 rgb(var(--ui-accent-2-rgb) / .58)}
+.sim-squad-kpis>div:nth-child(3){box-shadow:inset 0 2px 0 rgb(var(--ui-positive-rgb) / .48)}
+.sim-squad-kpis>div:nth-child(4){box-shadow:inset 0 2px 0 rgb(var(--ui-warn-rgb) / .50)}
+.sim-squad-kpis>div:nth-child(5){box-shadow:inset 0 2px 0 rgb(var(--ui-danger-rgb) / .44)}
 
 .sim-profile-stats>div{position:relative}
 .sim-profile-stats>div::before{
@@ -111,26 +111,26 @@
   right:10px;
   top:0;
   height:2px;
-  background:rgba(41,231,255,.34);
+  background:rgb(var(--ui-accent-rgb) / .34);
 }
-.sim-profile-stats>div:nth-child(even)::before{background:rgba(116,92,255,.42)}
+.sim-profile-stats>div:nth-child(even)::before{background:rgb(var(--ui-accent-2-rgb) / .42)}
 
 .sim-feed>article{
-  border-left:2px solid rgba(41,231,255,.22);
+  border-left:2px solid rgb(var(--ui-accent-rgb) / .22);
   border-bottom-color:var(--game-line-soft)!important;
   transition:background .14s ease,border-color .14s ease;
 }
 .sim-feed>article:hover{
   border-left-color:var(--game-cyan);
-  background:rgba(41,231,255,.035);
+  background:rgb(var(--ui-accent-rgb) / .035);
 }
 .sim-event-row{border-bottom-color:var(--game-line-soft)!important}
 .sim-market .market-candidate{
   border-color:var(--game-line-soft)!important;
-  box-shadow:inset 0 2px 0 rgba(41,231,255,.28);
+  box-shadow:inset 0 2px 0 rgb(var(--ui-accent-rgb) / .28);
 }
 .sim-market .market-candidate.tier-silver{box-shadow:inset 0 2px 0 rgba(199,206,215,.46)}
-.sim-market .market-candidate.tier-rare{box-shadow:inset 0 2px 0 rgba(41,231,255,.55)}
+.sim-market .market-candidate.tier-rare{box-shadow:inset 0 2px 0 rgb(var(--ui-accent-rgb) / .55)}
 .sim-market .market-candidate.tier-elite{box-shadow:inset 0 2px 0 rgba(190,82,255,.58)}
 .sim-market .market-candidate.tier-gold{box-shadow:inset 0 2px 0 rgba(239,195,79,.62)}
 
@@ -155,8 +155,8 @@
     height:36px;
     padding:0 10px 0 11px;
     border:1px solid var(--game-line-soft)!important;
-    border-left:3px solid rgba(41,231,255,.62)!important;
-    background:linear-gradient(90deg,rgba(16,28,58,.86),rgba(8,14,35,.66));
+    border-left:3px solid rgb(var(--ui-accent-rgb) / .62)!important;
+    background:linear-gradient(90deg,rgb(var(--ui-panel-raised-rgb) / .86),rgb(var(--ui-bg-rgb) / .66));
     box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
   }
   .sim-screen-head>div:first-child{

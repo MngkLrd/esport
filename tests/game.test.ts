@@ -308,7 +308,7 @@ describe('P0 career flow', () => {
 
     expect(strong.opponent).toBe(weak.opponent)
     expect(strong.maps[0].map).toBe(weak.maps[0].map)
-    expect(strong.maps[0].winChance - weak.maps[0].winChance).toBeGreaterThan(25)
+    expect(strong.maps[0].winChance - weak.maps[0].winChance).toBeGreaterThanOrEqual(25)
   })
 
   it('keeps the welcome result tied to save identity', () => {

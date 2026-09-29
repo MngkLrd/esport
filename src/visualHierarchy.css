@@ -232,3 +232,36 @@
 @media (max-width:900px){
   .fifa-screen-back-mark{font-size:15px}
 }
+
+
+/* FINAL PACK ARTWORK ----------------------------------------------------- */
+.pack-artwork.pack-artwork-final{
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+  border:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.pack-artwork.pack-artwork-final::before,
+.pack-artwork.pack-artwork-final::after{
+  display:none!important;
+  content:none!important;
+}
+.pack-artwork-final>img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+  pointer-events:none;
+  user-select:none;
+}
+.sim-pack-hero-art .pack-artwork-final{
+  border:0!important;
+  background:none!important;
+}
+.sim-pack-selector-art .pack-artwork-final{
+  border:0!important;
+  background:none!important;
+}

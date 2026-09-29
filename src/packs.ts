@@ -208,6 +208,14 @@ const toCard = (player: RealPlayerSeed, packId: PackId, serial: number, slot: nu
   }
 }
 
+export const packPoolCount = (rarity: PackRarity) => pools[rarity].length
+
+export const packPoolPreview = (rarity: PackRarity, limit = 3): PackCard[] =>
+  [...pools[rarity]]
+    .sort((a, b) => playerPower(b) - playerPower(a) || a.alias.localeCompare(b.alias, 'en-US'))
+    .slice(0, Math.max(0, limit))
+    .map((player, index) => toCard(player, 'welcome', -1000 - index, index))
+
 const hydrateCard = (card: PackCard): PackCard => {
   const player = playerByAlias.get(card.alias.toLocaleLowerCase('en-US'))
   const stats = card.cardStats ?? cardStatsForAlias(card.alias, card.role)

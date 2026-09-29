@@ -1,0 +1,39 @@
+/* ==========================================================================
+   GLOBAL UI THEME
+   Single source of truth for the interface palette.
+   Artwork/menu tiles establish the visual family; feature styles consume these
+   tokens instead of redefining their own palettes.
+   ========================================================================== */
+
+:root {
+  --ui-bg-0:#060914;
+  --ui-bg-1:#0a1022;
+  --ui-bg-2:#101831;
+  --ui-panel:#10182d;
+  --ui-panel-raised:#17213b;
+  --ui-panel-deep:#0c1327;
+
+  --ui-text:#f4f7ff;
+  --ui-muted:#99a8c6;
+  --ui-soft:#6f7f9f;
+
+  --ui-accent:#54cfff;
+  --ui-accent-2:#8171ff;
+  --ui-positive:#69e8c7;
+  --ui-danger:#ff6f83;
+  --ui-warn:#f2b36f;
+
+  --ui-bg-rgb:6 9 20;
+  --ui-panel-rgb:16 24 45;
+  --ui-panel-raised-rgb:23 33 59;
+  --ui-line-rgb:125 157 224;
+  --ui-accent-rgb:84 207 255;
+  --ui-accent-2-rgb:129 113 255;
+  --ui-positive-rgb:105 232 199;
+  --ui-danger-rgb:255 111 131;
+  --ui-warn-rgb:242 179 111;
+
+  --ui-line:rgb(var(--ui-line-rgb) / .25);
+  --ui-line-strong:rgb(var(--ui-line-rgb) / .48);
+  --ui-shadow:0 24px 70px rgb(0 0 0 / .38);
+}

@@ -300,17 +300,6 @@ export function PacksView({
 
   return (
     <section className="sim-screen sim-packs">
-      <div className="sim-screen-head sim-packs-head">
-        <div>
-          <span>STORE · PLAYER PACKS</span>
-          <h1>{section === 'store' ? 'PACK STORE' : 'MY CLUB'}</h1>
-        </div>
-        <div className="sim-head-metrics">
-          <div className="sim-head-stat"><small>COLLECTION</small><b>{stats.unique}</b><span>{stats.legendary} LEGENDARY</span></div>
-          <div className="sim-head-stat"><small>PACK TOKENS</small><b>{packTokens.toLocaleString('ru-RU')}</b></div>
-        </div>
-      </div>
-
       <div className="sim-subnav">
         <button className={section === 'store' ? 'active' : ''} onClick={() => setSection('store')}>PACKS</button>
         <button className={section === 'collection' ? 'active' : ''} onClick={() => setSection('collection')}>
@@ -337,17 +326,25 @@ export function PacksView({
               </button>
             </div>
           </section>
-          <aside className="sim-pack-selector">
-            <div className="sim-pack-selector-head"><span>PACK CATALOG</span><b>{PACKS.length}</b></div>
+          <aside className="sim-pack-selector" aria-label="Pack catalog">
             {PACKS.map((pack) => (
               <button
                 key={pack.id}
                 className={focusedPack.id === pack.id ? 'active' : ''}
+                style={{ '--pack-accent': pack.accent } as React.CSSProperties}
                 onClick={() => setFocusedPackId(pack.id as Exclude<PackId, 'welcome'>)}
               >
-                <i style={{ background: pack.accent }} />
-                <span><b>{pack.name}</b><small>{pack.eyebrow}</small></span>
-                <strong>{pack.price}</strong>
+                <div className="sim-pack-selector-art">
+                  <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
+                </div>
+                <span className="sim-pack-selector-copy">
+                  <b>{pack.name}</b>
+                  <small>{pack.eyebrow}</small>
+                </span>
+                <strong className="sim-pack-selector-price">
+                  {pack.price.toLocaleString('ru-RU')}
+                  <small>PACK TOKENS</small>
+                </strong>
               </button>
             ))}
           </aside>

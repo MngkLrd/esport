@@ -462,8 +462,8 @@ body{
   align-content:center;padding:3px 2px
 }
 .sim-event-timeline>div:not(:last-child)::after{content:'';position:absolute;left:5px;top:23px;bottom:-13px;width:1px;background:rgb(var(--ui-line-rgb) / .22)}
-.sim-event-timeline i{grid-row:1/span 2;align-self:center;width:8px;height:8px;border:2px solid #596788;border-radius:50%;background:#0b112c}
-.sim-event-timeline b{margin-top:3px;color:#cbd5ec;font-size:10px}
+.sim-event-timeline i{grid-row:1/span 2;align-self:center;width:8px;height:8px;border:2px solid #6f685e;border-radius:50%;background:#111315}
+.sim-event-timeline b{margin-top:3px;color:#d8d2c7;font-size:10px}
 .sim-event-timeline .done i{border-color:#4c8c83;background:#4c8c83}
 .sim-event-timeline .current i{border-color:var(--sim-cyan);background:var(--sim-cyan);box-shadow:0 0 0 4px rgb(var(--ui-accent-rgb) / .09)}
 .sim-event-timeline .current span{color:var(--sim-cyan)}
@@ -474,8 +474,8 @@ body{
   min-height:42px;
   display:flex;align-items:center;justify-content:space-between;
   border:1px solid rgb(var(--ui-accent-rgb) / .36);
-  background:linear-gradient(90deg,var(--sim-cyan),#6be7ff);
-  color:#06101b;
+  background:linear-gradient(90deg,var(--sim-cyan),#f0bd67);
+  color:#171108;
   padding:0 14px;
   cursor:pointer;
   font:1000 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
@@ -495,7 +495,7 @@ body{
   grid-template-rows:42px minmax(0,1fr);
   overflow:hidden;
   border:1px solid var(--sim-line);
-  background:rgba(9,14,35,.86);
+  background:rgba(12,13,14,.90);
 }
 .sim-world-vrs .vrs-table-head,.sim-world-vrs .vrs-row{
   grid-template-columns:58px minmax(180px,.7fr) minmax(0,1.4fr) 130px;
@@ -546,7 +546,7 @@ body{
   min-width:0;min-height:0;
   display:grid;grid-template-rows:48px 28px minmax(0,1fr);
   border:1px solid var(--sim-line-strong);
-  background:rgba(9,14,35,.86);
+  background:rgba(12,13,14,.90);
   box-shadow:var(--sim-shadow);
 }
 .sim-month-head{
@@ -565,7 +565,7 @@ body{
   gap:1px;
   background:rgb(var(--ui-line-rgb) / .12)
 }
-.sim-day,.sim-calendar-empty{min-width:0;min-height:0;background:#0a1028}
+.sim-day,.sim-calendar-empty{min-width:0;min-height:0;background:#101316}
 .sim-day{
   padding:8px;
   overflow:hidden;
@@ -576,7 +576,7 @@ body{
 .sim-day header{display:grid;grid-template-columns:1fr auto;gap:2px;margin-bottom:7px}
 .sim-day header span,.sim-day header small{color:#77736d;font:800 9px/1 Arial,sans-serif}
 .sim-day header small{grid-column:1}
-.sim-day header b{grid-column:2;grid-row:1/span 2;color:#eaf0ff;font:1000 clamp(18px,1.6vw,25px)/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
+.sim-day header b{grid-column:2;grid-row:1/span 2;color:#f0ece3;font:1000 clamp(18px,1.6vw,25px)/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-day-events{display:grid;gap:4px}
 .sim-day-event{
   min-width:0;min-height:27px;
@@ -595,7 +595,7 @@ body{
   display:grid;
   grid-template-rows:48px minmax(0,1fr);
   border:1px solid var(--sim-line-strong);
-  background:rgba(9,14,35,.88);
+  background:rgba(12,13,14,.92);
   box-shadow:var(--sim-shadow)
 }
 .sim-schedule-head{
@@ -610,7 +610,7 @@ body{
   padding:0 11px;border-bottom:1px solid rgb(var(--ui-line-rgb) / .10);
   color:#dce5f7;font:900 9px/1 Arial,sans-serif;letter-spacing:.08em
 }
-.sim-event-group>header b{color:#66738f}
+.sim-event-group>header b{color:#79746d}
 .sim-event-row{
   min-height:82px;
   display:grid;grid-template-columns:42px minmax(0,1fr) 90px;gap:9px;align-items:center;
@@ -621,7 +621,7 @@ body{
 .sim-event-badge{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--sim-line);background:#101831;font:1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-event-main{min-width:0;display:grid;gap:3px}
 .sim-event-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.sim-event-main small,.sim-event-main span,.sim-event-main i{color:#74809d;font-size:8px;font-style:normal}
+.sim-event-main small,.sim-event-main span,.sim-event-main i{color:#8b867e;font-size:8px;font-style:normal}
 .sim-event-actions{display:grid;gap:5px}
 .sim-event-actions button{min-height:27px;border:1px solid rgb(var(--ui-accent-rgb) / .34);background:transparent;color:#dbe7fa;cursor:pointer;font-size:8px}
 .sim-event-actions .register{background:rgb(var(--ui-accent-rgb) / .10);color:#fff}
@@ -654,7 +654,7 @@ body{
 .sim-event-banner-main h1{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:1000 22px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-event-banner-main p,.sim-event-banner-match small{margin:0;color:#76829f;font-size:9px}
 .sim-event-banner-status{min-width:100px;display:grid;gap:3px;justify-items:end}
-.sim-event-banner-status strong{font-size:13px}.sim-event-banner-status span{color:#74809d;font-size:8px}
+.sim-event-banner-status strong{font-size:13px}.sim-event-banner-status span{color:#8b867e;font-size:8px}
 .sim-event-banner-match strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px}
 .sim-event-banner-match strong i{color:#6d7998;font-style:normal;font-size:10px}
 .sim-event-banner-actions{display:flex;gap:6px;align-items:center}
@@ -672,7 +672,7 @@ body{
 .sim-match-head .eyebrow{color:#7d89a7;font-size:9px}
 .sim-match-head h1{margin:3px 0 0;font:1000 clamp(25px,2.2vw,34px)/.92 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-match-prize{display:grid;justify-items:end;gap:2px}
-.sim-match-prize span,.sim-match-prize small{color:#74809d;font-size:9px}
+.sim-match-prize span,.sim-match-prize small{color:#8b867e;font-size:9px}
 .sim-match-prize b{color:#fff;font-size:17px}
 
 .sim-match-stage{
@@ -683,8 +683,8 @@ body{
   overflow:hidden;
   border-block:1px solid var(--sim-line-strong);
   background:
-    linear-gradient(90deg,rgba(69,81,151,.06) 1px,transparent 1px),
-    linear-gradient(rgba(69,81,151,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(121,101,76,.05) 1px,transparent 1px),
+    linear-gradient(rgba(121,101,76,.05) 1px,transparent 1px),
     rgba(7,12,31,.72);
   background-size:46px 46px
 }
@@ -759,7 +759,7 @@ body{
 .sim-match-roster .visual-identity{
   left:6%;right:6%;bottom:6%;z-index:5;
   padding:6px 4px;
-  background:linear-gradient(90deg,transparent,rgba(3,7,18,.78) 18%,rgba(3,7,18,.78) 82%,transparent)
+  background:linear-gradient(90deg,transparent,rgba(8,9,10,.80) 18%,rgba(8,9,10,.80) 82%,transparent)
 }
 .sim-match-roster .visual-identity strong{font-size:11px}
 .sim-match-roster .visual-identity span{font-size:7px}
@@ -769,7 +769,7 @@ body{
   display:flex;align-items:center;justify-content:center;gap:9px;
   background:linear-gradient(90deg,transparent,rgb(var(--ui-accent-rgb) / .035),transparent)
 }
-.sim-match-versus span{color:#71809d;font:900 8px/1 Arial,sans-serif}
+.sim-match-versus span{color:#8b867e;font:900 8px/1 Arial,sans-serif}
 .sim-match-versus strong{font:1000 19px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
 
 .sim-match-actions{
@@ -918,7 +918,7 @@ body{
 .sim-practice-squad,.sim-practice-console{
   min-height:0;
   border:1px solid var(--sim-line-strong);
-  background:rgba(9,14,35,.88);
+  background:rgba(12,13,14,.92);
   box-shadow:var(--sim-shadow)
 }
 .sim-practice-squad{display:grid;grid-template-rows:56px minmax(0,1fr);padding:12px}
@@ -1044,9 +1044,9 @@ body{
   border:1px solid var(--sim-line-strong);
   background:
     radial-gradient(ellipse at 50% 112%,rgb(var(--ui-accent-rgb) / .085),transparent 44%),
-    linear-gradient(90deg,rgba(112,132,195,.04) 1px,transparent 1px),
-    linear-gradient(rgba(112,132,195,.04) 1px,transparent 1px),
-    #081027;
+    linear-gradient(90deg,rgba(137,117,89,.04) 1px,transparent 1px),
+    linear-gradient(rgba(137,117,89,.04) 1px,transparent 1px),
+    #0e1114;
   background-size:auto,48px 48px,48px 48px,auto;
   box-shadow:var(--sim-shadow);
 }
@@ -1171,7 +1171,7 @@ body{
   right:6%;
   bottom:20%;
   padding:6px 3px 5px;
-  background:linear-gradient(90deg,transparent,rgba(3,7,18,.76) 18%,rgba(3,7,18,.76) 82%,transparent);
+  background:linear-gradient(90deg,transparent,rgba(8,9,10,.78) 18%,rgba(8,9,10,.78) 82%,transparent);
 }
 .sim-squad-slot .visual-identity strong{font-size:11px}
 .sim-squad-slot .visual-identity span{margin-top:2px;font-size:6px}
@@ -1443,7 +1443,7 @@ body{
   align-content:center;
   gap:5px;
   border:1px dashed rgb(var(--ui-line-rgb) / .18);
-  color:#65728f;
+  color:#77726b;
 }
 .sim-pool-empty strong{font-size:10px}.sim-pool-empty span{font-size:8px}
 
@@ -1487,12 +1487,12 @@ body{
   object-position:center bottom;
 }
 .sim-inspector-name{padding:9px 12px 8px}
-.sim-inspector-name>span{color:#7683a0;font-size:7px}
+.sim-inspector-name>span{color:#8c877f;font-size:7px}
 .sim-inspector-name h2{
   margin:4px 0 2px;
   font:1000 18px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
-.sim-inspector-name p{margin:0;color:#66738f;font-size:8px}
+.sim-inspector-name p{margin:0;color:#79746d;font-size:8px}
 .sim-inspector-stats,
 .sim-inspector-state{
   display:grid;
@@ -1506,13 +1506,13 @@ body{
   gap:2px;
   padding:7px 2px;
   border-right:1px solid rgb(var(--ui-line-rgb) / .08);
-  color:#687590;
+  color:#7d7871;
   font:800 6px/1 Arial,sans-serif;
 }
 .sim-inspector-stats span:last-child,
 .sim-inspector-state span:last-child{border-right:0}
 .sim-inspector-stats b,
-.sim-inspector-state b{color:#eaf0ff;font-size:10px}
+.sim-inspector-state b{color:#f0ece3;font-size:10px}
 .sim-inspector-state .danger b{color:var(--sim-warn)}
 .sim-inspector-primary-actions{
   display:grid;
@@ -1549,7 +1549,7 @@ body{
 }
 .sim-inspector-primary-actions button:disabled,
 .sim-inspector-club-actions button:disabled{opacity:.32;cursor:not-allowed}
-.sim-inspector-empty{height:100%;display:grid;place-items:center;color:#65728f;font-size:9px}
+.sim-inspector-empty{height:100%;display:grid;place-items:center;color:#77726b;font-size:9px}
 
 /* TRANSFER / SCOUT ------------------------------------------------------- */
 
@@ -1600,7 +1600,7 @@ body{
 }
 .sim-market-results-head{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid rgb(var(--ui-line-rgb) / .12)}
 .sim-market-results-head>div{display:grid;gap:4px}
-.sim-market-results-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-market-results-head strong{font-size:17px}.sim-market-results-head small{color:#7683a0;font-size:9px}
+.sim-market-results-head span{color:var(--sim-cyan);font-size:9px;font-weight:900}.sim-market-results-head strong{font-size:17px}.sim-market-results-head small{color:#8c877f;font-size:9px}
 .sim-market-empty{display:grid;place-items:center;align-content:center;text-align:center}
 .sim-market-empty-mark{width:58px;height:58px;display:grid;place-items:center;border:1px dashed #42506d;border-radius:50%;color:var(--sim-cyan);font-size:32px}
 .sim-market-empty h2{margin:15px 0 0;font-size:20px}
@@ -1702,12 +1702,12 @@ body{
 .sim-pack-selector>button>i{height:42px}
 .sim-pack-selector>button>span{min-width:0;display:grid;gap:4px}
 .sim-pack-selector>button>span>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.sim-pack-selector>button>span>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#687590;font-size:7px}
+.sim-pack-selector>button>span>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#7d7871;font-size:7px}
 .sim-pack-selector>button>strong{font-size:14px}
 
 .sim-collection{min-height:0;display:grid;grid-template-rows:42px minmax(0,1fr)}
 .sim-collection-tools{display:flex;align-items:center;gap:7px}
-.sim-collection-tools input{min-width:230px;min-height:34px;border:1px solid var(--sim-line);background:#0a1028;color:#fff;padding:0 10px;font-size:10px}
+.sim-collection-tools input{min-width:230px;min-height:34px;border:1px solid var(--sim-line);background:#101316;color:#fff;padding:0 10px;font-size:10px}
 .sim-collection-tools .collection-filters{display:flex;gap:3px}
 .sim-collection-tools .collection-filters button{min-height:30px;font-size:8px}
 .sim-collection-scroll{min-height:0;overflow-y:auto;padding-top:8px}
@@ -1747,7 +1747,7 @@ body{
 .sim-profile-track{min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center;padding:28px;overflow:hidden}
 .sim-xp-line{height:8px;background:#202948;overflow:hidden}
 .sim-xp-line i{display:block;height:100%;background:linear-gradient(90deg,var(--sim-violet),var(--sim-cyan))}
-.sim-xp-labels{display:flex;justify-content:space-between;margin-top:7px;color:#74809d;font-size:9px}
+.sim-xp-labels{display:flex;justify-content:space-between;margin-top:7px;color:#8b867e;font-size:9px}
 .sim-milestones{min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px;overflow-y:auto}
 .sim-milestones article{min-height:108px;padding:14px;border:1px solid rgb(var(--ui-line-rgb) / .14);background:rgba(255,255,255,.016);opacity:.64}
 .sim-milestones article.complete{opacity:1;border-color:rgb(var(--ui-accent-rgb) / .30);background:rgb(var(--ui-accent-rgb) / .025)}
@@ -1758,7 +1758,7 @@ body{
 }
 .sim-profile-stats>div{display:grid;gap:4px;align-content:center;padding:10px 15px;border-right:1px solid rgb(var(--ui-line-rgb) / .12)}
 .sim-profile-stats>div:last-child{border-right:0}
-.sim-profile-stats span{color:#74809d;font-size:9px}.sim-profile-stats b{font-size:18px}
+.sim-profile-stats span{color:#8b867e;font-size:9px}.sim-profile-stats b{font-size:18px}
 
 /* INBOX ------------------------------------------------------------------ */
 
@@ -1805,7 +1805,7 @@ body{
   border:1px solid rgb(var(--ui-accent-rgb) / .25);background:rgb(var(--ui-accent-rgb) / .055);color:var(--sim-cyan);font-weight:900
 }
 .sim-feed article>div:last-child{min-width:0}
-.sim-feed article span{color:#71809d;font-size:9px}.sim-feed article h2{margin:5px 0;font-size:17px}.sim-feed article p{margin:0;color:#8692ad;font-size:11px;line-height:1.35}
+.sim-feed article span{color:#8b867e;font-size:9px}.sim-feed article h2{margin:5px 0;font-size:17px}.sim-feed article p{margin:0;color:#8692ad;font-size:11px;line-height:1.35}
 .sim-feed-action{margin-top:7px;border:0;background:transparent;color:var(--sim-cyan);cursor:pointer;font-size:9px;font-weight:900}
 .sim-danger-action{min-height:30px;border:1px solid rgb(var(--ui-danger-rgb) / .30);background:rgb(var(--ui-danger-rgb) / .05);color:#d98391;padding:0 10px;cursor:pointer;font-size:9px}
 .sim-reset{justify-self:start}
@@ -1842,7 +1842,7 @@ body{
   width:min(1500px,98vw);
   height:min(900px,95vh);
   border:1px solid var(--sim-line-strong);
-  background:#081027
+  background:#0e1114
 }
 .match-radar-main-canvas{grid-template-columns:minmax(0,1fr) 285px}
 .match-radar-roster-v2>button{min-height:44px}
@@ -2039,7 +2039,7 @@ body{
   text-overflow:ellipsis;
   white-space:nowrap;
   border:1px solid rgba(255,255,255,.18);
-  background:rgba(3,7,18,.76);
+  background:rgba(8,9,10,.78);
   color:#eaf2ff;
   box-shadow:0 2px 8px rgba(0,0,0,.22);
   font:900 5px/1 Arial,sans-serif;
@@ -2088,7 +2088,7 @@ body{
   right:6%;
   bottom:20%;
   padding:5px 3px;
-  background:linear-gradient(90deg,transparent,rgba(3,7,18,.76) 18%,rgba(3,7,18,.76) 82%,transparent);
+  background:linear-gradient(90deg,transparent,rgba(8,9,10,.78) 18%,rgba(8,9,10,.78) 82%,transparent);
 }
 .sim-pool-card-shell .visual-identity strong{font-size:10px}
 .sim-pool-card-shell .visual-identity span{margin-top:2px;font-size:6px}

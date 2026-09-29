@@ -106,9 +106,9 @@
 .market-field select {
   min-height: 42px;
   width: 100%;
-  border: 1px solid #35404d;
+  border: 1px solid #49443e;
   border-radius: 2px;
-  background: #11171e;
+  background: #151718;
   color: var(--ink);
   padding: 0 11px;
   font: 800 12px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
@@ -124,10 +124,10 @@
 .market-contract-options button,
 .market-role-promise button {
   min-height: 38px;
-  border: 1px solid #303b47;
+  border: 1px solid #454039;
   border-radius: 2px;
-  background: #10151c;
-  color: #86919f;
+  background: #141617;
+  color: #968f85;
   padding: 8px;
   cursor: pointer;
   font: 800 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
@@ -262,13 +262,13 @@
 }
 
 .market-candidate {
-  --market-card-main: #173b65;
-  --market-card-deep: #081725;
-  --market-card-line: #4b83bd;
+  --market-card-main: #3b342c;
+  --market-card-deep: #15120f;
+  --market-card-line: #8d7657;
   min-width: 0;
   padding: 7px;
-  border: 1px solid #283340;
-  background: #0c1117;
+  border: 1px solid #403b35;
+  background: #111314;
 }
 
 .market-candidate.tier-silver {
@@ -278,15 +278,15 @@
 }
 
 .market-candidate.tier-rare {
-  --market-card-main: #21568d;
-  --market-card-deep: #071c34;
-  --market-card-line: #4d9ce5;
+  --market-card-main: #46513b;
+  --market-card-deep: #151a12;
+  --market-card-line: #87a35c;
 }
 
 .market-candidate.tier-elite {
-  --market-card-main: #315b91;
-  --market-card-deep: #111b37;
-  --market-card-line: #78b5ef;
+  --market-card-main: #574568;
+  --market-card-deep: #1b1421;
+  --market-card-line: #a67fc5;
 }
 
 .market-candidate.tier-gold {
@@ -305,7 +305,7 @@
   background:
     radial-gradient(circle at 68% 10%, rgba(255,255,255,.14), transparent 25%),
     linear-gradient(150deg, var(--market-card-main), var(--market-card-deep) 72%);
-  color: #edf3f8;
+  color: #f1eee7;
   padding: 0;
   cursor: pointer;
   text-align: left;
@@ -521,7 +521,7 @@
   width: 38px;
   height: 38px;
   border: 1px solid var(--line);
-  background: #10151c;
+  background: #141617;
   color: var(--ink);
   cursor: pointer;
   font-size: 23px;

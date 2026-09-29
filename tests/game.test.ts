@@ -37,6 +37,7 @@ import {
   tournamentIsFinished,
   tournamentStartsAt,
 } from '../src/tournamentEngine'
+import { currentCareerObjectives, onboardingStep } from '../src/progression'
 
 describe('P0 career flow', () => {
   it('keeps game time deterministic across DST boundaries', () => {
@@ -88,6 +89,31 @@ describe('P0 career flow', () => {
     expect(ready.packs.inventory).toHaveLength(5)
     expect(canPlayMatch(ready, 'practice').ok).toBe(true)
     expect(executeGameCommand(initial, { type: 'OPEN_WELCOME_PACK', cards: cardsA }).events[0].type).toBe('WelcomePackOpened')
+  })
+
+  it('guides a new career through the first complete playable loop', () => {
+    const initial = { ...createInitialState(), saveId: 'rookie-flow-test' }
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+
+    expect(onboardingStep(ready)?.target).toBe('World')
+    expect(currentCareerObjectives(ready, 3).map((objective) => objective.id)).toEqual([
+      'book-event',
+      'first-practice',
+      'first-official',
+    ])
+
+    const booked = bookTournament(ready, 'nordic-online')
+    expect(onboardingStep(booked)?.target).toBe('Training')
+
+    const practiced = playMatch(booked, 'practice', 'balanced')
+    expect(onboardingStep(practiced)?.target).toBe('Calendar')
+
+    const atMatch = advanceToNextTournamentMatch(practiced)
+    expect(onboardingStep(atMatch)?.target).toBe('Play')
+
+    const official = playMatch(atMatch, 'scrim', 'balanced')
+    expect(official.history.some((match) => match.mode !== 'practice')).toBe(true)
+    expect(onboardingStep(official)).toBeNull()
   })
 
   it('routes tactical movement around blocked radar geometry', () => {

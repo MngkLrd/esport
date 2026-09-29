@@ -2815,3 +2815,254 @@ body{
   .match-lobby-center{order:2;min-height:650px}
   .match-lobby-map-grid{overflow-x:auto;grid-template-columns:repeat(6,130px)}
 }
+
+
+/* CAREER ONBOARDING / OBJECTIVES ---------------------------------------- */
+
+.app-main-hq .fifa-home-screen{
+  grid-template-rows:38px minmax(0,1fr) 76px;
+}
+
+.fifa-career-objectives{
+  min-width:0;
+  min-height:0;
+  display:grid;
+  grid-template-columns:160px repeat(3,minmax(0,1fr));
+  gap:7px;
+  align-items:stretch
+}
+.fifa-career-objectives-title{
+  min-width:0;
+  display:grid;
+  align-content:center;
+  gap:5px;
+  padding:9px 11px;
+  border:1px solid rgb(var(--ui-line-rgb) / .20);
+  background:rgba(12,13,14,.86)
+}
+.fifa-career-objectives-title span{
+  color:var(--sim-cyan);
+  font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing:.14em
+}
+.fifa-career-objectives-title b{
+  color:#f1ece4;
+  font:1000 11px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.fifa-career-objectives article{
+  min-width:0;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:4px;
+  padding:8px 10px;
+  border:1px solid rgb(var(--ui-line-rgb) / .20);
+  background:
+    linear-gradient(100deg,rgb(var(--ui-accent-rgb) / .035),transparent 45%),
+    rgba(13,15,16,.86)
+}
+.fifa-career-objectives article.is-current{
+  border-color:rgb(var(--ui-accent-rgb) / .50);
+  box-shadow:inset 2px 0 0 var(--sim-cyan)
+}
+.fifa-career-objectives article.is-complete{
+  opacity:.58;
+  border-color:rgb(var(--ui-positive-rgb) / .24)
+}
+.fifa-career-objectives article>div{
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:6px
+}
+.fifa-career-objectives article small{
+  color:#6f6a63;
+  font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.fifa-career-objectives article strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#f0ece5;
+  font:900 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.fifa-career-objectives article em{
+  color:var(--sim-cyan);
+  font:900 6px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  font-style:normal;
+  letter-spacing:.06em
+}
+.fifa-career-objectives article p{
+  margin:0;
+  overflow:hidden;
+  color:#7f7a73;
+  font-size:7px;
+  line-height:1.25
+}
+.fifa-career-objectives article footer{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px
+}
+.fifa-career-objectives article footer i{
+  height:3px;
+  overflow:hidden;
+  background:rgba(255,255,255,.07)
+}
+.fifa-career-objectives article footer i b{
+  display:block;
+  height:100%;
+  background:var(--sim-cyan)
+}
+.fifa-career-objectives article footer span{
+  color:#8c867d;
+  font:900 6px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+
+.career-coach{
+  position:fixed;
+  z-index:240;
+  left:22px;
+  bottom:22px;
+  width:min(355px,calc(100vw - 44px));
+  display:grid;
+  gap:8px;
+  padding:14px 15px 13px;
+  border:1px solid rgb(var(--ui-accent-rgb) / .48);
+  background:
+    radial-gradient(circle at 0 0,rgb(var(--ui-accent-rgb) / .12),transparent 45%),
+    rgba(12,14,15,.97);
+  box-shadow:0 20px 54px rgba(0,0,0,.52),inset 2px 0 0 var(--sim-cyan);
+  backdrop-filter:blur(16px);
+  animation:career-coach-in .28s ease both
+}
+.career-coach-progress{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px
+}
+.career-coach-progress span{
+  color:var(--sim-cyan);
+  font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing:.14em
+}
+.career-coach-progress b{
+  color:#8f8980;
+  font:900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.career-coach>strong{
+  color:#f4efe7;
+  font:1000 17px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.career-coach>p{
+  margin:0;
+  color:#969087;
+  font-size:10px;
+  line-height:1.45
+}
+.career-coach>div:last-child{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:2px
+}
+.career-coach button{
+  min-height:34px;
+  border:1px solid rgb(var(--ui-accent-rgb) / .55);
+  background:rgb(var(--ui-accent-rgb) / .12);
+  color:#f4efe7;
+  padding:0 11px;
+  cursor:pointer;
+  font:900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing:.06em
+}
+.career-coach button:first-child{
+  background:var(--sim-cyan);
+  color:#17120c
+}
+.career-coach button:hover{filter:brightness(1.08)}
+.career-coach .career-coach-skip{
+  margin-left:auto;
+  border-color:transparent;
+  background:transparent;
+  color:#6e6962
+}
+
+.career-progress-toast{
+  position:fixed;
+  z-index:500;
+  top:90px;
+  left:50%;
+  min-width:300px;
+  max-width:min(520px,calc(100vw - 32px));
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:11px 14px;
+  border:1px solid rgb(var(--ui-positive-rgb) / .42);
+  background:rgba(12,15,14,.96);
+  box-shadow:0 18px 50px rgba(0,0,0,.42),inset 0 2px 0 rgb(var(--ui-positive-rgb) / .50);
+  animation:career-toast-in .28s ease both
+}
+.career-progress-toast span{
+  color:var(--sim-mint);
+  font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  letter-spacing:.14em
+}
+.career-progress-toast strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#f4efe7;
+  font:1000 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+.career-progress-toast b{
+  color:var(--sim-cyan);
+  font:900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif
+}
+
+@keyframes career-coach-in{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes career-toast-in{
+  from{opacity:0;transform:translate(-50%,-10px)}
+  to{opacity:1;transform:translate(-50%,0)}
+}
+
+@media (min-width:901px) and (max-width:1320px){
+  .app-main-hq .fifa-home-screen{grid-template-rows:38px minmax(0,1fr) 70px}
+  .fifa-career-objectives{grid-template-columns:125px repeat(3,minmax(0,1fr));gap:5px}
+  .fifa-career-objectives-title{padding-inline:8px}
+  .fifa-career-objectives article{padding-inline:8px}
+  .fifa-career-objectives article p{display:none}
+}
+@media (min-width:901px) and (max-height:760px){
+  .app-main-hq .fifa-home-screen{grid-template-rows:34px minmax(0,1fr) 58px}
+  .fifa-career-objectives{grid-template-columns:112px repeat(3,minmax(0,1fr))}
+  .fifa-career-objectives article{padding:6px 8px}
+  .fifa-career-objectives article p{display:none}
+  .fifa-career-objectives-title b{font-size:9px}
+  .career-coach{bottom:12px;left:12px}
+}
+@media (max-width:900px){
+  .app-main-hq .fifa-home-screen{grid-template-rows:auto auto auto}
+  .fifa-career-objectives{
+    grid-template-columns:1fr;
+    min-height:auto
+  }
+  .fifa-career-objectives-title{min-height:54px}
+  .fifa-career-objectives article{min-height:68px}
+  .career-coach{left:10px;bottom:10px;width:calc(100vw - 20px)}
+  .career-progress-toast{
+    top:82px;
+    min-width:0;
+    width:calc(100vw - 20px);
+    grid-template-columns:1fr auto
+  }
+  .career-progress-toast span{grid-column:1/-1}
+}

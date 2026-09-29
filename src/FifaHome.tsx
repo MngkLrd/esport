@@ -4,6 +4,7 @@ import { tournamentForId } from './events'
 import { PlayerPortrait } from './PlayerPortrait'
 import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
 import { nextPlayerMatch, opponentForPlayerMatch } from './tournamentEngine'
+import { currentCareerObjectives } from './progression'
 
 type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Inbox' | 'Training'
 
@@ -45,6 +46,7 @@ export function FifaHome({
       : activeEvent
         ? activeEvent.label + ' · ' + activeEvent.prize.toLocaleString('ru-RU') + ' PRIZE'
         : null
+  const objectives = currentCareerObjectives(state, 3)
   const [focusIndex, setFocusIndex] = useState(0)
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -148,9 +150,28 @@ export function FifaHome({
         </button>
       </div>
 
-      <div className="fifa-home-hints">
-        <span><b>← → ↑ ↓</b> НАВИГАЦИЯ</span>
-        <span><b>ENTER</b> ВЫБРАТЬ</span>
+      <div className="fifa-career-objectives" aria-label="Career objectives">
+        <div className="fifa-career-objectives-title">
+          <span>CAREER PATH</span>
+          <b>NEXT OBJECTIVES</b>
+        </div>
+        {objectives.map((objective, index) => {
+          const progress = objective.target > 0 ? Math.min(100, objective.current / objective.target * 100) : 0
+          return (
+            <article key={objective.id} className={objective.completed ? 'is-complete' : index === 0 ? 'is-current' : ''}>
+              <div>
+                <small>{String(index + 1).padStart(2, '0')}</small>
+                <strong>{objective.title}</strong>
+                <em>{objective.rewardLabel}</em>
+              </div>
+              <p>{objective.description}</p>
+              <footer>
+                <i><b style={{ width: progress + '%' }} /></i>
+                <span>{objective.current}/{objective.target}</span>
+              </footer>
+            </article>
+          )
+        })}
       </div>
     </section>
   )

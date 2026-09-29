@@ -44,6 +44,7 @@ import { rollPack } from './packs'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
+import { metadataForAlias } from './playerMetadata'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -140,16 +141,22 @@ function PlayerVisualCard({ player, starter = false, compact = false, onClick }:
 
 
 function OpponentVisualCard({ player }: { player: TournamentRosterPlayer }) {
+  const metadata = metadataForAlias(player.alias)
+  const profileMatch = metadata?.profileUrl?.match(/\/player\/(\d+)/)
+  const resolvedProfileId = player.profileId ?? (profileMatch ? Number(profileMatch[1]) : null)
+  const resolvedCountry = player.country ?? metadata?.country ?? 'INT'
+
   return (
     <CollectiblePlayerCard
       rating={player.rating}
       tier={cardTier(player.rating)}
-      role={player.role}
+      role={player.role ?? metadata?.role}
       alias={player.alias}
       team="OPPONENT"
-      country={player.country ?? 'INT'}
-      profileId={player.profileId}
+      country={resolvedCountry}
+      profileId={resolvedProfileId}
       className="match-opponent-card"
+      loading="eager"
     />
   )
 }

@@ -329,9 +329,9 @@ const drawPlayer = (
   ctx.font = '800 11px Arial'
   ctx.textAlign = 'center'
   ctx.lineWidth = 4
-  ctx.strokeStyle = '#060916'
+  ctx.strokeStyle = '#090a0b'
   ctx.strokeText(player.name, player.x, player.y - 17)
-  ctx.fillStyle = '#f5f7ff'
+  ctx.fillStyle = '#eee9df'
   ctx.fillText(player.name, player.x, player.y - 17)
 
   if (player.alive && player.hp < 100) {
@@ -357,7 +357,7 @@ const drawCanvas = (
   if (!ctx || !frame) return
 
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
-  ctx.fillStyle = '#0b1021'
+  ctx.fillStyle = '#0d0f10'
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
 
   if (image) {
@@ -365,10 +365,10 @@ const drawCanvas = (
     ctx.globalAlpha = .82
     ctx.drawImage(image, 0, 0, CANVAS_SIZE, CANVAS_SIZE)
     ctx.restore()
-    ctx.fillStyle = 'rgba(5,8,22,.18)'
+    ctx.fillStyle = 'rgba(8,9,10,.14)'
     ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
   } else {
-    ctx.strokeStyle = 'rgba(117,132,171,.18)'
+    ctx.strokeStyle = 'rgba(143,132,114,.14)'
     ctx.lineWidth = 1
     for (let grid = 0; grid <= CANVAS_SIZE; grid += 64) {
       ctx.beginPath()

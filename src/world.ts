@@ -84,6 +84,24 @@ const identityByAlias = new Map(
   REAL_PLAYERS.map((player) => [normalizeAlias(player.alias), player] as const),
 )
 
+export const refreshWorldIdentityMetadata = (source: WorldState): WorldState => ({
+  ...source,
+  players: Object.fromEntries(
+    Object.entries(source.players).map(([key, player]) => {
+      const identity = identityByAlias.get(normalizeAlias(player.alias))
+      if (!identity) return [key, player]
+      return [key, {
+        ...player,
+        realName: player.realName ?? identity.realName,
+        country: player.country ?? identity.country,
+        age: player.age ?? identity.age,
+        role: player.role ?? identity.role,
+        profileId: player.profileId ?? profileIdFor(identity),
+      }]
+    }),
+  ),
+})
+
 const hashSeed = (input: string) => {
   let h = 2166136261
   for (let index = 0; index < input.length; index += 1) {

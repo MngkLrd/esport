@@ -46,7 +46,7 @@ const hashSeed = (input: string) => {
   return hash >>> 0
 }
 
-const mapAsset = (key: string) => `${import.meta.env.BASE_URL}maps/${key}.png`
+const mapAsset = (key: string) => '/esport/maps/' + key + '.png'
 
 const average = (values: number[]) =>
   values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0

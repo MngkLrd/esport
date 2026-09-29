@@ -3253,7 +3253,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   justify-items: end;
   gap: 2px;
 }
-.fifa-screen-rank small { color: #8f99b6; font: 800 8px/1 Arial, sans-serif; }
+.fifa-screen-rank small { color: #9b948b; font: 800 8px/1 Arial, sans-serif; }
 .fifa-screen-rank b { font: 900 34px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif; color: #fff; }
 .fifa-primary-cta {
   border: 0;
@@ -4288,7 +4288,7 @@ button.primary:hover,
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #8f99b6;
+  color: #9b948b;
   font: 800 7px/1 Arial, sans-serif;
   letter-spacing: .06em;
 }
@@ -4327,8 +4327,8 @@ button.primary:hover,
   margin: 12px 22px 0;
   padding: 0 11px;
   border: 1px solid rgb(var(--ui-line-rgb) / .2);
-  background: rgba(8,11,31,.72);
-  color: #a5afc9;
+  background: rgba(12,13,14,.78);
+  color: #aaa399;
   cursor: pointer;
   font: 900 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   letter-spacing: .09em;
@@ -4503,13 +4503,13 @@ button.primary:hover,
   gap: 8px;
   min-width: 210px;
   padding: 7px 9px;
-  background: rgba(4,7,17,.78);
+  background: rgba(9,10,11,.82);
   border-left: 2px solid rgba(255,255,255,.2);
   font: 800 9px/1 Arial, sans-serif;
 }
 .match-radar-feed b { text-align: right; color: #43dfef; }
 .match-radar-feed strong { color: #f3a05c; }
-.match-radar-feed span { color: #d4d9e6; }
+.match-radar-feed span { color: #d9d3c8; }
 .match-radar-result {
   position: absolute;
   left: 50%;
@@ -4521,15 +4521,15 @@ button.primary:hover,
   gap: 8px;
   padding: 30px;
   border: 1px solid rgba(255,255,255,.2);
-  background: rgba(7,10,26,.9);
+  background: rgba(12,13,14,.92);
   backdrop-filter: blur(12px);
   animation: radar-result-in .32s ease both;
 }
-.match-radar-result span { color: #8f99b6; font: 900 9px/1 Arial, sans-serif; letter-spacing: .14em; }
+.match-radar-result span { color: #9b948b; font: 900 9px/1 Arial, sans-serif; letter-spacing: .14em; }
 .match-radar-result strong { font: 1000 58px/.9 'Cyril UI', 'Noto Sans', system-ui, sans-serif; }
 .match-radar-result.win strong { color: #47e4d5; }
 .match-radar-result.loss strong { color: #ff667c; }
-.match-radar-result small { color: #bec6dc; font-weight: 800; }
+.match-radar-result small { color: #c7c0b5; font-weight: 800; }
 @keyframes radar-result-in {
   from { opacity: 0; transform: translate(-50%,-47%) scale(.96); }
   to { opacity: 1; transform: translate(-50%,-50%) scale(1); }
@@ -4537,12 +4537,12 @@ button.primary:hover,
 .match-radar-roster {
   padding: 18px 14px;
   border-left: 1px solid rgb(var(--ui-line-rgb) / .16);
-  background: #0e132b;
+  background: #111314;
 }
 .match-radar-roster > span {
   display: block;
   margin-bottom: 13px;
-  color: #7783a2;
+  color: #89837b;
   font: 900 8px/1 Arial, sans-serif;
   letter-spacing: .12em;
 }
@@ -4563,7 +4563,7 @@ button.primary:hover,
   background: #2bd9ea;
 }
 .match-radar-roster b { font-size: 11px; }
-.match-radar-roster small { color: #7f8ba8; font-size: 8px; }
+.match-radar-roster small { color: #918a81; font-size: 8px; }
 .match-radar-roster > div.dead { opacity: .32; }
 .match-radar-roster button {
   width: 100%;
@@ -4571,7 +4571,7 @@ button.primary:hover,
   margin-top: 20px;
   border: 1px solid rgb(var(--ui-line-rgb) / .2);
   background: transparent;
-  color: #9ca7c4;
+  color: #a49d93;
   cursor: pointer;
   font: 900 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
@@ -4629,7 +4629,7 @@ button.primary:hover,
   aspect-ratio: 1;
   object-fit: contain;
   border: 1px solid rgb(var(--ui-line-rgb) / .16);
-  background: #090d1c;
+  background: #0d0f10;
   box-shadow: inset 0 0 60px rgba(0,0,0,.24);
   cursor: crosshair;
 }
@@ -4642,18 +4642,18 @@ button.primary:hover,
   min-width: 190px;
   padding: 10px 12px;
   border-left: 2px solid var(--fifa-cyan);
-  background: rgba(5,8,20,.78);
+  background: rgba(10,11,12,.84);
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
 .match-radar-context span,
 .match-radar-context small {
-  color: #7784a2;
+  color: #8b857d;
   font: 900 7px/1 Arial, sans-serif;
   letter-spacing: .11em;
 }
 .match-radar-context b {
-  color: #eef2ff;
+  color: #eee9df;
   font: 1000 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 .match-radar-roster-v2 {
@@ -4721,11 +4721,11 @@ button.primary:hover,
   font: 900 10px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 .match-radar-roster-v2 > button > span small {
-  color: #6f7b9a;
+  color: #817b73;
   font: 800 7px/1 Arial, sans-serif;
 }
 .match-radar-roster-v2 > button > strong {
-  color: #dfe6f7;
+  color: #e4ded4;
   font: 900 9px/1 Arial, sans-serif;
 }
 .match-radar-roster-v2 > button.dead { opacity: .33; }
@@ -4747,7 +4747,7 @@ button.primary:hover,
   font: 1000 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 .radar-selected-player small {
-  color: #7e89a6;
+  color: #918a81;
   font: 800 8px/1 Arial, sans-serif;
 }
 .radar-playback-controls {
@@ -4761,8 +4761,8 @@ button.primary:hover,
   min-height: 36px;
   margin: 0;
   border: 1px solid rgb(var(--ui-line-rgb) / .18);
-  background: rgba(9,13,31,.9);
-  color: #9ca8c6;
+  background: rgba(13,14,15,.92);
+  color: #a49d93;
   cursor: pointer;
   font: 900 8px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
@@ -5865,7 +5865,7 @@ button.primary:hover,
 }
 .tactical-opponent-roster b {
   overflow: hidden;
-  color: #eef2ff;
+  color: #eee9df;
   font: 900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   text-overflow: ellipsis;
 }
@@ -6335,7 +6335,7 @@ button.primary:hover,
 }
 .vrs-team strong {
   overflow: hidden;
-  color: #eef2ff;
+  color: #eee9df;
   font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6486,7 +6486,7 @@ button.primary:hover,
 .calendar-event-badge { width: 44px; height: 44px; display: grid; place-items: center; border: 2px solid rgb(var(--ui-line-rgb) / .24); background: #111831; color: #fff; font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-event-main { min-width: 0; display: grid; gap: 3px; }
 .calendar-event-main small, .calendar-event-main span, .calendar-event-main i { color: #74809d; font: 800 8px/1.15 Arial,sans-serif; font-style: normal; }
-.calendar-event-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eef2ff; font: 1000 14px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif; }
+.calendar-event-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eee9df; font: 1000 14px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-event-main i { color: #56627f; font-size: 7px; }
 .calendar-event-actions { display: grid; gap: 5px; }
 .calendar-event-actions > b { color: var(--fifa-cyan); font: 1000 7px/1 Arial,sans-serif; letter-spacing: .08em; }

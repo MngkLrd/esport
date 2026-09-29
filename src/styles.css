@@ -3072,8 +3072,9 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   display: grid;
   place-items: center;
   background:
-    linear-gradient(112deg, rgba(35,19,92,.98), rgba(7,10,28,.99) 58%),
-    #090b1e;
+    linear-gradient(112deg, rgba(8,9,10,.985), rgba(17,17,16,.97) 58%, rgba(29,24,18,.965)),
+    url('./assets/ui/site-background.webp') center / cover no-repeat,
+    var(--ui-bg-0);
   animation: fifa-transition 620ms ease both;
   pointer-events: none;
 }
@@ -3103,7 +3104,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   display: block;
   width: 48%;
   height: 100%;
-  background: linear-gradient(90deg, var(--fifa-cyan), var(--fifa-purple-2));
+  background: linear-gradient(90deg, var(--ui-accent), #f0bd67);
   animation: fifa-loader 620ms ease both;
 }
 @keyframes fifa-transition {
@@ -5215,7 +5216,7 @@ button.primary:hover,
   place-content: center;
   justify-items: center;
   gap: 8px;
-  background: rgba(6,9,22,.96);
+  background: rgba(9,10,11,.965);
   pointer-events: none;
 }
 .match-radar-loading span {
@@ -5224,7 +5225,7 @@ button.primary:hover,
   letter-spacing: .14em;
 }
 .match-radar-loading strong {
-  color: #eef3ff;
+  color: var(--ui-text);
   font: 1000 20px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
 .match-radar-loading i {

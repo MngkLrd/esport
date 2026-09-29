@@ -164,6 +164,9 @@ export function PacksView({
   const stats = useMemo(() => packCollectionStats(viewState), [viewState])
   const selectedPack = PACKS.find((item) => item.id === selectedPackId) ?? null
   const focusedPack = PACKS.find((item) => item.id === focusedPackId) ?? PACKS[0]
+  const shelfPacks = PACKS
+    .filter((item) => item.id !== focusedPack.id)
+    .slice(0, 3)
   const roll = queue[queueIndex] ?? null
   const selectedPlayer = selectedCard
     ? roster.find((player) => player.acquiredCardId === selectedCard.id || player.playerKey === selectedCard.playerKey || player.alias.toLowerCase() === selectedCard.alias.toLowerCase())
@@ -329,23 +332,62 @@ export function PacksView({
 
       {section === 'store' ? (
         <div className="sim-pack-store">
-          <section className="sim-pack-hero" style={{ '--pack-accent': focusedPack.accent } as React.CSSProperties}>
-            <div className="sim-pack-hero-art"><PackArtwork variant={focusedPack.id} title={focusedPack.name} kicker={focusedPack.eyebrow} /></div>
-            <div className="sim-pack-hero-copy">
-              <span>{focusedPack.eyebrow}</span>
-              <h2>{focusedPack.name}</h2>
-              <p>{focusedPack.description}</p>
-              <div className="sim-pack-odds">
-                <div><small>RARE</small><b>{focusedPack.weights.rare}%</b></div>
-                <div><small>EPIC</small><b>{focusedPack.weights.epic}%</b></div>
-                <div><small>LEGENDARY</small><b>{focusedPack.weights.legendary}%</b></div>
+          <div className="sim-pack-market-grid">
+            <section className="sim-pack-hero" style={{ '--pack-accent': focusedPack.accent } as React.CSSProperties}>
+              <div className="sim-pack-hero-art">
+                <PackArtwork variant={focusedPack.id} title={focusedPack.name} kicker={focusedPack.eyebrow} />
               </div>
-              <div className="sim-pack-price"><small>PRICE</small><strong>{focusedPack.price.toLocaleString('ru-RU')}</strong><span>PACK TOKENS</span></div>
-              <button className="sim-primary-action" onClick={() => openPurchase(focusedPack.id as Exclude<PackId, 'welcome'>)}>
-                OPEN PACK <span>→</span>
-              </button>
-            </div>
-          </section>
+
+              <div className="sim-pack-hero-copy">
+                <span>{focusedPack.eyebrow}</span>
+                <h2>{focusedPack.name}</h2>
+                <p>{focusedPack.description}</p>
+
+                <div className="sim-pack-odds">
+                  <div><small>RARE</small><b>{focusedPack.weights.rare}%</b></div>
+                  <div><small>EPIC</small><b>{focusedPack.weights.epic}%</b></div>
+                  <div><small>LEGENDARY</small><b>{focusedPack.weights.legendary}%</b></div>
+                </div>
+
+                <div className="sim-pack-featured-buy">
+                  <div className="sim-pack-price">
+                    <small>PRICE</small>
+                    <strong>{focusedPack.price.toLocaleString('ru-RU')}</strong>
+                    <span>PACK TOKENS</span>
+                  </div>
+                  <button className="sim-primary-action" onClick={() => openPurchase(focusedPack.id as Exclude<PackId, 'welcome'>)}>
+                    OPEN PACK <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <aside className="sim-pack-sale-stack" aria-label="Other packs">
+              {shelfPacks.map((pack) => (
+                <button
+                  type="button"
+                  key={pack.id}
+                  className="sim-pack-sale-card"
+                  style={{ '--pack-accent': pack.accent } as React.CSSProperties}
+                  onClick={() => setFocusedPackId(pack.id as Exclude<PackId, 'welcome'>)}
+                >
+                  <div className="sim-pack-sale-art">
+                    <PackArtwork variant={pack.id} title={pack.name} kicker={pack.eyebrow} />
+                  </div>
+                  <div className="sim-pack-sale-copy">
+                    <span>{pack.eyebrow}</span>
+                    <strong>{pack.name}</strong>
+                    <small>VIEW PACK →</small>
+                  </div>
+                  <div className="sim-pack-sale-price">
+                    <b>{pack.price.toLocaleString('ru-RU')}</b>
+                    <span>PACK TOKENS</span>
+                  </div>
+                </button>
+              ))}
+            </aside>
+          </div>
+
           <aside className="sim-pack-selector" aria-label="Pack catalog">
             {PACKS.map((pack) => (
               <button

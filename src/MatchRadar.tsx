@@ -22,6 +22,7 @@ const WALL_LUMA = 58
 type RadarResource = { image: HTMLImageElement; wallMask: Uint8Array | null; navigationGrid: RadarNavigationGrid | null }
 const radarResourceCache = new Map<string, RadarResource>()
 const radarResourcePromises = new Map<string, Promise<RadarResource | null>>()
+const playbackElapsedCache = new Map<string, number>()
 
 const sideColor = (side: SimSide) => side === 'CT' ? CT_COLOR : T_COLOR
 
@@ -414,23 +415,48 @@ export function MatchRadar({
   const [selectedId, setSelectedId] = useState<string | null>(starters[0]?.id ?? null)
   const [imageReady, setImageReady] = useState(false)
   const [navigationRound, setNavigationRound] = useState<SimRound | null>(null)
+  const simulationKey = useMemo(
+    () => result.id + ':' + result.tactic + ':' + starters.map((player) => player.id).join(','),
+    [result.id, result.tactic, starters],
+  )
 
   useEffect(() => {
     let cancelled = false
+    const resumeAt = playbackElapsedCache.get(simulationKey) ?? 0
     setPlayback(null)
-    elapsedRef.current = 0
+    elapsedRef.current = resumeAt
     lastFrameRef.current = null
     finishedRef.current = false
-    setElapsed(0)
+    setElapsed(resumeAt)
 
     void buildMatchPlayback(result, starters, result.tactic).then((next) => {
-      if (!cancelled) setPlayback(next)
+      if (!cancelled) {
+        elapsedRef.current = Math.min(elapsedRef.current, next.totalDuration)
+        setElapsed(elapsedRef.current)
+        setPlayback(next)
+      }
     })
 
     return () => {
       cancelled = true
+      playbackElapsedCache.set(simulationKey, elapsedRef.current)
     }
-  }, [result, starters])
+  }, [simulationKey])
+
+  useEffect(() => {
+    const resyncFrameClock = () => {
+      lastFrameRef.current = performance.now()
+    }
+
+    document.addEventListener('visibilitychange', resyncFrameClock)
+    window.addEventListener('blur', resyncFrameClock)
+    window.addEventListener('focus', resyncFrameClock)
+    return () => {
+      document.removeEventListener('visibilitychange', resyncFrameClock)
+      window.removeEventListener('blur', resyncFrameClock)
+      window.removeEventListener('focus', resyncFrameClock)
+    }
+  }, [])
 
   const rounds = playback?.rounds ?? []
   const roundOffsets = useMemo(() => {
@@ -494,12 +520,20 @@ export function MatchRadar({
 
     const tick = (now: number) => {
       if (lastFrameRef.current == null) lastFrameRef.current = now
+
+      if (document.hidden) {
+        lastFrameRef.current = now
+        raf = requestAnimationFrame(tick)
+        return
+      }
+
       const delta = Math.min(80, now - lastFrameRef.current)
       lastFrameRef.current = now
 
       if (!paused && !finishedRef.current && navigationRound?.id === round?.id) {
         elapsedRef.current = Math.min(playback.totalDuration, elapsedRef.current + delta * speed)
         if (now - lastHudUpdate > 45 || elapsedRef.current >= playback.totalDuration) {
+          playbackElapsedCache.set(simulationKey, elapsedRef.current)
           setElapsed(elapsedRef.current)
           lastHudUpdate = now
         }
@@ -507,6 +541,7 @@ export function MatchRadar({
 
       if (elapsedRef.current >= playback.totalDuration && !finishedRef.current) {
         finishedRef.current = true
+        playbackElapsedCache.delete(simulationKey)
         setElapsed(playback.totalDuration)
         window.setTimeout(onComplete, 1100)
         return
@@ -517,7 +552,7 @@ export function MatchRadar({
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [navigationRound, onComplete, paused, playback, round?.id, speed])
+  }, [navigationRound, onComplete, paused, playback, round?.id, simulationKey, speed])
 
   useEffect(() => {
     if (!canvasRef.current || !activeRound) return
@@ -654,7 +689,10 @@ export function MatchRadar({
             <div className="radar-playback-controls">
               <button onClick={() => setPaused((value) => !value)}>{paused ? 'RESUME' : 'PAUSE'}</button>
               <button onClick={() => setSpeed((value) => value === 1 ? 2 : 1)}>{speed}X</button>
-              <button onClick={onSkip}>SKIP <b>→</b></button>
+              <button onClick={() => {
+                playbackElapsedCache.delete(simulationKey)
+                onSkip()
+              }}>SKIP <b>→</b></button>
             </div>
           </aside>
         </div>

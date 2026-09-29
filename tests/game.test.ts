@@ -147,6 +147,57 @@ describe('P0 career flow', () => {
     expect(points.some((point) => point.y > 28)).toBe(true)
   })
 
+  it('keeps players moving when a raw route points into a disconnected radar island', () => {
+    const cols = 20
+    const rows = 12
+    const walkable = new Uint8Array(cols * rows)
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        if (col <= 7 || col >= 12) walkable[row * cols + col] = 1
+      }
+    }
+
+    const grid: RadarNavigationGrid = { cols, rows, cellSize: 8, walkable }
+    const round: SimRound = {
+      id: 'disconnected-navigation-test',
+      map: 'Test',
+      mapKey: 'test',
+      homeSide: 'T',
+      scenario: 'default',
+      scenarioLabel: 'DEFAULT',
+      site: 'A',
+      duration: 500,
+      events: [],
+      winner: 'HOME',
+      frames: Array.from({ length: 6 }, (_, index) => ({
+        time: index * 100,
+        players: [{
+          id: 'p1',
+          name: 'P1',
+          side: 'T' as const,
+          x: index === 0 ? 20 : 140,
+          y: 44,
+          yaw: 0,
+          hp: 100,
+          alive: true,
+          weapon: 'AK-47',
+          hasBomb: false,
+        }],
+      })),
+    }
+
+    const constrained = constrainRoundToNavigation(round, grid)
+    const points = constrained.frames.map((frame) => frame.players[0])
+
+    expect(new Set(points.map((point) => point.x + ':' + point.y)).size).toBeGreaterThan(1)
+    expect(points.at(-1)!.x).toBeGreaterThan(points[0].x)
+    expect(points.every((point) => point.x < 64)).toBe(true)
+    for (let index = 1; index < points.length; index += 1) {
+      expect(isNavigationSegmentClear(grid, points[index - 1], points[index])).toBe(true)
+    }
+  })
+
   it('re-times combat to legal line-of-sight frames after navigation', () => {
     const cols = 16
     const rows = 16
@@ -209,6 +260,59 @@ describe('P0 career flow', () => {
     const frame = simulationFrameAt(playbackA.rounds[0], 4500)
     expect(frame?.players).toHaveLength(10)
     expect(frame?.players.every((player) => Number.isFinite(player.x) && Number.isFinite(player.y))).toBe(true)
+  })
+
+  it('makes tactical playback reflect whether a map was close or dominant', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const played = playMatch(ready, 'practice', 'balanced')
+    const base = played.history[0]
+    const map = base.maps[0]
+
+    const dominant = {
+      ...base,
+      id: 'score-margin-visual-test',
+      won: true,
+      maps: [{ ...map, us: 13, them: 2 }],
+    }
+    const close = {
+      ...dominant,
+      maps: [{ ...map, us: 13, them: 11 }],
+    }
+
+    const dominantRound = generateMatchPlayback(dominant, ready.roster, 'balanced').rounds[0]
+    const closeRound = generateMatchPlayback(close, ready.roster, 'balanced').rounds[0]
+    const homeDeaths = (round: SimRound) => round.events.filter((event) =>
+      event.type === 'kill' && event.targetId != null && !event.targetId.startsWith('away-'),
+    ).length
+
+    expect(homeDeaths(dominantRound)).toBeLessThan(homeDeaths(closeRound))
+    expect(homeDeaths(dominantRound)).toBe(0)
+    expect(homeDeaths(closeRound)).toBe(3)
+  })
+
+  it('makes lineup rating gaps materially change map win chance', () => {
+    const seeded = { ...createInitialState(), saveId: 'rating-gap-regression' }
+    const ready = {
+      ...applyWelcomePack(seeded, rollWelcomePack(seeded.saveId)),
+      reputation: 80,
+    }
+    const tuneRoster = (delta: number) => ready.roster.map((player) => ({
+      ...player,
+      aim: Math.max(0, Math.min(100, player.aim + delta)),
+      gameSense: Math.max(0, Math.min(100, player.gameSense + delta)),
+      utility: Math.max(0, Math.min(100, player.utility + delta)),
+      clutch: Math.max(0, Math.min(100, player.clutch + delta)),
+      leadership: Math.max(0, Math.min(100, player.leadership + delta)),
+    }))
+
+    const strong = playMatch({ ...ready, roster: tuneRoster(15) }, 'practice', 'balanced').history[0]
+    const weak = playMatch({ ...ready, roster: tuneRoster(-15) }, 'practice', 'balanced').history[0]
+
+    expect(strong.opponent).toBe(weak.opponent)
+    expect(strong.maps[0].map).toBe(weak.maps[0].map)
+    expect(strong.maps[0].winChance).toBeGreaterThan(weak.maps[0].winChance)
+    expect(strong.maps[0].winChance - weak.maps[0].winChance).toBeGreaterThanOrEqual(15)
   })
 
   it('keeps the welcome result tied to save identity', () => {

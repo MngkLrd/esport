@@ -201,6 +201,125 @@ const canUseDiagonal = (
   return walkableAt(grid, col + dx, row) && walkableAt(grid, col, row + dy)
 }
 
+interface NavigationComponents {
+  ids: Int32Array
+  sizes: number[]
+}
+
+const buildNavigationComponents = (grid: RadarNavigationGrid): NavigationComponents => {
+  const total = grid.cols * grid.rows
+  const ids = new Int32Array(total)
+  ids.fill(-1)
+  const sizes: number[] = []
+
+  for (let row = 0; row < grid.rows; row += 1) {
+    for (let col = 0; col < grid.cols; col += 1) {
+      const start = gridIndex(grid, col, row)
+      if (!walkableAt(grid, col, row) || ids[start] >= 0) continue
+
+      const componentId = sizes.length
+      const queue: number[] = [start]
+      ids[start] = componentId
+      let cursor = 0
+      let size = 0
+
+      while (cursor < queue.length) {
+        const current = queue[cursor]
+        cursor += 1
+        size += 1
+        const currentCol = current % grid.cols
+        const currentRow = Math.floor(current / grid.cols)
+
+        for (const [dx, dy] of CARDINAL_AND_DIAGONAL) {
+          const nextCol = currentCol + dx
+          const nextRow = currentRow + dy
+          if (
+            !walkableAt(grid, nextCol, nextRow) ||
+            !canUseDiagonal(grid, currentCol, currentRow, dx, dy)
+          ) continue
+
+          const next = gridIndex(grid, nextCol, nextRow)
+          if (ids[next] >= 0) continue
+          ids[next] = componentId
+          queue.push(next)
+        }
+      }
+
+      sizes.push(size)
+    }
+  }
+
+  return { ids, sizes }
+}
+
+const nearestWalkableIndexInComponent = (
+  grid: RadarNavigationGrid,
+  point: Point,
+  components: NavigationComponents,
+  componentId: number,
+) => {
+  if (componentId < 0) return -1
+  const base = cellForPoint(grid, point)
+  const maxRadius = Math.max(grid.cols, grid.rows)
+
+  for (let radius = 0; radius <= maxRadius; radius += 1) {
+    let best = -1
+    let bestDistance = Number.POSITIVE_INFINITY
+
+    for (let row = base.row - radius; row <= base.row + radius; row += 1) {
+      for (let col = base.col - radius; col <= base.col + radius; col += 1) {
+        if (
+          col < 0 ||
+          row < 0 ||
+          col >= grid.cols ||
+          row >= grid.rows ||
+          Math.max(Math.abs(col - base.col), Math.abs(row - base.row)) !== radius
+        ) continue
+
+        const index = gridIndex(grid, col, row)
+        if (components.ids[index] !== componentId) continue
+        const candidate = pointForCell(grid, index)
+        const candidateDistance = distance(candidate, point)
+        if (candidateDistance < bestDistance) {
+          best = index
+          bestDistance = candidateDistance
+        }
+      }
+    }
+
+    if (best >= 0) return best
+  }
+
+  return -1
+}
+
+const safeStartIndex = (
+  grid: RadarNavigationGrid,
+  point: Point,
+  components: NavigationComponents,
+) => {
+  const nearest = nearestWalkableIndex(grid, point)
+  if (nearest < 0) return -1
+
+  const componentId = components.ids[nearest]
+  const minimumUsefulSize = Math.max(16, Math.floor(grid.cols * grid.rows * .002))
+  if ((components.sizes[componentId] ?? 0) >= minimumUsefulSize) return nearest
+
+  let best = nearest
+  let bestDistance = Number.POSITIVE_INFINITY
+  for (let index = 0; index < components.ids.length; index += 1) {
+    const candidateComponent = components.ids[index]
+    if (candidateComponent < 0 || (components.sizes[candidateComponent] ?? 0) < minimumUsefulSize) continue
+    const candidate = pointForCell(grid, index)
+    const candidateDistance = distance(candidate, point)
+    if (candidateDistance < bestDistance) {
+      best = index
+      bestDistance = candidateDistance
+    }
+  }
+  return best
+}
+
 const findPath = (
   grid: RadarNavigationGrid,
   from: Point,
@@ -313,11 +432,20 @@ const constrainTarget = (
   target: Point,
   maxDistance: number,
   cache: Map<string, number[]>,
+  components: NavigationComponents,
 ) => {
-  const targetIndex = nearestWalkableIndex(grid, target)
-  if (targetIndex < 0) return previous
-  const safeTarget = pointForCell(grid, targetIndex)
+  const previousIndex = nearestWalkableIndex(grid, previous, 3)
+  if (previousIndex < 0) return previous
+  const previousComponent = components.ids[previousIndex]
+  if (previousComponent < 0) return previous
 
+  let targetIndex = nearestWalkableIndex(grid, target)
+  if (targetIndex < 0 || components.ids[targetIndex] !== previousComponent) {
+    targetIndex = nearestWalkableIndexInComponent(grid, target, components, previousComponent)
+  }
+  if (targetIndex < 0) return previous
+
+  const safeTarget = pointForCell(grid, targetIndex)
   if (isNavigationSegmentClear(grid, previous, safeTarget)) {
     const candidate = moveToward(previous, safeTarget, maxDistance)
     return isNavigationSegmentClear(grid, previous, candidate) ? candidate : previous
@@ -345,6 +473,7 @@ export const constrainRoundToNavigation = (
   const previousByPlayer = new Map<string, Point>()
   const yawByPlayer = new Map<string, number>()
   const pathCache = new Map<string, number[]>()
+  const components = buildNavigationComponents(grid)
 
   const frames = round.frames.map((frame, frameIndex) => {
     const previousFrameTime = frameIndex > 0 ? round.frames[frameIndex - 1].time : frame.time
@@ -357,14 +486,14 @@ export const constrainRoundToNavigation = (
       const existing = previousByPlayer.get(player.id)
 
       if (!existing) {
-        const startIndex = nearestWalkableIndex(grid, raw)
+        const startIndex = safeStartIndex(grid, raw, components)
         const start = startIndex >= 0 ? pointForCell(grid, startIndex) : raw
         previousByPlayer.set(player.id, start)
         yawByPlayer.set(player.id, player.yaw)
         return { ...player, x: start.x, y: start.y }
       }
 
-      const next = constrainTarget(grid, existing, raw, maxDistance, pathCache)
+      const next = constrainTarget(grid, existing, raw, maxDistance, pathCache, components)
       const yaw = yawBetween(existing, next, yawByPlayer.get(player.id) ?? player.yaw)
       previousByPlayer.set(player.id, next)
       yawByPlayer.set(player.id, yaw)

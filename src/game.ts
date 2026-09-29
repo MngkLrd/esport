@@ -925,9 +925,14 @@ const tacticalModifier = (active: Player[], tactic: TacticalPlan) => {
   return 0
 }
 
-const mapScore = (won: boolean, closeness: number, rng: () => number): [number, number] => {
-  const floor = closeness > 0.72 ? 9 : closeness > 0.5 ? 7 : 4
-  const loser = Math.floor(floor + rng() * (12 - floor))
+const mapScore = (won: boolean, winProbability: number, rng: () => number): [number, number] => {
+  // A rating gap should be visible in the actual scoreline, not only in a hidden
+  // probability. Expected wins can become dominant; major upsets stay close.
+  const winnerProbability = won ? winProbability : 1 - winProbability
+  const dominance = clamp((winnerProbability - 0.5) * 2, 0, 1)
+  const floor = dominance >= .72 ? 2 : dominance >= .48 ? 4 : dominance >= .24 ? 6 : 8
+  const ceiling = dominance >= .72 ? 7 : dominance >= .48 ? 9 : dominance >= .24 ? 11 : 12
+  const loser = Math.floor(floor + rng() * (ceiling - floor + 1))
   return won ? [13, loser] : [loser, 13]
 }
 
@@ -1400,11 +1405,14 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     const map = pick(mapPool.filter((name) => !maps.some((current) => current.map === name)), rng)
     const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
     const effectiveRating = baseRating + tacticMod + momentum - rolePenalty - mapFatigue
-    const volatility = tactic === 'aggressive' ? 5.4 : tactic === 'structured' ? 4.8 : 5.1
-    const probability = 1 / (1 + Math.exp((opponent.rating - effectiveRating) / volatility))
+    // OVR difference is the primary competitive signal. Keep some upset room,
+    // but make even a 5-10 point gap materially change the series.
+    const ratingGap = effectiveRating - opponent.rating
+    const volatility = tactic === 'aggressive' ? 4.6 : tactic === 'structured' ? 4.2 : 4.4
+    const rawProbability = 1 / (1 + Math.exp(-ratingGap / volatility))
+    const probability = clamp(rawProbability, .04, .96)
     const wonMap = rng() < probability
-    const closeness = 1 - Math.min(1, Math.abs(probability - .5) * 2)
-    const [us, them] = mapScore(wonMap, closeness, rng)
+    const [us, them] = mapScore(wonMap, probability, rng)
     const mapTop = [...active].sort((a, b) => performanceRating(b, wonMap, tactic, rng) - performanceRating(a, wonMap, tactic, rng))[0]
     maps.push({ map, us, them, winChance: Math.round(probability * 100), topPerformer: mapTop.alias })
     if (wonMap) {

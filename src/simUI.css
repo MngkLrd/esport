@@ -3177,7 +3177,7 @@ body{
   padding:0;
   border:1px solid color-mix(in srgb,var(--pack-accent) 30%,rgb(var(--ui-line-rgb) / .28));
   background:
-    linear-gradient(90deg,rgb(var(--pack-accent) / 0) 0%,rgba(10,12,13,.70) 52%,rgba(9,10,11,.96) 100%),
+    linear-gradient(90deg,transparent 0%,rgba(10,12,13,.70) 52%,rgba(9,10,11,.96) 100%),
     rgba(12,14,15,.95);
   color:#fff;
   text-align:left;

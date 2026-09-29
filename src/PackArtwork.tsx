@@ -1,15 +1,11 @@
 import type { PackId } from './packState'
-import academyPack from './assets/packs/academy.webp'
-import challengerPack from './assets/packs/challenger.webp'
-import majorPack from './assets/packs/major.webp'
-import afterdarkPack from './assets/packs/afterdark.webp'
 
 const PACK_ART: Record<PackId, string> = {
-  welcome: academyPack,
-  academy: academyPack,
-  challenger: challengerPack,
-  major: majorPack,
-  afterdark: afterdarkPack,
+  welcome: new URL('./assets/packs/academy.webp', import.meta.url).href,
+  academy: new URL('./assets/packs/academy.webp', import.meta.url).href,
+  challenger: new URL('./assets/packs/challenger.webp', import.meta.url).href,
+  major: new URL('./assets/packs/major.webp', import.meta.url).href,
+  afterdark: new URL('./assets/packs/afterdark.webp', import.meta.url).href,
 }
 
 export function PackArtwork({

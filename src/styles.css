@@ -3264,7 +3264,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   justify-content: space-between;
   gap: 30px;
   background: linear-gradient(90deg, var(--fifa-cyan), #39ffca);
-  color: #07121e;
+  color: #171108;
   font: 1000 11px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   cursor: pointer;
 }
@@ -3636,7 +3636,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 .manager-progress-track { padding: 42px 36px; }
 .manager-progress-line { height: 9px; background: rgba(255,255,255,.1); overflow: hidden; }
 .manager-progress-line i { display: block; height: 100%; background: linear-gradient(90deg, var(--fifa-cyan), var(--fifa-purple-2)); }
-.manager-progress-labels { display: flex; justify-content: space-between; margin-top: 8px; color: #7f8aa8; font: 800 8px/1 Arial, sans-serif; }
+.manager-progress-labels { display: flex; justify-content: space-between; margin-top: 8px; color: #8f8980; font: 800 8px/1 Arial, sans-serif; }
 .manager-milestones {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3819,7 +3819,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   font: 900 10px/1 Arial, sans-serif;
 }
 .pack-spin-topline b { color: var(--fifa-cyan); }
-.pack-reel-modal { border: 1px solid rgb(var(--ui-line-rgb) / .18); background: rgba(6,9,28,.72); }
+.pack-reel-modal { border: 1px solid rgb(var(--ui-line-rgb) / .18); background: rgba(12,13,14,.78); }
 .pack-spin-controls { min-height: 30px; display: flex; justify-content: flex-end; padding-top: 8px; }
 .pack-reveal-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .fifa-collection-head { margin-top: 34px; }
@@ -3829,7 +3829,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 .scout-market-screen,
 .newsroom-screen,
 .narrow {
-  background: linear-gradient(145deg, rgba(18,22,62,.42), rgba(7,10,28,.18));
+  background: linear-gradient(145deg, rgba(31,29,25,.42), rgba(9,10,11,.26));
 }
 .tactical-board,
 .lineup-board,
@@ -3849,7 +3849,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 .market-candidate,
 .market-term,
 .collection-card {
-  background-color: rgba(15,20,56,.76) !important;
+  background-color: rgba(18,19,19,.86) !important;
 }
 .eyebrow,
 .control-label,
@@ -3862,10 +3862,10 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 button.primary,
 .hq-primary-action {
   background: var(--fifa-cyan);
-  color: #07121e;
+  color: #171108;
 }
 button.primary:hover,
-.hq-primary-action:hover { background: #7df7ff; }
+.hq-primary-action:hover { background: #efb866; }
 
 /* responsive */
 @media (max-width: 1180px) {
@@ -3889,7 +3889,7 @@ button.primary:hover,
   .fifa-mode-tile { min-width: 280px; min-height: 260px; }
   .fifa-mode-hero { min-width: 360px; }
   .world-map-layout { display: block; }
-  .world-region-list { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgba(152,166,255,.18); }
+  .world-region-list { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid rgb(var(--ui-line-rgb) / .18); }
   .world-region-list > button { min-width: 120px; }
   .world-upkeep { display: none; }
   .world-map-stage { min-height: 430px; }
@@ -4340,7 +4340,7 @@ button.primary:hover,
 .screen-back-button:hover {
   color: #fff;
   border-color: var(--fifa-cyan);
-  background: rgba(19,27,59,.94);
+  background: rgba(31,28,24,.95);
 }
 
 /* tactical radar match simulation */
@@ -4351,7 +4351,7 @@ button.primary:hover,
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(3,5,15,.94);
+  background: rgba(8,9,10,.95);
   backdrop-filter: blur(14px);
 }
 .match-radar-shell {
@@ -4360,8 +4360,8 @@ button.primary:hover,
   display: grid;
   grid-template-rows: 74px minmax(0,1fr) 5px;
   overflow: hidden;
-  border: 1px solid rgba(142,157,255,.28);
-  background: #090d20;
+  border: 1px solid rgb(var(--ui-line-rgb) / .28);
+  background: #0e1011;
   box-shadow: 0 30px 90px rgba(0,0,0,.48);
 }
 .match-radar-header {
@@ -4371,14 +4371,14 @@ button.primary:hover,
   gap: 20px;
   padding: 0 22px;
   border-bottom: 1px solid rgb(var(--ui-line-rgb) / .16);
-  background: rgba(15,20,48,.92);
+  background: rgba(20,20,19,.94);
 }
 .match-radar-header > div:first-child {
   display: grid;
   gap: 4px;
 }
 .match-radar-header span {
-  color: #7f8aa8;
+  color: #8f8980;
   font: 900 8px/1 Arial, sans-serif;
   letter-spacing: .12em;
 }
@@ -4398,7 +4398,7 @@ button.primary:hover,
 }
 .match-radar-score b:first-child { color: #45dff0; }
 .match-radar-score b:last-child { color: #f3a05c; }
-.match-radar-score span { color: #8d97b3; }
+.match-radar-score span { color: #999289; }
 .match-radar-clock {
   justify-self: end;
   display: grid;
@@ -4418,23 +4418,23 @@ button.primary:hover,
   min-height: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at center, rgba(45,57,91,.26), transparent 60%),
-    #0b1022;
+    radial-gradient(circle at center, rgb(var(--ui-accent-rgb) / .06), transparent 60%),
+    #0d0f10;
 }
 .match-radar-map > svg { width: 100%; height: 100%; }
 .radar-floor {
-  fill: #11182a;
-  stroke: #303a58;
+  fill: #151819;
+  stroke: #3d3a35;
   stroke-width: 2;
 }
 .radar-zone {
-  fill: #202a3d;
-  stroke: #4a5674;
+  fill: #222526;
+  stroke: #514b43;
   stroke-width: 3;
 }
 .radar-wall {
   fill: none;
-  stroke: #8a94a9;
+  stroke: #8d877e;
   stroke-width: 15;
   stroke-linecap: square;
   stroke-linejoin: miter;
@@ -4455,7 +4455,7 @@ button.primary:hover,
   transition: opacity .2s ease;
 }
 .radar-player > circle:first-of-type {
-  stroke: #06101b;
+  stroke: #0b0d0e;
   stroke-width: 3;
 }
 .radar-player.home > circle:first-of-type { fill: #29d7ee; }
@@ -5117,7 +5117,7 @@ button.primary:hover,
 .calendar-upcoming {
   margin-top: 14px;
   border: 1px solid rgb(var(--ui-line-rgb) / .15);
-  background: #0b1028;
+  background: #111314;
 }
 .calendar-upcoming-title {
   display: flex;
@@ -5259,7 +5259,7 @@ button.primary:hover,
 .tournament-group-fixtures {
   padding: 13px 16px 16px;
   border-bottom: 1px solid rgb(var(--ui-line-rgb) / .12);
-  background: #0b1028;
+  background: #111314;
 }
 .tournament-group-fixtures > span {
   color: #75809d;
@@ -5977,7 +5977,7 @@ button.primary:hover,
   grid-template-rows: 46px minmax(0, 1fr);
   border-style: solid;
   border-color: rgb(var(--ui-line-rgb) / .22);
-  background: #0b1028;
+  background: #111314;
 }
 .calendar-board-title {
   display: flex;
@@ -6288,7 +6288,7 @@ button.primary:hover,
   grid-template-rows: 42px minmax(0, 1fr);
   border-style: solid;
   border-color: rgb(var(--ui-line-rgb) / .22);
-  background: #0b1028;
+  background: #111314;
   overflow: hidden;
 }
 .vrs-table-head {
@@ -6838,7 +6838,7 @@ button.primary:hover,
 .practice-console {
   min-height: 0;
   border: 2px solid rgb(var(--ui-line-rgb) / .25);
-  background: #0b1028;
+  background: #111314;
 }
 .practice-squad-panel {
   padding: 18px;

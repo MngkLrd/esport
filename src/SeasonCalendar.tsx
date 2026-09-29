@@ -28,6 +28,8 @@ const monthTitle = (value: string) =>
 
 export function SeasonCalendar({
   state,
+  displayNow,
+  timeAnimating = false,
   onAdvance,
   onAdvanceToMatch,
   onOpenMatch,
@@ -35,6 +37,8 @@ export function SeasonCalendar({
   onBook,
 }: {
   state: GameState
+  displayNow?: string
+  timeAnimating?: boolean
   onAdvance: (target: string) => void
   onAdvanceToMatch: () => void
   onOpenMatch: () => void
@@ -42,9 +46,10 @@ export function SeasonCalendar({
   onBook: (eventId: string) => void
 }) {
   const [monthOffset, setMonthOffset] = useState(0)
+  const renderNow = displayNow ?? state.now
   const nextClubMatch = nextPlayerMatch(state.activeTournament)
   const fixtureDue = Boolean(nextClubMatch && compareGameTime(nextClubMatch.scheduledAt, state.now) <= 0)
-  const timeBlocked = Boolean(state.pendingDecision || fixtureDue)
+  const timeBlocked = Boolean(state.pendingDecision || fixtureDue || timeAnimating)
 
   const eventRows = useMemo(
     () => TOURNAMENTS.map((event) => ({
@@ -126,14 +131,14 @@ export function SeasonCalendar({
           <h1>CALENDAR</h1>
         </div>
         <div className="sim-head-stat sim-calendar-now">
-          <small>{formatGameDate(state.now)}</small>
-          <b>{formatGameTime(state.now)}</b>
+          <small>{formatGameDate(renderNow)}</small>
+          <b>{formatGameTime(renderNow)}</b>
         </div>
       </div>
 
       <div className="sim-calendar-controls">
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameHours(state.now, 6))}>+6 HOURS</button>
-        <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>+1 DAY</button>
+        <button className="next-day" disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>NEXT DAY <span>→</span></button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 3, 9))}>+3 DAYS</button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 7, 9))}>+7 DAYS</button>
         {state.pendingDecision && <span className="sim-calendar-blocked">DECISION REQUIRED · INBOX</span>}
@@ -162,7 +167,7 @@ export function SeasonCalendar({
 
               const label = dayLabel(day)
               const dayKey = gameDayKey(day)
-              const current = dayKey === gameDayKey(state.now)
+              const current = dayKey === gameDayKey(renderNow)
               const clubMatchToday = nextClubMatch && gameDayKey(nextClubMatch.scheduledAt) === dayKey
               const starts = eventRows.filter((item) => gameDayKey(item.start) === dayKey)
               const closes = eventRows.filter((item) => gameDayKey(addGameHours(item.start, -72)) === dayKey)

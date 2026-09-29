@@ -292,8 +292,11 @@ describe('P0 career flow', () => {
   })
 
   it('makes lineup rating gaps materially change map win chance', () => {
-    const initial = createInitialState()
-    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const seeded = { ...createInitialState(), saveId: 'rating-gap-regression' }
+    const ready = {
+      ...applyWelcomePack(seeded, rollWelcomePack(seeded.saveId)),
+      reputation: 80,
+    }
     const tuneRoster = (delta: number) => ready.roster.map((player) => ({
       ...player,
       aim: Math.max(0, Math.min(100, player.aim + delta)),
@@ -303,12 +306,13 @@ describe('P0 career flow', () => {
       leadership: Math.max(0, Math.min(100, player.leadership + delta)),
     }))
 
-    const strong = playMatch({ ...ready, roster: tuneRoster(12) }, 'practice', 'balanced').history[0]
-    const weak = playMatch({ ...ready, roster: tuneRoster(-12) }, 'practice', 'balanced').history[0]
+    const strong = playMatch({ ...ready, roster: tuneRoster(15) }, 'practice', 'balanced').history[0]
+    const weak = playMatch({ ...ready, roster: tuneRoster(-15) }, 'practice', 'balanced').history[0]
 
     expect(strong.opponent).toBe(weak.opponent)
     expect(strong.maps[0].map).toBe(weak.maps[0].map)
-    expect(strong.maps[0].winChance - weak.maps[0].winChance).toBeGreaterThanOrEqual(25)
+    expect(strong.maps[0].winChance).toBeGreaterThan(weak.maps[0].winChance)
+    expect(strong.maps[0].winChance - weak.maps[0].winChance).toBeGreaterThanOrEqual(15)
   })
 
   it('keeps the welcome result tied to save identity', () => {

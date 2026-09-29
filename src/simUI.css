@@ -28,13 +28,7 @@ html,body,#root{height:100%}
 body{
   overflow:hidden;
   color:var(--sim-text);
-  background:
-    radial-gradient(circle at 11% -12%,rgb(var(--ui-accent-2-rgb) / .28),transparent 31rem),
-    radial-gradient(circle at 88% 8%,rgb(var(--ui-accent-rgb) / .16),transparent 28rem),
-    linear-gradient(148deg,var(--ui-bg-2) 0%,var(--ui-bg-1) 48%,var(--ui-bg-0) 100%);
-}
-body::before{
-  opacity:.18;
+  background:linear-gradient(148deg,var(--ui-bg-2) 0%,var(--ui-bg-1) 48%,var(--ui-bg-0) 100%);
 }
 .app-shell{height:100dvh;min-height:0;overflow:hidden}
 .app-main{height:calc(100dvh - 74px);min-height:0;overflow:hidden;position:relative}

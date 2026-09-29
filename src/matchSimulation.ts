@@ -291,6 +291,7 @@ const buildCombatEvents = (
   homeSide: SimSide,
   roundWinner: 'HOME' | 'AWAY',
   site: 'A' | 'B',
+  scoreMargin: number,
   rng: () => number,
 ): SimEvent[] => {
   const rankedHome = performanceBias(result, starters)
@@ -301,7 +302,7 @@ const buildCombatEvents = (
   const awayIds = rivalNames.map((_, index) => 'away-' + index)
   const winningIds = roundWinner === 'HOME' ? rankedHomeIds : awayIds
   const losingIds = roundWinner === 'HOME' ? awayIds : [...rankedHomeIds].reverse()
-  const winningNames = (id: string) =>
+  const playerName = (id: string) =>
     homeNames.get(id) ?? rivalNames[Number(id.replace('away-', ''))] ?? result.opponent
   const sideForId = (id: string): SimSide => {
     const belongsHome = !id.startsWith('away-')
@@ -309,97 +310,135 @@ const buildCombatEvents = (
   }
 
   const events: SimEvent[] = []
-  const contactBase = 3900 + Math.floor(rng() * 450)
-  const openingVictim = losingIds[1] ?? losingIds[0]
-  const openingKiller = winningIds[0]
-  const tradeVictim = winningIds[4]
-  const tradeKiller = losingIds[0]
-  const secondVictim = losingIds[3] ?? losingIds[2]
-  const secondKiller = winningIds[1] ?? winningIds[0]
-  const thirdVictim = losingIds[0]
-  const thirdKiller = winningIds[2] ?? winningIds[0]
-  const fourthVictim = losingIds[4] ?? losingIds[2]
-  const fourthKiller = winningIds[3] ?? winningIds[0]
+  const normalizedMargin = Math.max(0, Math.min(12, scoreMargin))
+  // Close maps trade down to 2v2-ish situations. Blowouts look like blowouts:
+  // the stronger side keeps more bodies alive and takes earlier control.
+  const winnerCasualties =
+    normalizedMargin >= 8 ? 0 :
+    normalizedMargin >= 5 ? 1 :
+    normalizedMargin >= 3 ? 2 : 3
+  const contactBase = 3400 + Math.floor(rng() * 360) + Math.max(0, 4 - normalizedMargin) * 110
+  const duelStep = normalizedMargin >= 8 ? 500 : normalizedMargin >= 5 ? 610 : 720
+  let duelIndex = 0
+  let time = contactBase
 
-  const pairs: Array<[number, string, string, boolean]> = [
-    [contactBase, openingKiller, openingVictim, rng() > .62],
-    [contactBase + 720, tradeKiller, tradeVictim, rng() > .75],
-    [contactBase + 1420, secondKiller, secondVictim, rng() > .55],
-    [contactBase + 2250, thirdKiller, thirdVictim, rng() > .7],
-    [contactBase + 3000, fourthKiller, fourthVictim, rng() > .5],
-  ]
-
-  pairs.forEach(([time, killerId, victimId, headshot], index) => {
-    const killerName = winningNames(killerId)
-    const victimName = winningNames(victimId)
+  const addDuel = (killerId: string, victimId: string, at: number) => {
     const side = sideForId(killerId)
-    const weapon = side === 'CT' ? (index === 2 ? 'AWP' : 'M4A1-S') : (index === 2 ? 'AWP' : 'AK-47')
+    const weapon = side === 'CT'
+      ? (duelIndex % 4 === 2 ? 'AWP' : 'M4A1-S')
+      : (duelIndex % 4 === 2 ? 'AWP' : 'AK-47')
+    const headshot = rng() > .58
+
     events.push({
-      id: 'shot-' + index,
-      time: time - 240,
+      id: 'shot-' + duelIndex,
+      time: Math.max(0, at - 240),
       type: 'shot',
       actorId: killerId,
       targetId: victimId,
-      actorName: killerName,
-      targetName: victimName,
+      actorName: playerName(killerId),
+      targetName: playerName(victimId),
       side,
       weapon,
     })
     events.push({
-      id: 'damage-' + index,
-      time: time - 130,
+      id: 'damage-' + duelIndex,
+      time: Math.max(0, at - 130),
       type: 'damage',
       actorId: killerId,
       targetId: victimId,
-      actorName: killerName,
-      targetName: victimName,
+      actorName: playerName(killerId),
+      targetName: playerName(victimId),
       side,
       weapon,
       damage: 44 + Math.floor(rng() * 33),
     })
     events.push({
-      id: 'kill-' + index,
-      time,
+      id: 'kill-' + duelIndex,
+      time: at,
       type: 'kill',
       actorId: killerId,
       targetId: victimId,
-      actorName: killerName,
-      targetName: victimName,
+      actorName: playerName(killerId),
+      targetName: playerName(victimId),
       side,
       weapon,
       headshot,
     })
-  })
+    duelIndex += 1
+  }
+
+  let losingIndex = 0
+  if (losingIds[losingIndex] && winningIds[0]) {
+    addDuel(winningIds[0], losingIds[losingIndex], time)
+    losingIndex += 1
+  }
+
+  for (
+    let casualty = 0;
+    casualty < winnerCasualties && losingIndex < losingIds.length;
+    casualty += 1
+  ) {
+    const trader = losingIds[losingIndex]
+    const winnerVictim = winningIds[winningIds.length - 1 - casualty]
+    if (trader && winnerVictim) {
+      time += Math.round(duelStep * .72)
+      addDuel(trader, winnerVictim, time)
+    }
+
+    const tradeBack = winningIds[Math.min(casualty + 1, winningIds.length - 1)]
+    if (tradeBack && trader) {
+      time += Math.round(duelStep * .68)
+      addDuel(tradeBack, trader, time)
+      losingIndex += 1
+    }
+  }
+
+  while (losingIndex < losingIds.length) {
+    time += duelStep
+    const killer = winningIds[Math.min(losingIndex, winningIds.length - 1)] ?? winningIds[0]
+    const victim = losingIds[losingIndex]
+    if (killer && victim) addDuel(killer, victim, time)
+    losingIndex += 1
+  }
 
   const tSide = homeSide === 'T' ? 'HOME' : 'AWAY'
   const tIds = tSide === 'HOME' ? homeIds : awayIds
-  const tNames = (id: string) => homeNames.get(id) ?? rivalNames[Number(id.replace('away-', ''))] ?? result.opponent
+  const ctIds = tSide === 'HOME' ? awayIds : homeIds
   const tWins = roundWinner === tSide
   const plantTime = 6500
-  const bombActor = tIds.find((id) => !events.some((event) => event.type === 'kill' && event.targetId === id && event.time < plantTime)) ?? tIds[0]
+  const deadBefore = (id: string, at: number) =>
+    events.some((event) => event.type === 'kill' && event.targetId === id && event.time < at)
+  const bombActor = tIds.find((id) => !deadBefore(id, plantTime))
+  const ctStillAlive = ctIds.some((id) => !deadBefore(id, plantTime))
+  const shouldPlant = Boolean(
+    bombActor &&
+    ctStillAlive &&
+    (tWins ? normalizedMargin < 8 || rng() > .42 : rng() > .52),
+  )
 
-  if (tWins || rng() > .34) {
+  if (shouldPlant && bombActor) {
     events.push({
       id: 'plant',
       time: plantTime,
       type: 'plant',
       actorId: bombActor,
-      actorName: tNames(bombActor),
+      actorName: playerName(bombActor),
       side: 'T',
       site,
     })
     if (!tWins) {
-      const ctIds = tSide === 'HOME' ? awayIds : homeIds
-      const defuser = ctIds.find((id) => !events.some((event) => event.type === 'kill' && event.targetId === id)) ?? ctIds[0]
-      events.push({
-        id: 'defuse',
-        time: 8350,
-        type: 'defuse',
-        actorId: defuser,
-        actorName: winningNames(defuser),
-        side: 'CT',
-        site,
-      })
+      const defuser = ctIds.find((id) => !deadBefore(id, 8350))
+      if (defuser) {
+        events.push({
+          id: 'defuse',
+          time: 8350,
+          type: 'defuse',
+          actorId: defuser,
+          actorName: playerName(defuser),
+          side: 'CT',
+          site,
+        })
+      }
     }
   }
 
@@ -441,7 +480,8 @@ const makeRound = (
   const homeRoutes = homeSide === 'T' ? tRoutes : ctRoutes
   const awayRoutes = homeSide === 'T' ? ctRoutes : tRoutes
   const duration = 9200
-  const events = buildCombatEvents(result, starters, homeSide, winner, site, rng)
+  const scoreMargin = Math.abs(mapResult.us - mapResult.them)
+  const events = buildCombatEvents(result, starters, homeSide, winner, site, scoreMargin, rng)
   const away = awayNames(result)
   const bombHome = homeSide === 'T'
 

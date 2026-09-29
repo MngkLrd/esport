@@ -1,4 +1,6 @@
 import { managerLevelFromXp, type GameState } from './game'
+import { compareGameTime } from './calendar'
+import { nextPlayerMatch } from './tournamentEngine'
 
 export type CareerObjectiveId =
   | 'first-five'
@@ -194,8 +196,11 @@ export const onboardingStep = (state: GameState): OnboardingStep | null => {
   }
 
   if (!hasOfficial) {
-    const due = state.activeTournament?.matches.some((match) =>
-      match.status === 'ready' && (match.teamAId === 'club' || match.teamBId === 'club'),
+    const nextMatch = nextPlayerMatch(state.activeTournament)
+    const due = Boolean(
+      nextMatch &&
+      nextMatch.status === 'ready' &&
+      compareGameTime(state.now, nextMatch.scheduledAt) >= 0,
     )
 
     return due

@@ -1896,22 +1896,22 @@ footer {
 
 /* v0.4 editorial game redesign */
 :root {
-  --bg: #090b0e;
-  --panel: #11151a;
-  --panel-2: #171c22;
-  --line: #2a3038;
-  --line-soft: #20262d;
-  --muted: #8e98a4;
-  --ink: #eef1f4;
-  --orange: #ff7040;
-  --orange-2: #ff9b65;
-  --cyan: #68d8ca;
-  --green: #87d9a7;
-  --font-xs: 11px;
-  --font-sm: 12px;
-  --font-md: 14px;
-  --font-lg: 18px;
-  --font-xl: 24px;
+  --bg:var(--ui-bg-0);
+  --panel:var(--ui-panel);
+  --panel-2:var(--ui-panel-raised);
+  --line:var(--ui-line);
+  --line-soft:rgb(var(--ui-line-rgb) / .16);
+  --muted:var(--ui-muted);
+  --ink:var(--ui-text);
+  --orange:var(--ui-accent);
+  --orange-2:var(--ui-accent);
+  --cyan:var(--ui-accent);
+  --green:var(--ui-positive);
+  --font-xs:11px;
+  --font-sm:12px;
+  --font-md:14px;
+  --font-lg:18px;
+  --font-xl:24px;
 }
 
 body {
@@ -3013,27 +3013,27 @@ button.secondary { border-color: #4a5662; background: transparent; }
    FIFA-style game shell pass
    ========================================================= */
 :root {
-  --bg: #080b1c;
-  --panel: #12172f;
-  --panel-2: #171d3c;
-  --line: rgba(164, 177, 255, .22);
-  --muted: #9aa5c3;
-  --orange: #25f4c8;
-  --orange-2: #8dfcf0;
-  --cyan: #20e6ff;
-  --green: #62f29f;
-  --red: #ff657a;
-  --fifa-purple: #6b46d8;
-  --fifa-purple-2: #9a4dff;
-  --fifa-blue: #24318c;
-  --fifa-cyan: #20e6ff;
+  --bg:var(--ui-bg-0);
+  --panel:var(--ui-panel);
+  --panel-2:var(--ui-panel-raised);
+  --line:var(--ui-line);
+  --muted:var(--ui-muted);
+  --orange:var(--ui-accent);
+  --orange-2:var(--ui-accent);
+  --cyan:var(--ui-accent);
+  --green:var(--ui-positive);
+  --red:var(--ui-danger);
+  --fifa-purple:var(--ui-accent-2);
+  --fifa-purple-2:var(--ui-accent-2);
+  --fifa-blue:var(--ui-accent-2);
+  --fifa-cyan:var(--ui-accent);
 }
 html, body, #root { min-height: 100%; }
 body {
   background:
-    radial-gradient(circle at 18% -12%, rgba(110, 72, 255, .34), transparent 32rem),
-    radial-gradient(circle at 90% 20%, rgba(20, 213, 255, .12), transparent 30rem),
-    linear-gradient(160deg, #11143a 0%, #080b1c 48%, #07121e 100%);
+    radial-gradient(circle at 18% -12%,rgb(var(--ui-accent-rgb) / .07),transparent 32rem),
+    radial-gradient(circle at 90% 20%,rgb(var(--ui-accent-2-rgb) / .08),transparent 30rem),
+    linear-gradient(160deg,var(--ui-bg-2) 0%,var(--ui-bg-0) 52%,#071019 100%);
   background-attachment: fixed;
   font-family: 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
   overflow-x: hidden;
@@ -3408,7 +3408,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   height: 8px;
   border: 2px solid var(--fifa-cyan);
   border-radius: 50%;
-  box-shadow: 0 0 0 4px rgba(32,230,255,.12);
+  box-shadow: 0 0 0 4px rgb(var(--ui-accent-rgb) / .12);
 }
 .fifa-mini-map .p1 { left: 28%; top: 35%; }
 .fifa-mini-map .p2 { left: 56%; top: 27%; }
@@ -3551,7 +3551,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 .world-pin:hover,
 .world-pin.active { color: #fff; }
 .world-pin:hover i,
-.world-pin.active i { border-color: var(--fifa-cyan); background: var(--fifa-cyan); box-shadow: 0 0 0 7px rgba(32,230,255,.14), 0 0 18px rgba(32,230,255,.45); }
+.world-pin.active i { border-color: var(--fifa-cyan); background: var(--fifa-cyan); box-shadow: 0 0 0 7px rgb(var(--ui-accent-rgb) / .14), 0 0 18px rgb(var(--ui-accent-rgb) / .45); }
 .world-pin.tier-s i { border-color: #bf78ff; }
 .world-map-caption {
   position: absolute;
@@ -3650,7 +3650,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   background: rgba(16,21,58,.65);
   opacity: .55;
 }
-.manager-milestones article.complete { opacity: 1; border-color: rgba(32,230,255,.38); }
+.manager-milestones article.complete { opacity: 1; border-color: rgb(var(--ui-accent-rgb) / .38); }
 .manager-milestones b { color: var(--fifa-cyan); font: 900 9px/1 Arial, sans-serif; }
 .manager-milestones strong { display: block; margin: 18px 0 8px; font: 1000 15px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif; text-transform: uppercase; }
 .manager-milestones p { color: #8590ad; font-size: 10px; line-height: 1.4; }
@@ -3703,10 +3703,10 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 .squad-radar-shape {
   position: absolute;
   inset: 25px;
-  background: rgba(32,230,255,.2);
+  background: rgb(var(--ui-accent-rgb) / .2);
   border: 2px solid var(--fifa-cyan);
   clip-path: polygon(50% calc(100% - var(--aim)), var(--pos) 50%, 50% var(--utl), calc(100% - var(--clu)) 50%);
-  filter: drop-shadow(0 0 8px rgba(32,230,255,.28));
+  filter: drop-shadow(0 0 8px rgb(var(--ui-accent-rgb) / .28));
 }
 .squad-radar > span { position: absolute; color: #7f8aa5; font: 800 7px/1 Arial, sans-serif; }
 .radar-aim { left: 50%; bottom: -13px; transform: translateX(-50%); }
@@ -3788,7 +3788,7 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
 }
 .pack-fast-row button.active {
   border-color: var(--fifa-cyan);
-  background: rgba(32,230,255,.12);
+  background: rgb(var(--ui-accent-rgb) / .12);
   color: #fff;
 }
 .pack-spin-button {
@@ -3931,7 +3931,7 @@ button.primary:hover,
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(32, 230, 255, .52);
+  background: rgb(var(--ui-accent-rgb) /  .52);
   background-clip: padding-box;
 }
 
@@ -3945,8 +3945,8 @@ button.primary:hover,
 .fifa-wallets > div,
 .fifa-wallets > button { min-width: 98px; }
 .fifa-wallets > button.has-unread {
-  border-color: rgba(32,230,255,.6);
-  box-shadow: inset 0 0 18px rgba(32,230,255,.08), 0 0 16px rgba(32,230,255,.08);
+  border-color: rgb(var(--ui-accent-rgb) / .6);
+  box-shadow: inset 0 0 18px rgb(var(--ui-accent-rgb) / .08), 0 0 16px rgb(var(--ui-accent-rgb) / .08);
 }
 .fifa-wallets > button.has-unread b { color: var(--fifa-cyan); }
 .fifa-home-screen,
@@ -3955,7 +3955,7 @@ button.primary:hover,
 
 .fifa-inbox-tile {
   background:
-    radial-gradient(circle at 86% 22%, rgba(32,230,255,.17), transparent 28%),
+    radial-gradient(circle at 86% 22%, rgb(var(--ui-accent-rgb) / .17), transparent 28%),
     linear-gradient(145deg, #1b3157, #14173c 76%);
 }
 .fifa-inbox-tile p {
@@ -4011,7 +4011,7 @@ button.primary:hover,
 .market-offer-packages button:hover,
 .market-offer-packages button:focus-visible {
   border-color: var(--fifa-cyan);
-  background: rgba(32,230,255,.08);
+  background: rgb(var(--ui-accent-rgb) / .08);
 }
 .market-offer-packages span {
   color: var(--fifa-cyan);
@@ -4088,9 +4088,9 @@ button.primary:hover,
   overflow: hidden;
   margin-bottom: 22px;
   padding: 24px 26px;
-  border: 1px solid rgba(32,230,255,.42);
+  border: 1px solid rgb(var(--ui-accent-rgb) / .42);
   background:
-    linear-gradient(110deg, rgba(32,230,255,.12), rgba(92,56,196,.16) 58%, rgba(8,11,31,.92)),
+    linear-gradient(110deg, rgb(var(--ui-accent-rgb) / .12), rgba(92,56,196,.16) 58%, rgba(8,11,31,.92)),
     #101536;
 }
 .club-decision-card::after {
@@ -4192,8 +4192,8 @@ button.primary:hover,
 }
 .world-filter-strip button:hover { color: #fff; }
 .world-filter-strip button.active {
-  border-color: rgba(32,230,255,.45);
-  background: rgba(32,230,255,.09);
+  border-color: rgb(var(--ui-accent-rgb) / .45);
+  background: rgb(var(--ui-accent-rgb) / .09);
   color: var(--fifa-cyan);
 }
 .world-map-layout-v2 {
@@ -4811,7 +4811,7 @@ button.primary:hover,
 .fifa-mode-hero { grid-row: span 3; min-height: 520px; }
 .fifa-calendar-tile {
   background:
-    linear-gradient(135deg, rgba(32,230,255,.11), transparent 45%),
+    linear-gradient(135deg, rgb(var(--ui-accent-rgb) / .11), transparent 45%),
     linear-gradient(145deg, #173251, #12172f 76%);
 }
 .fifa-clock-button {
@@ -4835,7 +4835,7 @@ button.primary:hover,
   margin-bottom: 18px;
   border: 1px solid rgb(var(--ui-line-rgb) / .18);
   background:
-    radial-gradient(circle at 76% 0, rgba(32,230,255,.08), transparent 35%),
+    radial-gradient(circle at 76% 0, rgb(var(--ui-accent-rgb) / .08), transparent 35%),
     rgba(8,12,31,.82);
 }
 .tournament-hero {
@@ -4914,7 +4914,7 @@ button.primary:hover,
 }
 .tournament-group > div.is-player {
   color: #fff;
-  background: linear-gradient(90deg, rgba(32,230,255,.08), transparent);
+  background: linear-gradient(90deg, rgb(var(--ui-accent-rgb) / .08), transparent);
 }
 .tournament-group i {
   color: #616d8c;
@@ -4958,7 +4958,7 @@ button.primary:hover,
   background: rgba(20,26,57,.82);
 }
 .bracket-match.is-player {
-  border-color: rgba(32,230,255,.5);
+  border-color: rgb(var(--ui-accent-rgb) / .5);
   box-shadow: inset 3px 0 0 var(--fifa-cyan);
 }
 .bracket-match-meta {
@@ -5073,7 +5073,7 @@ button.primary:hover,
 }
 .calendar-strip > article.is-today {
   background:
-    linear-gradient(145deg, rgba(32,230,255,.11), rgba(12,17,41,.96));
+    linear-gradient(145deg, rgb(var(--ui-accent-rgb) / .11), rgba(12,17,41,.96));
   box-shadow: inset 0 0 0 1px var(--fifa-cyan);
 }
 .calendar-strip header {
@@ -5111,7 +5111,7 @@ button.primary:hover,
 .calendar-event.t3 { border-color: #21dced; }
 .calendar-event.online::before { content: '● '; color: #fff; }
 .calendar-event.active {
-  background: rgba(32,230,255,.12);
+  background: rgb(var(--ui-accent-rgb) / .12);
   color: #fff;
 }
 .calendar-upcoming {
@@ -5149,7 +5149,7 @@ button.primary:hover,
   border-bottom: 1px solid rgb(var(--ui-line-rgb) / .08);
 }
 .calendar-upcoming > article.active {
-  background: linear-gradient(90deg, rgba(32,230,255,.08), transparent 60%);
+  background: linear-gradient(90deg, rgb(var(--ui-accent-rgb) / .08), transparent 60%);
 }
 .calendar-tier {
   display: grid;
@@ -5438,7 +5438,7 @@ button.primary:hover,
 }
 .world-marker .world-marker-pulse {
   fill: transparent;
-  stroke: rgba(32,230,255,.72);
+  stroke: rgb(var(--ui-accent-rgb) / .72);
   stroke-width: 1.5;
   animation: world-marker-ping 1.5s ease-out infinite;
 }
@@ -5477,13 +5477,13 @@ button.primary:hover,
   outline: none;
 }
 .world-cluster-ring {
-  fill: rgba(32,230,255,.07);
-  stroke: rgba(32,230,255,.33);
+  fill: rgb(var(--ui-accent-rgb) / .07);
+  stroke: rgb(var(--ui-accent-rgb) / .33);
   stroke-width: 1.4;
 }
 .world-cluster-core {
   fill: #182342;
-  stroke: #20e6ff;
+  stroke: var(--ui-accent);
   stroke-width: 2;
 }
 .world-cluster text {
@@ -5493,8 +5493,8 @@ button.primary:hover,
 }
 .world-cluster:hover .world-cluster-ring,
 .world-cluster.selected .world-cluster-ring {
-  fill: rgba(32,230,255,.15);
-  stroke: #20e6ff;
+  fill: rgb(var(--ui-accent-rgb) / .15);
+  stroke: var(--ui-accent);
 }
 
 /* selected tournament is a real information panel, not a hidden footer */
@@ -5520,8 +5520,8 @@ button.primary:hover,
 .world-event-panel-v2 .world-event-tier {
   margin: 0;
   padding: 4px 6px;
-  background: rgba(154,77,255,.22);
-  border: 1px solid rgba(154,77,255,.45);
+  background: rgb(var(--ui-accent-2-rgb) / .22);
+  border: 1px solid rgb(var(--ui-accent-2-rgb) / .45);
 }
 .world-event-status {
   max-width: 112px;
@@ -5571,7 +5571,7 @@ button.primary:hover,
   font: 900 8px/1.25 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
 .world-event-details .highlight {
-  background: rgba(32,230,255,.07);
+  background: rgb(var(--ui-accent-rgb) / .07);
 }
 .world-event-details .highlight b { color: #fff; }
 .world-event-panel-v2 .world-budget-preview {
@@ -6039,7 +6039,7 @@ button.primary:hover,
 }
 .calendar-event.club-match {
   border-left-color: var(--fifa-cyan);
-  background: rgba(32,230,255,.13);
+  background: rgb(var(--ui-accent-rgb) / .13);
   color: #fff;
 }
 .calendar-more {
@@ -6074,7 +6074,7 @@ button.primary:hover,
   border-bottom: 1px solid rgb(var(--ui-line-rgb) / .1);
 }
 .calendar-upcoming-scroll > article.active {
-  background: linear-gradient(90deg, rgba(32,230,255,.1), transparent 75%);
+  background: linear-gradient(90deg, rgb(var(--ui-accent-rgb) / .1), transparent 75%);
 }
 .calendar-tier {
   width: 42px;
@@ -6320,7 +6320,7 @@ button.primary:hover,
 .vrs-row:hover { background: rgba(255,255,255,.025); }
 .vrs-row.is-player {
   position: relative;
-  background: linear-gradient(90deg, rgba(32,230,255,.13), rgba(32,230,255,.025));
+  background: linear-gradient(90deg, rgb(var(--ui-accent-rgb) / .13), rgb(var(--ui-accent-rgb) / .025));
   box-shadow: inset 4px 0 0 var(--fifa-cyan);
 }
 .vrs-rank {
@@ -6376,7 +6376,7 @@ button.primary:hover,
   padding: 24px;
   border-left: 2px solid rgb(var(--ui-line-rgb) / .14);
   background:
-    radial-gradient(circle at 100% 0, rgba(32,230,255,.16), transparent 45%),
+    radial-gradient(circle at 100% 0, rgb(var(--ui-accent-rgb) / .16), transparent 45%),
     #0d132d;
 }
 .vrs-club-pin span {
@@ -6441,7 +6441,7 @@ button.primary:hover,
 .world-view-vrs .world-event-rail { display: none; }
 .world-event-rail { min-width: 0; display: flex; gap: 6px; overflow-x: auto; padding: 5px 0 7px; scrollbar-width: thin; }
 .world-event-rail button { flex: 0 0 170px; min-width: 0; height: 40px; display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 3px 8px; padding: 5px 9px; border: 2px solid rgb(var(--ui-line-rgb) / .20); background: #0c122b; color: #8e99b5; text-align: left; cursor: pointer; }
-.world-event-rail button:hover, .world-event-rail button.selected { border-color: rgba(32,230,255,.72); background: rgba(32,230,255,.07); }
+.world-event-rail button:hover, .world-event-rail button.selected { border-color: rgb(var(--ui-accent-rgb) / .72); background: rgb(var(--ui-accent-rgb) / .07); }
 .world-event-rail button.active { box-shadow: inset 3px 0 0 #55ffd2; }
 .world-event-rail span { font: 900 7px/1 Arial,sans-serif; letter-spacing: .1em; color: #65718d; }
 .world-event-rail b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; color: #edf2ff; }
@@ -6467,7 +6467,7 @@ button.primary:hover,
 .calendar-month-grid header b { grid-column: 2; grid-row: 1 / span 2; color: #e7ecfb; font: 1000 18px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-day-events { display: grid; gap: 4px; min-width: 0; }
 .calendar-phase { min-width: 0; min-height: 24px; display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 5px; padding: 4px 5px; border: 0; border-left: 3px solid #63708f; background: rgba(255,255,255,.035); color: #9ba6c0; text-align: left; cursor: pointer; }
-.calendar-phase:hover { background: rgba(32,230,255,.10); color: #fff; }
+.calendar-phase:hover { background: rgb(var(--ui-accent-rgb) / .10); color: #fff; }
 .calendar-phase b { font: 1000 7px/1 Arial,sans-serif; color: var(--fifa-cyan); }
 .calendar-phase span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-phase.t1 { border-left-color: #ff8455; }
@@ -6490,8 +6490,8 @@ button.primary:hover,
 .calendar-event-main i { color: #56627f; font-size: 7px; }
 .calendar-event-actions { display: grid; gap: 5px; }
 .calendar-event-actions > b { color: var(--fifa-cyan); font: 1000 7px/1 Arial,sans-serif; letter-spacing: .08em; }
-.calendar-event-actions button { min-height: 27px; border: 1px solid rgba(32,230,255,.42); background: transparent; color: #dceaff; cursor: pointer; font: 1000 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
-.calendar-event-actions button:hover { background: rgba(32,230,255,.10); }
+.calendar-event-actions button { min-height: 27px; border: 1px solid rgb(var(--ui-accent-rgb) / .42); background: transparent; color: #dceaff; cursor: pointer; font: 1000 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
+.calendar-event-actions button:hover { background: rgb(var(--ui-accent-rgb) / .10); }
 .calendar-event-actions button.register { border-color: #55ffd2; background: rgba(85,255,210,.09); }
 .calendar-skip-controls button { font-size: 9px; }
 
@@ -6598,11 +6598,11 @@ button.primary:hover,
   padding: 7px 16px;
   border: 2px solid rgba(85,255,210,.58);
   background:
-    linear-gradient(90deg, rgba(85,255,210,.16), rgba(32,230,255,.06)),
+    linear-gradient(90deg, rgba(85,255,210,.16), rgb(var(--ui-accent-rgb) / .06)),
     #0b1428;
   cursor: pointer;
   text-align: left;
-  box-shadow: 0 0 24px rgba(32,230,255,.08);
+  box-shadow: 0 0 24px rgb(var(--ui-accent-rgb) / .08);
 }
 .fifa-current-match-button > span {
   color: #55ffd2;
@@ -6632,7 +6632,7 @@ button.primary:hover,
 .fifa-current-match-button:hover {
   border-color: #55ffd2;
   background:
-    linear-gradient(90deg, rgba(85,255,210,.22), rgba(32,230,255,.09)),
+    linear-gradient(90deg, rgba(85,255,210,.22), rgb(var(--ui-accent-rgb) / .09)),
     #0b1428;
 }
 
@@ -6763,8 +6763,8 @@ button.primary:hover,
   align-content: center;
   gap: 5px;
   padding: 10px 12px;
-  border: 2px solid rgba(32,230,255,.25);
-  background: rgba(32,230,255,.045);
+  border: 2px solid rgb(var(--ui-accent-rgb) / .25);
+  background: rgb(var(--ui-accent-rgb) / .045);
 }
 .tactical-event-lock span {
   color: #eef5ff;
@@ -7318,7 +7318,7 @@ button.primary:hover,
   .app-main-world .world-event-timeline .current i {
     border-color: var(--fifa-cyan);
     background: var(--fifa-cyan);
-    box-shadow: 0 0 0 5px rgba(32,230,255,.08);
+    box-shadow: 0 0 0 5px rgb(var(--ui-accent-rgb) / .08);
   }
 
   .app-main-world .world-event-timeline .current span {

@@ -100,7 +100,7 @@ function AwayPlayerCard({ player }: { player: TournamentRosterPlayer }) {
       <div className="match-lobby-player-copy">
         <div className="match-lobby-player-name"><strong>{player.alias}</strong><span>{countryFlag(country)} {role}</span></div>
         <div className="match-lobby-player-stats">
-          <span><b>{stats?.raw?.rating?.toFixed?.(2) ?? stats?.rating?.toFixed?.(2) ?? '—'}</b>HLTV</span>
+          <span><b>{stats?.rating != null ? stats.rating.toFixed(2) : '—'}</b>HLTV</span>
           <span><b>{stats?.aim ?? '—'}</b>AIM</span>
           <span><b>{stats?.clutch ?? '—'}</b>CLU</span>
         </div>
@@ -136,7 +136,6 @@ export function MatchLobby({
     [veto],
   )
 
-  const availableMaps = MAPS.filter((map) => !actionByMap.has(map.name))
   const selectedMaps = veto
     .filter((action) => action.type === 'PICK' || action.type === 'DECIDER')
     .map((action) => action.map)
@@ -206,7 +205,7 @@ export function MatchLobby({
             <small>BEST OF 3</small>
             <div>
               <b>{phase === 'result' ? ourMapScore : 0}</b>
-              <i>VS</i>
+              <i><span>VS</span></i>
               <b>{phase === 'result' ? theirMapScore : 0}</b>
             </div>
             <p>{mapSummary.length ? mapSummary.join(' · ') : 'COMPLETE MAP VETO TO LOCK THE SERIES'}</p>

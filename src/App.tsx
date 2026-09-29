@@ -41,16 +41,13 @@ import { ManagerProfile } from './ManagerProfile'
 import { TournamentHub } from './TournamentHub'
 import { SeasonCalendar } from './SeasonCalendar'
 import { rollPack } from './packs'
+import { PacksView } from './PacksView'
 import { executeGameCommand } from './gameCommands'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 import { metadataForAlias } from './playerMetadata'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
-
-const PacksView = lazy(() =>
-  import('./PacksView').then((module) => ({ default: module.PacksView })),
-)
 
 const saveRepository = createBrowserSaveRepository()
 type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Training' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'

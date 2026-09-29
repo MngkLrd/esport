@@ -587,8 +587,12 @@ function App() {
     if (timeAdvance) return
     const result = executeGameCommand(state, { type: 'ADVANCE_TIME', target })
     if (result.state === state) return
-    const frameCount = buildTimeAdvanceFrames(state.now, result.state.now).length
-    beginTimeAdvance(result.state, frameCount <= 2 ? 'NEXT DAY' : 'ADVANCING CALENDAR')
+    const frames = buildTimeAdvanceFrames(state.now, result.state.now)
+    const crossedDay = state.now.slice(0, 10) !== result.state.now.slice(0, 10)
+    beginTimeAdvance(
+      result.state,
+      crossedDay && frames.length <= 2 ? 'NEXT DAY' : crossedDay ? 'ADVANCING CALENDAR' : 'ADVANCING TIME',
+    )
   }
 
   const resolveDecision = (choice: 'a' | 'b') => {

@@ -3072,9 +3072,8 @@ button:focus-visible { outline-color: var(--fifa-cyan); }
   display: grid;
   place-items: center;
   background:
-    linear-gradient(112deg, rgba(8,9,10,.985), rgba(17,17,16,.97) 58%, rgba(29,24,18,.965)),
-    url('./assets/ui/site-background.webp') center / cover no-repeat,
-    var(--ui-bg-0);
+    radial-gradient(circle at 76% 42%, rgb(var(--ui-accent-rgb) / .10), transparent 30rem),
+    linear-gradient(112deg, #08090a, #11110f 58%, #1c1813);
   animation: fifa-transition 620ms ease both;
   pointer-events: none;
 }

@@ -195,6 +195,13 @@ export function PacksView({
       })
   }, [selectedPack])
 
+  const reelPreview = useMemo(() => {
+    const base = poolPreview.flatMap((group) => group.cards)
+    if (!base.length) return []
+    const length = Math.max(14, base.length * 2)
+    return Array.from({ length }, (_, index) => base[index % base.length])
+  }, [poolPreview])
+
   useEffect(() => {
     if (!spinning) return
     const timer = window.setTimeout(() => {
@@ -462,27 +469,69 @@ export function PacksView({
           <section className={'pack-purchase-modal ' + (spinning ? 'is-spinning' : '') + (revealed ? 'is-revealed' : '')} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
             <button className="pack-purchase-close" onClick={closeSpin} disabled={spinning || preparing} aria-label="Закрыть">×</button>
 
+            {roll && revealed && (
+              <div className="pack-top-winner">
+                <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
+              </div>
+            )}
+
             {!queue.length ? (
-              <>
-                <div className="pack-purchase-toolbar">
-                  <div className="pack-fast-row">
-                    {QUANTITIES.map((count) => (
-                      <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
-                    ))}
-                  </div>
-
-                  <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
-                    {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
-                  </button>
-
-                  <div className="pack-purchase-cost">
-                    <b>{(selectedPack.price * quantity).toLocaleString('ru-RU')}</b>
-                    <span>PACK TOKENS</span>
-                    {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
-                  </div>
+              <div className="pack-purchase-toolbar">
+                <div className="pack-fast-row">
+                  {QUANTITIES.map((count) => (
+                    <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
+                  ))}
                 </div>
 
-                <div className="pack-pool-preview">
+                <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
+                  {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
+                </button>
+
+                <div className="pack-purchase-cost">
+                  <b>{(selectedPack.price * quantity).toLocaleString('ru-RU')}</b>
+                  <span>PACK TOKENS</span>
+                  {packTokens < selectedPack.price * quantity && <small className="pack-token-warning">Недостаточно Pack Tokens</small>}
+                </div>
+              </div>
+            ) : (
+              <div className="pack-spin-topline">
+                <span>{spinning ? 'ПРОКРУТКА' : revealed ? 'РЕЗУЛЬТАТ' : 'ОТКРЫТИЕ'}</span>
+                <b>{queueIndex + 1}/{queue.length}</b>
+              </div>
+            )}
+
+            <div className={'pack-reel-window pack-reel-modal' + (!roll ? ' is-preview' : '')}>
+              <div className="pack-center-line"><i /></div>
+              {roll ? (
+                <div
+                  className="pack-reel-track"
+                  style={{
+                    '--winner-index': roll.winnerIndex,
+                    '--spin-ms': SPIN_MS + 'ms',
+                  } as React.CSSProperties}
+                >
+                  {roll.reel.map((card, index) => <ReelCard key={card.id} card={card} winner={revealed && index === roll.winnerIndex} />)}
+                </div>
+              ) : (
+                <div className="pack-reel-track pack-reel-preview-track">
+                  {reelPreview.map((card, index) => <ReelCard key={'preview-' + index + '-' + card.id} card={card} />)}
+                </div>
+              )}
+            </div>
+
+            {queue.length > 0 && (
+              <div className="pack-spin-controls">
+                {spinning && <button className="text-button" onClick={skip}>ПРОПУСТИТЬ</button>}
+                {roll && revealed && queueIndex < queue.length - 1 && (
+                  <button className="fifa-primary-cta" onClick={nextRoll} disabled={preparing}>{preparing ? 'ПОДГОТОВКА' : 'СЛЕДУЮЩИЙ ДРОП'} <span>→</span></button>
+                )}
+                {roll && revealed && queueIndex >= queue.length - 1 && (
+                  <button className="fifa-primary-cta" onClick={closeSpin}>ГОТОВО <span>→</span></button>
+                )}
+              </div>
+            )}
+
+            <div className="pack-pool-preview">
                   <div className="pack-pool-preview-head">
                     <div>
                       <span>ИГРОКИ В ПУЛЕ</span>
@@ -530,46 +579,6 @@ export function PacksView({
                     ))}
                   </div>
                 </div>
-
-              </>
-            ) : (
-              <>
-                <div className="pack-spin-topline">
-                  <span>ОТКРЫТИЕ</span>
-                  <b>{queueIndex + 1}/{queue.length}</b>
-                </div>
-
-                <div className="pack-reel-window pack-reel-modal">
-                  <div className="pack-center-line"><i /></div>
-                  {roll && (
-                    <div
-                      className="pack-reel-track"
-                      style={{
-                        '--winner-index': roll.winnerIndex,
-                        '--spin-ms': SPIN_MS + 'ms',
-                      } as React.CSSProperties}
-                    >
-                      {roll.reel.map((card, index) => <ReelCard key={card.id} card={card} winner={revealed && index === roll.winnerIndex} />)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="pack-spin-controls">
-                  {spinning && <button className="text-button" onClick={skip}>ПРОПУСТИТЬ</button>}
-                </div>
-
-                {roll && revealed && (
-                  <>
-                    <WinnerReveal card={roll.winner} duplicate={duplicate} onOpen={() => setSelectedCard(roll.winner)} />
-                    <div className="pack-reveal-actions">
-                      {queueIndex < queue.length - 1
-                        ? <button className="fifa-primary-cta" onClick={nextRoll} disabled={preparing}>{preparing ? 'ПОДГОТОВКА' : 'СЛЕДУЮЩИЙ ДРОП'} <span>→</span></button>
-                        : <button className="fifa-primary-cta" onClick={closeSpin}>ГОТОВО <span>→</span></button>}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
           </section>
         </div>
       )}

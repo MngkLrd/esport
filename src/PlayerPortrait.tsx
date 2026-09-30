@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { playerPhoto } from './playerVisuals'
 import { hltvSnapshotForAlias } from './cardStats'
+import { playerVisualBodyshot, playerVisualProfileId } from './visualIdentity'
 
 const staticCandidates = (playerId: number | null | undefined) => {
   if (!playerId) return []
@@ -17,13 +18,13 @@ const portraitKey = (alias: string, playerId: number | null | undefined) =>
   alias.toLocaleLowerCase('en-US') + ':' + (playerId ?? 'none')
 
 const effectivePlayerId = (alias: string, playerId: number | null | undefined) =>
-  playerId ?? hltvSnapshotForAlias(alias)?.playerId ?? null
+  playerId ?? playerVisualProfileId(alias) ?? hltvSnapshotForAlias(alias)?.playerId ?? null
 
 const portraitCandidates = (alias: string, playerId: number | null | undefined) => {
   const resolvedId = effectivePlayerId(alias, playerId)
   const key = portraitKey(alias, resolvedId)
   const cached = resolvedPortraits.get(key)
-  return [...new Set([cached, playerPhoto(alias), ...staticCandidates(resolvedId)]
+  return [...new Set([cached, playerVisualBodyshot(alias), playerPhoto(alias), ...staticCandidates(resolvedId)]
     .filter((url): url is string => Boolean(url)))]
     .filter((url) => !failedPortraitUrls.has(url))
 }

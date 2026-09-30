@@ -33,7 +33,7 @@ import { MatchRadar } from './MatchRadar'
 import { MatchLobby, type LobbyVetoAction } from './MatchLobby'
 import { RosterBoard } from './RosterBoard'
 import { tournamentForId, tournamentMode } from './events'
-import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
+import { addGameDays, compareGameTime, formatGameDate, formatGameTime } from './calendar'
 import { opponentForPlayerMatch, type TournamentRosterPlayer } from './tournamentEngine'
 import { ScoutMarket } from './ScoutMarket'
 import { FifaHome } from './FifaHome'
@@ -104,6 +104,30 @@ const RISK_LABELS: Record<string, string> = {
 }
 
 const format = new Intl.NumberFormat('ru-RU')
+
+type TimeAdvanceTransition = {
+  from: string
+  to: string
+  frames: string[]
+  index: number
+  nextState: GameState
+  label: string
+}
+
+const buildTimeAdvanceFrames = (from: string, to: string) => {
+  if (compareGameTime(to, from) <= 0) return [from]
+
+  const frames = [from]
+  let cursor = addGameDays(from, 1, 9)
+
+  while (compareGameTime(cursor, to) < 0 && frames.length < 8) {
+    frames.push(cursor)
+    cursor = addGameDays(cursor, 1, 9)
+  }
+
+  if (frames[frames.length - 1] !== to) frames.push(to)
+  return frames
+}
 
 function Metric({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
   return (
@@ -329,6 +353,7 @@ function App() {
     window.localStorage.getItem('eam:tutorial:' + state.saveId) === 'dismissed',
   )
   const [progressToast, setProgressToast] = useState<{ title: string; reward: string } | null>(null)
+  const [timeAdvance, setTimeAdvance] = useState<TimeAdvanceTransition | null>(null)
   const completedObjectivesRef = useRef<Set<string> | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
@@ -407,6 +432,26 @@ function App() {
       window.clearTimeout(clearTimer)
     }
   }, [transition, state.news])
+
+  useEffect(() => {
+    if (!timeAdvance) return
+
+    const atLastFrame = timeAdvance.index >= timeAdvance.frames.length - 1
+    const timer = window.setTimeout(() => {
+      if (atLastFrame) {
+        setState(timeAdvance.nextState)
+        setTimeAdvance(null)
+        return
+      }
+
+      setTimeAdvance((current) => current
+        ? { ...current, index: Math.min(current.frames.length - 1, current.index + 1) }
+        : null,
+      )
+    }, atLastFrame ? 360 : timeAdvance.index === 0 ? 220 : 280)
+
+    return () => window.clearTimeout(timer)
+  }, [timeAdvance])
 
   const openTab = (next: Tab) => {
     if (next === tab && !transition) return
@@ -515,16 +560,39 @@ function App() {
     openTab('Play')
   }
 
+  const beginTimeAdvance = (nextState: GameState, label: string) => {
+    if (timeAdvance || nextState === state || nextState.now === state.now) {
+      if (!timeAdvance && nextState !== state) setState(nextState)
+      return
+    }
+
+    setTimeAdvance({
+      from: state.now,
+      to: nextState.now,
+      frames: buildTimeAdvanceFrames(state.now, nextState.now),
+      index: 0,
+      nextState,
+      label,
+    })
+  }
+
   const advanceToTournamentMatch = () => {
+    if (timeAdvance) return
     const result = executeGameCommand(state, { type: 'ADVANCE_TO_MATCH' })
     if (result.state === state) return
-    setState(result.state)
+    beginTimeAdvance(result.state, 'ADVANCING TO MATCH')
   }
 
   const advanceTime = (target: string) => {
+    if (timeAdvance) return
     const result = executeGameCommand(state, { type: 'ADVANCE_TIME', target })
     if (result.state === state) return
-    setState(result.state)
+    const frames = buildTimeAdvanceFrames(state.now, result.state.now)
+    const crossedDay = state.now.slice(0, 10) !== result.state.now.slice(0, 10)
+    beginTimeAdvance(
+      result.state,
+      crossedDay && frames.length <= 2 ? 'NEXT DAY' : crossedDay ? 'ADVANCING CALENDAR' : 'ADVANCING TIME',
+    )
   }
 
   const resolveDecision = (choice: 'a' | 'b') => {
@@ -544,6 +612,10 @@ function App() {
 
 
   const managerProgress = managerLevelProgress(state.managerXp)
+  const visualNow = timeAdvance?.frames[Math.min(timeAdvance.index, timeAdvance.frames.length - 1)] ?? state.now
+  const timeAdvanceProgress = timeAdvance
+    ? Math.round((timeAdvance.index / Math.max(1, timeAdvance.frames.length - 1)) * 100)
+    : 0
 
   return (
     <div className="app-shell">
@@ -608,6 +680,22 @@ function App() {
           <div><span>ESPORT AI MANAGER</span><strong>{transition.title}</strong><i /></div>
         </div>
       )}
+      {timeAdvance && (
+        <div className="time-advance-overlay" aria-live="polite" aria-label="Время в игре продвигается">
+          <div className="time-advance-card">
+            <span>{timeAdvance.label}</span>
+            <div className="time-advance-date" key={visualNow}>
+              <strong>{formatGameDate(visualNow)}</strong>
+              <b>{formatGameTime(visualNow)}</b>
+            </div>
+            <div className="time-advance-meta">
+              <small>{formatGameDate(timeAdvance.from)}</small>
+              <i><em style={{ width: timeAdvanceProgress + '%' }} /></i>
+              <small>{formatGameDate(timeAdvance.to)}</small>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="fifa-topbar">
         <button
           className="fifa-brand fifa-screen-title"
@@ -626,8 +714,8 @@ function App() {
           </button>
         ) : (
           <button className="fifa-topbar-center fifa-clock-button" onClick={() => openTab('Calendar')}>
-            <span>{formatGameDate(state.now)}</span>
-            <b>{formatGameTime(state.now)}</b>
+            <span>{formatGameDate(visualNow)}</span>
+            <b>{formatGameTime(visualNow)}</b>
             <i />
             <span>{activeEvent ? 'NEXT · ' + activeEvent.name.toUpperCase() : 'OPEN CALENDAR'}</span>
           </button>
@@ -673,6 +761,8 @@ function App() {
         {tab === 'Calendar' && (
           <SeasonCalendar
             state={state}
+            displayNow={visualNow}
+            timeAnimating={Boolean(timeAdvance)}
             onAdvance={advanceTime}
             onAdvanceToMatch={advanceToTournamentMatch}
             onOpenMatch={() => openTab('Play')}

@@ -1,5 +1,6 @@
 import { PLAYER_PORTRAIT_STATS, portraitForAlias } from './playerPhotos'
 import { hltvIdentityFallbackForAlias } from './hltvIdentityFallbacks'
+import { playerVisualIdentity } from './visualIdentity'
 
 export type CardTier = 'gold' | 'elite' | 'rare' | 'silver'
 
@@ -70,11 +71,11 @@ const flagFromCode = (code: string) =>
     .join('')
 
 export function playerPhoto(alias: string) {
-  return portraitForAlias(alias)?.url ?? hltvIdentityFallbackForAlias(alias)?.bodyshotUrl ?? null
+  return playerVisualIdentity(alias)?.bodyshotUrl ?? portraitForAlias(alias)?.url ?? hltvIdentityFallbackForAlias(alias)?.bodyshotUrl ?? null
 }
 
 export function playerPhotoSource(alias: string) {
-  return portraitForAlias(alias)?.source ?? hltvIdentityFallbackForAlias(alias)?.source ?? null
+  return playerVisualIdentity(alias)?.source ?? portraitForAlias(alias)?.source ?? hltvIdentityFallbackForAlias(alias)?.source ?? null
 }
 
 export { PLAYER_PORTRAIT_STATS }

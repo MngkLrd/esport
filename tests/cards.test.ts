@@ -18,6 +18,7 @@ import {
 } from '../src/packs'
 import { countryFlag, playerPhoto } from '../src/playerVisuals'
 import type { PackCard } from '../src/packState'
+import { playerVisualIdentity, teamVisualLogo } from '../src/visualIdentity'
 
 describe('HLTV collectible card pipeline', () => {
   it('covers the full current player pool without duplicate aliases', () => {
@@ -97,6 +98,24 @@ describe('HLTV collectible card pipeline', () => {
     expect(vicu!.age).toBe(23)
     expect(vicu!.profileUrl).toContain('/22062/')
     expect(playerPhoto('vicu')).toContain('img-cdn.hltv.org/playerbodyshot/')
+  })
+
+  it('resolves visual identities for roster players missing from legacy metadata', () => {
+    const expected = {
+      tom1jed: 18554,
+      abizz: 20451,
+      ivz: 20992,
+      naz: 21155,
+      guty: 24749,
+    }
+
+    for (const [alias, profileId] of Object.entries(expected)) {
+      expect(playerVisualIdentity(alias)?.profileId).toBe(profileId)
+      expect(playerPhoto(alias)).toContain('img-cdn.hltv.org/playerbodyshot/')
+    }
+
+    expect(teamVisualLogo('ShindeN')).toContain('img-cdn.hltv.org/teamlogo/')
+    expect(teamVisualLogo('shinden')).toBe(teamVisualLogo('ShindeN'))
   })
 
   it('rehydrates saved cards with current identity and profile data', () => {

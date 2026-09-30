@@ -5,6 +5,7 @@ import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 import { metadataForAlias } from './playerMetadata'
 import { cardStatsForAlias } from './cardStats'
+import { teamVisualLogo } from './visualIdentity'
 
 export type LobbyVetoAction = {
   step: number
@@ -126,6 +127,7 @@ export function MatchLobby({
   onContinue?: () => void
 }) {
   const rivals = useMemo(() => opponentPlayers(result), [result])
+  const opponentLogo = teamVisualLogo(result.opponent)
   const [veto, setVeto] = useState<LobbyVetoAction[]>(initialVeto)
   const [focusedMap, setFocusedMap] = useState(
     initialVeto.find((action) => action.type === 'PICK')?.map ?? MAPS[2].name,
@@ -212,9 +214,20 @@ export function MatchLobby({
           </div>
 
           <div className="match-lobby-team-title away">
-            <span>{result.opponent}</span>
-            <strong>{awayRating} OVR</strong>
-            <small>5 / 5 READY</small>
+            <div className="match-lobby-team-copy">
+              <span>{result.opponent}</span>
+              <strong>{awayRating} OVR</strong>
+              <small>5 / 5 READY</small>
+            </div>
+            {opponentLogo && (
+              <img
+                className="match-lobby-team-logo"
+                src={opponentLogo}
+                alt=""
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            )}
           </div>
         </header>
 

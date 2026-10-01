@@ -116,6 +116,7 @@ export interface WorldEcologyState {
   processedUntil: string
   nextSequence: number
   lastAgingYear: number
+  carryingCapacityTeams: number
   scheduled: WorldScheduledEvent[]
   operators: Record<string, TournamentOperatorAgent>
   competitions: Record<string, AutonomousCompetition>
@@ -289,6 +290,7 @@ export const createWorldEcology = (world: WorldState, seed: number, at: string):
     processedUntil: at,
     nextSequence: 1,
     lastAgingYear: yearFor(at),
+    carryingCapacityTeams: Math.max(24, world.teams.length),
     scheduled: [],
     operators: {},
     competitions: {},
@@ -856,14 +858,24 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
   }
 
   recalcMetrics(world, ecology)
+  const activeTeamCount = activeTeams(world).length
+  const sustainableTeamCapacity = ecology.carryingCapacityTeams + Math.max(0, Math.floor((ecology.metrics.audienceDemand - 55) / 8))
   for (const region of REGIONS) {
+    if (activeTeamCount >= sustainableTeamCapacity) break
     const regionalFree = Object.values(world.players).filter((player) =>
       !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
     )
     const regionalTeams = activeTeams(world).filter((team) => (team.region ?? teamRegion(world, team)) === region)
     const tournamentAccess = activeCompetitions(ecology).filter((event) => event.region === region).length
-    const entryUtility = regionalFree.length * 4 + tournamentAccess * 5 + ecology.metrics.sponsorLiquidity * .22 - regionalTeams.length * 2.2
-    if (regionalFree.length >= 7 && entryUtility + rng() * 15 > 48) foundTeam(world, ecology, region, at, seed)
+    const regionalShare = regionalTeams.length / Math.max(1, activeTeams(world).length)
+    const underRepresentation = Math.max(0, .18 - regionalShare) * 80
+    const entryUtility =
+      Math.min(28, regionalFree.length * 1.4) +
+      tournamentAccess * 4 +
+      ecology.metrics.sponsorLiquidity * .18 +
+      underRepresentation -
+      regionalTeams.length * .28
+    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 50) foundTeam(world, ecology, region, at, seed)
   }
 
   maybeFoundOperator(world, ecology, at, seed)

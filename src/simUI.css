@@ -4012,7 +4012,7 @@ body{
 
 .sim-planner-summary{
   display:grid;
-  grid-template-columns:repeat(4,minmax(86px,1fr));
+  grid-template-columns:repeat(5,minmax(82px,1fr));
   border:1px solid rgb(var(--ui-line-rgb) / .16);
   background:#0e1011;
 }
@@ -4458,6 +4458,56 @@ body{
   cursor:pointer;
   font:900 6px/1 Arial,sans-serif;
 }
+
+.sim-planner-compare{
+  margin:0 8px 7px;
+  border:1px solid rgb(var(--ui-line-rgb) / .12);
+  background:
+    linear-gradient(90deg,rgb(var(--ui-accent-rgb) / .045),transparent 72%),
+    #101213;
+}
+.sim-planner-compare-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:7px 8px 6px;
+  border-bottom:1px solid rgb(var(--ui-line-rgb) / .09);
+}
+.sim-planner-compare-head span{
+  color:#6e6861;
+  font:900 5px/1 Arial,sans-serif;
+  letter-spacing:.10em;
+}
+.sim-planner-compare-head b{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#cfc8bf;
+  font:1000 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-compare-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+}
+.sim-planner-compare-grid span{
+  display:grid;
+  gap:3px;
+  padding:7px 8px;
+  border-right:1px solid rgb(var(--ui-line-rgb) / .08);
+}
+.sim-planner-compare-grid span:last-child{border-right:0}
+.sim-planner-compare-grid small{
+  color:#59554f;
+  font:900 5px/1 Arial,sans-serif;
+}
+.sim-planner-compare-grid b{
+  color:#bcb5ac;
+  font:1000 12px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-compare-grid b.up{color:var(--planner-good)}
+.sim-planner-compare-grid b.down{color:var(--planner-risk)}
 .sim-planner-candidate-list{
   min-height:0;
   display:grid;
@@ -4480,6 +4530,12 @@ body{
 .sim-planner-candidate-list article:hover{
   border-color:rgb(var(--ui-accent-rgb) / .22);
   background:rgba(255,255,255,.02);
+}
+
+.sim-planner-candidate-list article.selected{
+  border-color:rgb(var(--ui-accent-rgb) / .34);
+  background:rgb(var(--ui-accent-rgb) / .04);
+  box-shadow:inset 2px 0 0 var(--ui-accent);
 }
 .sim-planner-candidate-list img,
 .sim-planner-candidate-list .player-portrait-fallback{

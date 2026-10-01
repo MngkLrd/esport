@@ -17,6 +17,7 @@ export type WorldPortalTarget = 'World' | 'Roster' | 'Scout' | 'Profile'
 interface WorldPortalProps {
   state: GameState
   onResolveDecision: (choice: 'a' | 'b') => void
+  onOpenDecision?: () => void
   onNavigate: (target: WorldPortalTarget) => void
   onOpenPlayer?: (player: Player) => void
   onReset: () => void
@@ -197,7 +198,7 @@ function WorldContext({ state, onOpenTeam }: { state: GameState; onOpenTeam: (te
   )
 }
 
-export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer, onReset }: WorldPortalProps) {
+export function WorldPortal({ state, onResolveDecision, onOpenDecision, onNavigate, onOpenPlayer, onReset }: WorldPortalProps) {
   const [view, setView] = useState<PortalView>('news')
   const [selectedStory, setSelectedStory] = useState<NewsStory | null>(null)
   const [selectedClubItem, setSelectedClubItem] = useState<NewsItem | null>(null)
@@ -352,6 +353,7 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer
                 <h2>{state.pendingDecision.title}</h2>
                 <p>{state.pendingDecision.body}</p>
                 <div>
+                  {onOpenDecision && <button className="primary" onClick={onOpenDecision}>ПРОВЕСТИ ВСТРЕЧУ →</button>}
                   <button onClick={() => onResolveDecision('a')}>{state.pendingDecision.optionA}</button>
                   <button onClick={() => onResolveDecision('b')}>{state.pendingDecision.optionB}</button>
                 </div>

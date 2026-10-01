@@ -1,4 +1,4 @@
-import type { MatchResult, Player, TacticalPlan } from './game'
+import type { MatchResult, MatchRoundStory, Player, TacticalPlan } from './game'
 
 export type SimSide = 'CT' | 'T'
 export type SimUtility = 'smoke' | 'flash' | 'molotov'
@@ -52,6 +52,10 @@ export interface SimRound {
   frames: SimFrame[]
   events: SimEvent[]
   winner: 'HOME' | 'AWAY'
+  scoreUs?: number
+  scoreThem?: number
+  cause?: MatchRoundStory['cause']
+  keyPlayer?: string
 }
 
 export interface MatchPlayback {
@@ -463,24 +467,37 @@ const makeRound = (
   result: MatchResult,
   mapName: string,
   mapIndex: number,
+  roundIndex: number,
+  storyRound: MatchRoundStory | undefined,
   starters: Player[],
   tactic: TacticalPlan,
 ): SimRound => {
-  const seed = hashSeed(result.id + ':' + mapName + ':' + mapIndex + ':' + tactic)
+  const seed = hashSeed(result.id + ':' + mapName + ':' + mapIndex + ':' + roundIndex + ':' + tactic)
   const rng = mulberry32(seed)
   const map = mapProfileFor(mapName, mapIndex)
-  const scenarioPool = SCENARIOS[tactic]
+  const scenarioPool = storyRound?.cause === 'ANTI_STRAT' || storyRound?.cause === 'TACTICAL_EDGE'
+    ? SCENARIOS.structured
+    : SCENARIOS[tactic]
   const scenario = scenarioPool[Math.floor(rng() * scenarioPool.length)]
   const site = siteForScenario(scenario)
-  const homeSide: SimSide = mapIndex % 2 === 0 ? 'CT' : 'T'
+  const half = Math.floor(roundIndex / 12)
+  const homeSide: SimSide = (mapIndex + half) % 2 === 0 ? 'CT' : 'T'
   const mapResult = result.maps[mapIndex] ?? result.maps[0]
-  const winner: 'HOME' | 'AWAY' = mapResult.us > mapResult.them ? 'HOME' : 'AWAY'
+  const winner: 'HOME' | 'AWAY' = storyRound
+    ? (storyRound.winner === 'US' ? 'HOME' : 'AWAY')
+    : mapResult.us > mapResult.them ? 'HOME' : 'AWAY'
   const tRoutes = buildTRoutes(map, scenario)
   const ctRoutes = buildCTRoutes(map, site)
   const homeRoutes = homeSide === 'T' ? tRoutes : ctRoutes
   const awayRoutes = homeSide === 'T' ? ctRoutes : tRoutes
   const duration = 9200
-  const scoreMargin = Math.abs(mapResult.us - mapResult.them)
+  const scoreMargin = storyRound?.cause === 'CLUTCH'
+    ? 0
+    : storyRound?.cause === 'ANTI_STRAT' || storyRound?.cause === 'TACTICAL_EDGE'
+      ? 5
+      : storyRound?.cause === 'PLAYER_ERROR'
+        ? 3
+        : Math.abs(mapResult.us - mapResult.them)
   const events = buildCombatEvents(result, starters, homeSide, winner, site, scoreMargin, rng)
   const away = awayNames(result)
   const bombHome = homeSide === 'T'
@@ -577,7 +594,7 @@ const makeRound = (
   }
 
   return {
-    id: result.id + '-sim-' + mapIndex,
+    id: result.id + '-sim-' + mapIndex + '-' + roundIndex,
     map: map.label,
     mapKey: map.key,
     homeSide,
@@ -588,6 +605,10 @@ const makeRound = (
     frames,
     events: allEvents,
     winner,
+    scoreUs: storyRound?.scoreUs,
+    scoreThem: storyRound?.scoreThem,
+    cause: storyRound?.cause,
+    keyPlayer: storyRound?.keyPlayer,
   }
 }
 
@@ -596,7 +617,13 @@ export const generateMatchPlayback = (
   starters: Player[],
   tactic: TacticalPlan,
 ): MatchPlayback => {
-  const rounds = result.maps.map((map, index) => makeRound(result, map.map, index, starters, tactic))
+  const rounds = result.maps.flatMap((map, mapIndex) => {
+    const storyRounds = map.story?.rounds
+    if (!storyRounds?.length) return [makeRound(result, map.map, mapIndex, 0, undefined, starters, tactic)]
+    return storyRounds.map((storyRound, roundIndex) =>
+      makeRound(result, map.map, mapIndex, roundIndex, storyRound, starters, tactic),
+    )
+  })
   return {
     rounds,
     totalDuration: rounds.reduce((sum, round) => sum + round.duration, 0),

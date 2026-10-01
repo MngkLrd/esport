@@ -18,6 +18,7 @@ import {
 } from './game'
 import { cardTier, countryFlag } from './playerVisuals'
 import { PlayerPortrait } from './PlayerPortrait'
+import { PlayerIdentity } from './PlayerIdentity'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 import { buildAutoPlannerAll, buildAutoPlannerRole } from './squadPlannerAuto'
@@ -779,15 +780,18 @@ function SquadPlanner({
           {inspectedEntry && (
             <div className="sim-planner-inspector">
               <div className="sim-planner-inspector-main">
-                <div className="sim-planner-inspector-portrait">
-                  <PlayerPortrait alias={inspectedEntry.player.alias} playerId={inspectedEntry.player.profileId} alt={inspectedEntry.player.alias} draggable={false} />
-                </div>
-                <div>
-                  <small>ВЫБРАННЫЙ ИГРОК</small>
-                  <h3>{inspectedEntry.player.alias}</h3>
-                  <span>{plannerSourceLabel[inspectedEntry.source]} · {inspectedEntry.player.role} · {inspectedEntry.player.age ?? '—'} лет</span>
-                </div>
-                <button onClick={() => onOpenPlayer(inspectedEntry.player)}>ПРОФИЛЬ →</button>
+                <PlayerIdentity
+                  alias={inspectedEntry.player.alias}
+                  realName={inspectedEntry.player.realName}
+                  country={inspectedEntry.player.country}
+                  team={inspectedEntry.player.team}
+                  role={inspectedEntry.player.role}
+                  profileId={inspectedEntry.player.profileId}
+                  size="md"
+                  className="sim-planner-inspector-identity"
+                  trailing={<button onClick={() => onOpenPlayer(inspectedEntry.player)}>ПРОФИЛЬ →</button>}
+                />
+                <small className={'source-chip source-' + inspectedEntry.source}>{plannerSourceLabel[inspectedEntry.source]} · {inspectedEntry.player.age ?? '—'} лет</small>
               </div>
               <div className="sim-planner-inspector-stats">
                 <span><small>POT</small><b>{inspectedEntry.player.potential}</b></span>

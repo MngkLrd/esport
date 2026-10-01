@@ -712,6 +712,7 @@ function SquadPlanner({
                             </div>
                             <span>
                               <b>{player.alias}</b>
+                              <small className="sim-planner-player-context">{countryFlag(player.country)} {player.team} · {player.role}</small>
                               <small className={'source-chip source-' + entry.source}>{plannerSourceLabel[entry.source]}</small>
                             </span>
                             <strong>
@@ -908,6 +909,7 @@ function SquadPlanner({
                     </div>
                     <span>
                       <b>{entry.player.alias}</b>
+                      <small className="sim-planner-candidate-context">{countryFlag(entry.player.country)} {entry.player.team} · {entry.player.role}</small>
                       <small><i className={'source-dot source-' + entry.source} />{plannerSourceLabel[entry.source]} · {fit} FIT</small>
                     </span>
                     <strong>{projectedOverall(entry.player)}</strong>

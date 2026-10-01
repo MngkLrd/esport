@@ -1127,6 +1127,36 @@ export const mapStyleFit = (skills: MatchSkillProfile, map: string) => {
 export const matchDurationHoursForRounds = (rounds: number, maps: number) =>
   Math.max(1, Math.min(5, Math.ceil((Math.max(0, rounds) * 2 + Math.max(1, maps) * 12) / 60)))
 
+export const mapWinProbabilityFromRoundChance = (roundChance: number) => {
+  const p = clamp(roundChance, 0, 1)
+  if (p <= 0) return 0
+  if (p >= 1) return 1
+  const q = 1 - p
+
+  const choose6 = [1, 6, 15, 20, 15, 6, 1]
+  let overtimeWinBlock = 0
+  for (let wins = 4; wins <= 6; wins += 1) {
+    overtimeWinBlock += choose6[wins] * Math.pow(p, wins) * Math.pow(q, 6 - wins)
+  }
+  const overtimeTieBlock = choose6[3] * Math.pow(p, 3) * Math.pow(q, 3)
+  const overtimeWin = overtimeWinBlock / Math.max(1e-9, 1 - overtimeTieBlock)
+
+  const memo = new Map<string, number>()
+  const solve = (us: number, them: number): number => {
+    if (us >= 13) return 1
+    if (them >= 13) return 0
+    if (us === 12 && them === 12) return overtimeWin
+    const key = us + ':' + them
+    const cached = memo.get(key)
+    if (cached != null) return cached
+    const value = p * solve(us + 1, them) + q * solve(us, them + 1)
+    memo.set(key, value)
+    return value
+  }
+
+  return solve(0, 0)
+}
+
 
 const opponentRoleBoost = (
   role: TournamentRosterPlayer['role'],
@@ -1744,7 +1774,15 @@ const simulateStoryMap = (
     map,
     us,
     them,
-    winChance: Math.round(clamp(probability + mapEdge + ((tacticalQuality + preparation * .28) - (opponent.tactical + opponent.preparation * .28)) * .00115, .05, .95) * 100),
+    winChance: Math.round(mapWinProbabilityFromRoundChance(
+      clamp(
+        probability +
+        mapEdge +
+        ((tacticalQuality + preparation * .28) - (opponent.tactical + opponent.preparation * .28)) * .00115,
+        .05,
+        .95,
+      ),
+    ) * 100),
     topPerformer: topPerformer?.alias ?? '—',
     story: {
       map,

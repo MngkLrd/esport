@@ -1114,6 +1114,73 @@ export const mapStyleFit = (skills: MatchSkillProfile, map: string) => {
   )
 }
 
+const opponentRoleBoost = (
+  role: TournamentRosterPlayer['role'],
+  stat: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership',
+) => {
+  if (stat === 'aim') return role === 'AWP' ? 5 : role === 'Entry' ? 4 : role === 'Rifler' ? 2 : role === 'IGL' ? -2 : -1
+  if (stat === 'sense') return role === 'IGL' ? 7 : role === 'Support' ? 4 : role === 'AWP' ? 2 : 0
+  if (stat === 'utility') return role === 'Support' ? 8 : role === 'IGL' ? 5 : role === 'Rifler' ? 1 : -2
+  if (stat === 'clutch') return role === 'AWP' ? 4 : role === 'Rifler' ? 3 : role === 'IGL' ? 2 : 0
+  return role === 'IGL' ? 10 : role === 'Support' ? 3 : 0
+}
+
+export const lineupMapStyleFit = (active: Player[], map: string) => {
+  if (!active.length) return 50
+  return mapStyleFit({
+    aim: averagePlayerStat(active, 'aim'),
+    gameSense: averagePlayerStat(active, 'gameSense'),
+    utility: averagePlayerStat(active, 'utility'),
+    clutch: averagePlayerStat(active, 'clutch'),
+    leadership: averagePlayerStat(active, 'leadership'),
+  }, map)
+}
+
+const opponentRosterSkillProfile = (
+  roster: TournamentRosterPlayer[] | undefined,
+  teamRatingValue: number,
+): MatchSkillProfile => {
+  const players = (roster ?? []).slice(0, 5)
+  if (!players.length) {
+    return {
+      aim: teamRatingValue,
+      gameSense: teamRatingValue,
+      utility: teamRatingValue,
+      clutch: teamRatingValue,
+      leadership: teamRatingValue,
+    }
+  }
+
+  const enriched = players.map((player) => ({
+    player,
+    stats: cardStatsForAlias(player.alias, player.role),
+  }))
+  const stat = (kind: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership') =>
+    clamp(enriched.reduce((sum, entry) => {
+      const { player, stats } = entry
+      if (!stats) return sum + player.rating + opponentRoleBoost(player.role, kind)
+      if (kind === 'aim') return sum + stats.aim
+      if (kind === 'sense') return sum + clamp(stats.positioning + opponentRoleBoost(player.role, 'sense') * .45)
+      if (kind === 'utility') return sum + stats.utility
+      if (kind === 'clutch') return sum + stats.clutch
+      return sum + clamp(player.rating + opponentRoleBoost(player.role, 'leadership'))
+    }, 0) / enriched.length)
+
+  return {
+    aim: stat('aim'),
+    gameSense: stat('sense'),
+    utility: stat('utility'),
+    clutch: stat('clutch'),
+    leadership: stat('leadership'),
+  }
+}
+
+export const opponentRosterMapStyleFit = (
+  roster: TournamentRosterPlayer[] | undefined,
+  teamRatingValue: number,
+  map: string,
+) => mapStyleFit(opponentRosterSkillProfile(roster, teamRatingValue), map)
+
 const roundCauseLabel: Record<MatchRoundCause, string> = {
   AIM: 'чистая реализация дуэлей',
   TACTICAL_EDGE: 'тактическое преимущество',
@@ -1204,37 +1271,12 @@ const buildOpponentMatchProfile = (
   const averageRating = players.length
     ? players.reduce((sum, player) => sum + player.rating, 0) / players.length
     : teamRatingValue
-  const roleBoost = (role: TournamentRosterPlayer['role'], stat: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership') => {
-    if (stat === 'aim') return role === 'AWP' ? 5 : role === 'Entry' ? 4 : role === 'Rifler' ? 2 : role === 'IGL' ? -2 : -1
-    if (stat === 'sense') return role === 'IGL' ? 7 : role === 'Support' ? 4 : role === 'AWP' ? 2 : 0
-    if (stat === 'utility') return role === 'Support' ? 8 : role === 'IGL' ? 5 : role === 'Rifler' ? 1 : -2
-    if (stat === 'clutch') return role === 'AWP' ? 4 : role === 'Rifler' ? 3 : role === 'IGL' ? 2 : 0
-    return role === 'IGL' ? 10 : role === 'Support' ? 3 : 0
-  }
+  const baseSkills = opponentRosterSkillProfile(players, teamRatingValue)
+  const { aim, gameSense, utility, clutch, leadership } = baseSkills
   const enrichedPlayers = players.map((player) => ({
     player,
     stats: cardStatsForAlias(player.alias, player.role),
   }))
-  const statFromRoster = (stat: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership') =>
-    clamp(
-      enrichedPlayers.length
-        ? enrichedPlayers.reduce((sum, entry) => {
-            const { player, stats } = entry
-            if (!stats) return sum + player.rating + roleBoost(player.role, stat)
-            if (stat === 'aim') return sum + stats.aim
-            if (stat === 'sense') return sum + clamp(stats.positioning + roleBoost(player.role, 'sense') * .45)
-            if (stat === 'utility') return sum + stats.utility
-            if (stat === 'clutch') return sum + stats.clutch
-            return sum + clamp(player.rating + roleBoost(player.role, 'leadership'))
-          }, 0) / enrichedPlayers.length
-        : averageRating,
-    )
-
-  const aim = statFromRoster('aim')
-  const gameSense = statFromRoster('sense')
-  const utility = statFromRoster('utility')
-  const clutch = statFromRoster('clutch')
-  const leadership = statFromRoster('leadership')
   const form = clamp(averageRating + (rng() - .5) * 12)
   const morale = clamp(62 + (averageRating - 65) * .18 + (rng() - .5) * 18)
   const fatigue = clamp(18 + mapIndex * 7 + rng() * 30)
@@ -1247,8 +1289,8 @@ const buildOpponentMatchProfile = (
     (a.stats?.ovr ?? a.player.rating) - (b.stats?.ovr ?? b.player.rating),
   )[0]?.player
   const clutchPlayer = [...enrichedPlayers].sort((a, b) =>
-    (b.stats?.clutch ?? b.player.rating + roleBoost(b.player.role, 'clutch')) -
-    (a.stats?.clutch ?? a.player.rating + roleBoost(a.player.role, 'clutch')),
+    (b.stats?.clutch ?? b.player.rating + opponentRoleBoost(b.player.role, 'clutch')) -
+    (a.stats?.clutch ?? a.player.rating + opponentRoleBoost(a.player.role, 'clutch')),
   )[0]?.player
 
   return {
@@ -1345,14 +1387,8 @@ const simulateStoryMap = (
   )[0] ?? active[0]
   const clutchPlayer = [...active].sort((a, b) => b.clutch - a.clutch || b.form - a.form)[0] ?? active[0]
   const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, mapIndex, opponentAdaptation, rng)
-  const ourMapFit = mapStyleFit({
-    aim: avgAim,
-    gameSense: avgGameSense,
-    utility: avgUtility,
-    clutch: avgClutch,
-    leadership: avgLeadership,
-  }, map)
-  const opponentMapFit = mapStyleFit(opponent, map)
+  const ourMapFit = lineupMapStyleFit(active, map)
+  const opponentMapFit = opponentRosterMapStyleFit(opponentRoster, opponentRating, map)
   const mapEdge = clamp((ourMapFit - opponentMapFit) * .0022, -.05, .05)
 
   const rounds: MatchRoundStory[] = []

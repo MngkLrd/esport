@@ -1,4 +1,5 @@
 import { cardStatsForAlias } from './cardStats'
+import { buildPlayerRatingV2, type RatingRole } from './ratingEngine'
 import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
 import { VRS_RANKED_ROSTERS, VRS_SNAPSHOT_DATE } from './vrs'
 import { advanceWorldEcology, createWorldEcology, type EcologyRegion, type WorldEcologyState } from './worldEcology'
@@ -143,7 +144,21 @@ const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max,
 
 const ratingForIdentity = (identity: RealPlayerSeed, teamRank: number) => {
   const hltv = cardStatsForAlias(identity.alias, identity.role)
-  if (hltv) return hltv.ovr
+  if (hltv) {
+    const role = (identity.role ?? 'Rifler') as RatingRole
+    const leadership = role === 'IGL'
+      ? clamp(hltv.positioning + 11)
+      : role === 'Support'
+        ? clamp(hltv.positioning + 4)
+        : clamp(hltv.positioning - 7)
+    return buildPlayerRatingV2({
+      aim: hltv.aim,
+      gameSense: hltv.positioning,
+      utility: hltv.utility,
+      clutch: hltv.clutch,
+      leadership,
+    }, role).rating
+  }
   if (identity.rating != null) return clamp(Math.round(59 + (identity.rating - .8) * 63), 55, 97)
   if (teamRank <= 10) return 85
   if (teamRank <= 30) return 79

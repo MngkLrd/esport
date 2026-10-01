@@ -48,6 +48,7 @@ import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 import { metadataForAlias } from './playerMetadata'
 import { careerObjectives, completedCareerObjectiveIds, onboardingStep } from './progression'
+import { TimeProgressionOverlay, type TimeProgressionSession, type TimeProgressionSpeed, type TimeProgressionStop } from './TimeProgression'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -105,28 +106,85 @@ const RISK_LABELS: Record<string, string> = {
 
 const format = new Intl.NumberFormat('ru-RU')
 
-type TimeAdvanceTransition = {
-  from: string
-  to: string
-  frames: string[]
-  index: number
-  nextState: GameState
-  label: string
+const TIME_PROGRESSION_DELAY: Record<TimeProgressionSpeed, number> = {
+  1: 720,
+  2: 300,
+  3: 110,
 }
 
-const buildTimeAdvanceFrames = (from: string, to: string) => {
-  if (compareGameTime(to, from) <= 0) return [from]
-
-  const frames = [from]
-  let cursor = addGameDays(from, 1, 9)
-
-  while (compareGameTime(cursor, to) < 0 && frames.length < 8) {
-    frames.push(cursor)
-    cursor = addGameDays(cursor, 1, 9)
+const detectTimeProgressionStop = (before: GameState, after: GameState): TimeProgressionStop | null => {
+  if (after.pendingDecision && after.pendingDecision.id !== before.pendingDecision?.id) {
+    return {
+      kind: 'decision',
+      title: after.pendingDecision.title,
+      detail: after.pendingDecision.body,
+      action: 'Inbox',
+      actionLabel: 'ОТКРЫТЬ INBOX',
+    }
   }
 
-  if (frames[frames.length - 1] !== to) frames.push(to)
-  return frames
+  const expired = after.roster.find((player) => {
+    const previous = before.roster.find((candidate) => candidate.id === player.id)
+    return Boolean(previous && previous.contractWeeks > 0 && player.contractWeeks <= 0)
+  })
+  if (expired) {
+    return {
+      kind: 'contract',
+      title: 'Контракт ' + expired.alias + ' истёк',
+      detail: 'Игрок требует решения по контракту до следующего официального матча.',
+      action: 'Roster',
+      actionLabel: 'ОТКРЫТЬ СОСТАВ',
+    }
+  }
+
+  const knownNews = new Set(before.news.map((item) => item.id))
+  const actionableNews = after.news.find((item) => {
+    if (knownNews.has(item.id)) return false
+    const text = (item.title + ' ' + item.body).toLocaleLowerCase('ru-RU')
+    return /травм|injur|предлож|offer|приглаш|invite|обязательн|decision required/.test(text)
+  })
+  if (actionableNews) {
+    const text = (actionableNews.title + ' ' + actionableNews.body).toLocaleLowerCase('ru-RU')
+    const injury = /травм|injur/.test(text)
+    const transfer = /предлож|offer/.test(text)
+    const invitation = /приглаш|invite/.test(text)
+    return {
+      kind: injury ? 'injury' : transfer ? 'transfer' : invitation ? 'tournament' : 'message',
+      title: actionableNews.title,
+      detail: actionableNews.body,
+      action: injury ? 'Roster' : invitation ? 'World' : 'Inbox',
+      actionLabel: injury ? 'ОТКРЫТЬ СОСТАВ' : invitation ? 'ОТКРЫТЬ WORLD' : 'ОТКРЫТЬ INBOX',
+    }
+  }
+
+  const match = activeTournamentMatch(after)
+  if (
+    match &&
+    compareGameTime(match.scheduledAt, after.now) <= 0 &&
+    compareGameTime(match.scheduledAt, before.now) > 0
+  ) {
+    const event = tournamentForId(after.activeEventId)
+    const opponent = opponentForPlayerMatch(after.activeTournament)
+    return {
+      kind: 'match',
+      title: 'Матч готов к старту',
+      detail: (event ? event.name + ' · ' : '') + (opponent ? 'YOUR CLUB vs ' + opponent.name : match.label),
+      action: 'Play',
+      actionLabel: 'К МАТЧУ',
+    }
+  }
+
+  if (after.seasonEnded && !before.seasonEnded) {
+    return {
+      kind: 'season',
+      title: 'Сезон завершён',
+      detail: 'Промотка остановлена на итогах сезона.',
+      action: 'HQ',
+      actionLabel: 'К ИТОГАМ',
+    }
+  }
+
+  return null
 }
 
 function Metric({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) {
@@ -353,7 +411,7 @@ function App() {
     window.localStorage.getItem('eam:tutorial:' + state.saveId) === 'dismissed',
   )
   const [progressToast, setProgressToast] = useState<{ title: string; reward: string } | null>(null)
-  const [timeAdvance, setTimeAdvance] = useState<TimeAdvanceTransition | null>(null)
+  const [timeAdvance, setTimeAdvance] = useState<TimeProgressionSession | null>(null)
   const [saveSignal, setSaveSignal] = useState<{ revision: number; status: 'saved' | 'error' }>({ revision: 0, status: 'saved' })
   const completedObjectivesRef = useRef<Set<string> | null>(null)
 
@@ -439,24 +497,58 @@ function App() {
   }, [transition, state.news])
 
   useEffect(() => {
-    if (!timeAdvance) return
+    if (!timeAdvance || timeAdvance.status !== 'running') return
 
-    const atLastFrame = timeAdvance.index >= timeAdvance.frames.length - 1
     const timer = window.setTimeout(() => {
-      if (atLastFrame) {
-        setState(timeAdvance.nextState)
-        setTimeAdvance(null)
+      if (compareGameTime(state.now, timeAdvance.target) >= 0) {
+        setTimeAdvance((current) => current ? { ...current, status: 'complete' } : null)
         return
       }
 
+      const nextDay = addGameDays(state.now, 1, 9)
+      const stepTarget = compareGameTime(nextDay, timeAdvance.target) > 0 ? timeAdvance.target : nextDay
+      const result = executeGameCommand(state, { type: 'ADVANCE_TIME', target: stepTarget })
+
+      if (result.state === state || result.state.now === state.now) {
+        const stop = state.pendingDecision
+          ? {
+              kind: 'decision' as const,
+              title: state.pendingDecision.title,
+              detail: state.pendingDecision.body,
+              action: 'Inbox' as const,
+              actionLabel: 'ОТКРЫТЬ INBOX',
+            }
+          : null
+        setTimeAdvance((current) => current
+          ? { ...current, status: stop ? 'stopped' : 'complete', stop }
+          : null,
+        )
+        return
+      }
+
+      const nextState = result.state
+      const stop = detectTimeProgressionStop(state, nextState)
+      const reachedTarget = compareGameTime(nextState.now, timeAdvance.target) >= 0
+
+      setState(nextState)
       setTimeAdvance((current) => current
-        ? { ...current, index: Math.min(current.frames.length - 1, current.index + 1) }
+        ? {
+            ...current,
+            status: stop ? 'stopped' : reachedTarget ? 'complete' : 'running',
+            stop,
+          }
         : null,
       )
-    }, atLastFrame ? 360 : timeAdvance.index === 0 ? 220 : 280)
+    }, TIME_PROGRESSION_DELAY[timeAdvance.speed])
 
     return () => window.clearTimeout(timer)
-  }, [timeAdvance])
+  }, [timeAdvance, state])
+
+  useEffect(() => {
+    if (timeAdvance?.status !== 'complete') return
+    const timer = window.setTimeout(() => setTimeAdvance(null), 520)
+    return () => window.clearTimeout(timer)
+  }, [timeAdvance?.status])
 
   const openTab = (next: Tab) => {
     if (next === tab && !transition) return
@@ -565,39 +657,70 @@ function App() {
     openTab('Play')
   }
 
-  const beginTimeAdvance = (nextState: GameState, label: string) => {
-    if (timeAdvance || nextState === state || nextState.now === state.now) {
-      if (!timeAdvance && nextState !== state) setState(nextState)
+  const beginTimeProgression = (target: string, label: string) => {
+    if (timeAdvance || compareGameTime(target, state.now) <= 0 || state.seasonEnded) return
+    if (state.pendingDecision) {
+      openTab('Inbox')
+      return
+    }
+    if (currentFixtureDue) {
+      openTab('Play')
       return
     }
 
     setTimeAdvance({
       from: state.now,
-      to: nextState.now,
-      frames: buildTimeAdvanceFrames(state.now, nextState.now),
-      index: 0,
-      nextState,
+      target,
+      speed: 1,
+      status: 'running',
       label,
+      stop: null,
     })
+  }
+
+  const continueTime = () => {
+    if (timeAdvance) return
+
+    if (bracketMatch && compareGameTime(bracketMatch.scheduledAt, state.now) > 0) {
+      beginTimeProgression(bracketMatch.scheduledAt, 'CONTINUE · TO NEXT MATCH')
+      return
+    }
+
+    if (state.activeTournament) {
+      const projected = executeGameCommand(state, { type: 'ADVANCE_TO_MATCH' })
+      if (projected.state !== state && compareGameTime(projected.state.now, state.now) > 0) {
+        beginTimeProgression(projected.state.now, 'CONTINUE · TO NEXT MATCH')
+        return
+      }
+    }
+
+    beginTimeProgression(addGameDays(state.now, 7, 9), 'CONTINUE')
   }
 
   const advanceToTournamentMatch = () => {
     if (timeAdvance) return
     const result = executeGameCommand(state, { type: 'ADVANCE_TO_MATCH' })
     if (result.state === state) return
-    beginTimeAdvance(result.state, 'ADVANCING TO MATCH')
+    if (result.state.now === state.now) {
+      setState(result.state)
+      return
+    }
+    beginTimeProgression(result.state.now, 'ADVANCE TO MATCH')
   }
 
   const advanceTime = (target: string) => {
     if (timeAdvance) return
-    const result = executeGameCommand(state, { type: 'ADVANCE_TIME', target })
-    if (result.state === state) return
-    const frames = buildTimeAdvanceFrames(state.now, result.state.now)
-    const crossedDay = state.now.slice(0, 10) !== result.state.now.slice(0, 10)
-    beginTimeAdvance(
-      result.state,
-      crossedDay && frames.length <= 2 ? 'NEXT DAY' : crossedDay ? 'ADVANCING CALENDAR' : 'ADVANCING TIME',
-    )
+    beginTimeProgression(target, state.now.slice(0, 10) === target.slice(0, 10) ? 'ADVANCE TIME' : 'ADVANCE CALENDAR')
+  }
+
+  const setTimeProgressionSpeed = (speed: TimeProgressionSpeed) => {
+    setTimeAdvance((current) => current && current.status === 'running' ? { ...current, speed } : current)
+  }
+
+  const handleTimeProgressionStop = () => {
+    const action = timeAdvance?.stop?.action
+    setTimeAdvance(null)
+    if (action) openTab(action)
   }
 
   const resolveDecision = (choice: 'a' | 'b') => {
@@ -617,10 +740,7 @@ function App() {
 
 
   const managerProgress = managerLevelProgress(state.managerXp)
-  const visualNow = timeAdvance?.frames[Math.min(timeAdvance.index, timeAdvance.frames.length - 1)] ?? state.now
-  const timeAdvanceProgress = timeAdvance
-    ? Math.round((timeAdvance.index / Math.max(1, timeAdvance.frames.length - 1)) * 100)
-    : 0
+  const visualNow = state.now
 
   return (
     <div className="app-shell">
@@ -686,20 +806,12 @@ function App() {
         </div>
       )}
       {timeAdvance && (
-        <div className="time-advance-overlay" aria-live="polite" aria-label="Время в игре продвигается">
-          <div className="time-advance-card">
-            <span>{timeAdvance.label}</span>
-            <div className="time-advance-date" key={visualNow}>
-              <strong>{formatGameDate(visualNow)}</strong>
-              <b>{formatGameTime(visualNow)}</b>
-            </div>
-            <div className="time-advance-meta">
-              <small>{formatGameDate(timeAdvance.from)}</small>
-              <i><em style={{ width: timeAdvanceProgress + '%' }} /></i>
-              <small>{formatGameDate(timeAdvance.to)}</small>
-            </div>
-          </div>
-        </div>
+        <TimeProgressionOverlay
+          state={state}
+          session={timeAdvance}
+          onSpeedChange={setTimeProgressionSpeed}
+          onStopAction={handleTimeProgressionStop}
+        />
       )}
       <header className="fifa-topbar">
         <button
@@ -757,7 +869,7 @@ function App() {
                 <button className="fifa-primary-cta" onClick={() => setState((current) => executeGameCommand(current, { type: 'START_NEXT_SEASON' }).state)}>START SEASON {state.season + 1} <span>→</span></button>
               </article>
             )}
-            <FifaHome state={state} starters={starters} unread={unread} onOpen={(mode) => openTab(mode)} />
+            <FifaHome state={state} starters={starters} unread={unread} onOpen={(mode) => openTab(mode)} onContinue={continueTime} />
           </>
         )}
 
@@ -769,6 +881,7 @@ function App() {
             displayNow={visualNow}
             timeAnimating={Boolean(timeAdvance)}
             onAdvance={advanceTime}
+            onContinue={continueTime}
             onAdvanceToMatch={advanceToTournamentMatch}
             onOpenMatch={() => openTab('Play')}
             onOpenWorld={openWorldEvent}

@@ -8,8 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:p0": "vitest run tests/cards.test.ts tests/game.test.ts tests/layout.test.ts tests/squadPlanner.test.ts tests/trainingGround.test.ts tests/worldEcology.test.ts",
-    "test:cards": "vitest run tests/cards.test.ts"
+    "test:p0": "vitest run tests/cards.test.ts tests/game.test.ts tests/layout.test.ts tests/squadPlanner.test.ts tests/trainingGround.test.ts tests/worldEcology.test.ts tests/worldEcologyAnalytics.test.ts",
+    "test:cards": "vitest run tests/cards.test.ts",
+    "test:soak": "vitest run tests/worldEcologySoak.test.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

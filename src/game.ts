@@ -1928,14 +1928,46 @@ const buildMatchStory = (
   }
 }
 
-const performanceRating = (player: Player, won: boolean, tactic: TacticalPlan, rng: () => number) => {
+const performanceRating = (
+  player: Player,
+  won: boolean,
+  tactic: TacticalPlan,
+  rng: () => number,
+  context: { errors: number; clutches: number; systemWins: number },
+) => {
+  const execution =
+    player.role === 'Entry'
+      ? player.aim * .44 + player.gameSense * .18 + player.clutch * .18 + player.utility * .08 + player.leadership * .12
+      : player.role === 'AWP'
+        ? player.aim * .40 + player.gameSense * .30 + player.clutch * .20 + player.utility * .04 + player.leadership * .06
+        : player.role === 'Support'
+          ? player.aim * .16 + player.gameSense * .27 + player.utility * .34 + player.clutch * .09 + player.leadership * .14
+          : player.role === 'IGL'
+            ? player.aim * .12 + player.gameSense * .30 + player.utility * .19 + player.clutch * .09 + player.leadership * .30
+            : player.aim * .34 + player.gameSense * .25 + player.utility * .14 + player.clutch * .19 + player.leadership * .08
+
   const tacticFit =
     tactic === 'aggressive'
-      ? (player.aim - 65) * 0.08
+      ? (player.aim - 65) * .06 + (player.role === 'Entry' ? 1.4 : 0)
       : tactic === 'structured'
-        ? ((player.gameSense + player.utility + player.leadership) / 3 - 65) * 0.07
+        ? ((player.gameSense + player.utility + player.leadership) / 3 - 65) * .07 +
+          (player.role === 'IGL' || player.role === 'Support' ? 1.2 : 0)
         : 0
-  return Math.round(clamp(overall(player) + (player.form - 50) * 0.1 - player.fatigue * 0.06 + tacticFit + (won ? 4 : -3) + (rng() - 0.5) * 6, 35, 99))
+  const condition = (player.form - 50) * .11 - player.fatigue * .055 + (player.morale - 50) * .035
+  const systemShare = player.role === 'IGL'
+    ? context.systemWins * .42
+    : player.role === 'Support'
+      ? context.systemWins * .26
+      : context.systemWins * .08
+  const causalImpact = context.clutches * 3.4 - context.errors * 4.2 + systemShare
+  const resultImpact = won ? 1.5 : -1.3
+  const noise = (rng() - .5) * 4.2
+
+  return Math.round(clamp(
+    54 + (execution - 65) * .48 + condition + tacticFit + causalImpact + resultImpact + noise,
+    35,
+    99,
+  ))
 }
 
 export const weeklyPayroll = (state: GameState) =>
@@ -2681,17 +2713,21 @@ export const playMatch = (
       }
     }
   }
+  const systemWins = maps.reduce((sum, map) =>
+    sum + (map.story?.rounds ?? []).filter((round) =>
+      round.winner === 'US' &&
+      (round.cause === 'ANTI_STRAT' || round.cause === 'TACTICAL_EDGE'),
+    ).length,
+  0)
   const performances = active
     .map((player) => ({
       playerId: player.id,
       alias: player.alias,
-      rating: Math.round(clamp(
-        performanceRating(player, won, tactic, rng)
-        - (storyErrors.get(player.alias) ?? 0) * 3
-        + (storyClutches.get(player.alias) ?? 0) * 2,
-        35,
-        99,
-      )),
+      rating: performanceRating(player, won, tactic, rng, {
+        errors: storyErrors.get(player.alias) ?? 0,
+        clutches: storyClutches.get(player.alias) ?? 0,
+        systemWins,
+      }),
     }))
     .sort((a, b) => b.rating - a.rating)
   const mvpPerf = performances[0]

@@ -56,6 +56,7 @@ export interface SimRound {
   scoreThem?: number
   cause?: MatchRoundStory['cause']
   keyPlayer?: string
+  keyPlayerSide?: MatchRoundStory['keyPlayerSide']
 }
 
 export interface MatchPlayback {
@@ -289,6 +290,17 @@ const performanceBias = (result: MatchResult, starters: Player[]) =>
     return pb - pa
   })
 
+export const homeSideForRound = (mapIndex: number, roundIndex: number): SimSide => {
+  const openingSide: SimSide = mapIndex % 2 === 0 ? 'CT' : 'T'
+  const oppositeSide: SimSide = openingSide === 'CT' ? 'T' : 'CT'
+  if (roundIndex < 12) return openingSide
+  if (roundIndex < 24) return oppositeSide
+
+  // MR12 overtime swaps every three rounds, not every 12.
+  const overtimeHalf = Math.floor((roundIndex - 24) / 3)
+  return overtimeHalf % 2 === 0 ? openingSide : oppositeSide
+}
+
 const buildCombatEvents = (
   result: MatchResult,
   starters: Player[],
@@ -297,6 +309,7 @@ const buildCombatEvents = (
   site: 'A' | 'B',
   scoreMargin: number,
   rng: () => number,
+  storyRound?: MatchRoundStory,
 ): SimEvent[] => {
   const rankedHome = performanceBias(result, starters)
   const homeIds = starters.slice(0, 5).map((player) => player.id)
@@ -304,8 +317,31 @@ const buildCombatEvents = (
   const homeNames = new Map(starters.map((player) => [player.id, player.alias]))
   const rivalNames = awayNames(result)
   const awayIds = rivalNames.map((_, index) => 'away-' + index)
-  const winningIds = roundWinner === 'HOME' ? rankedHomeIds : awayIds
-  const losingIds = roundWinner === 'HOME' ? awayIds : [...rankedHomeIds].reverse()
+  let winningIds = roundWinner === 'HOME' ? [...rankedHomeIds] : [...awayIds]
+  let losingIds = roundWinner === 'HOME' ? [...awayIds] : [...rankedHomeIds].reverse()
+  const homeIdForAlias = (alias?: string) => alias
+    ? starters.find((player) => player.alias === alias)?.id
+    : undefined
+  const awayIdForAlias = (alias?: string) => {
+    if (!alias) return undefined
+    const index = rivalNames.findIndex((name) => name === alias)
+    return index >= 0 ? 'away-' + index : undefined
+  }
+  const causalPlayerId = storyRound?.keyPlayerSide === 'US'
+    ? homeIdForAlias(storyRound.keyPlayer)
+    : storyRound?.keyPlayerSide === 'THEM'
+      ? awayIdForAlias(storyRound.keyPlayer)
+      : undefined
+  const moveFirst = (ids: string[], id?: string) => {
+    if (!id || !ids.includes(id)) return ids
+    return [id, ...ids.filter((candidate) => candidate !== id)]
+  }
+  if (storyRound?.cause === 'PLAYER_ERROR') {
+    losingIds = moveFirst(losingIds, causalPlayerId)
+  }
+  if (storyRound?.cause === 'CLUTCH') {
+    winningIds = moveFirst(winningIds, causalPlayerId)
+  }
   const playerName = (id: string) =>
     homeNames.get(id) ?? rivalNames[Number(id.replace('away-', ''))] ?? result.opponent
   const sideForId = (id: string): SimSide => {
@@ -315,18 +351,35 @@ const buildCombatEvents = (
 
   const events: SimEvent[] = []
   const normalizedMargin = Math.max(0, Math.min(12, scoreMargin))
-  // Close maps trade down to 2v2-ish situations. Blowouts look like blowouts:
-  // the stronger side keeps more bodies alive and takes earlier control.
-  const winnerCasualties =
-    normalizedMargin >= 8 ? 0 :
-    normalizedMargin >= 5 ? 1 :
-    normalizedMargin >= 3 ? 2 : 3
-  const contactBase = 3400 + Math.floor(rng() * 360) + Math.max(0, 4 - normalizedMargin) * 110
+  const winnerCasualties = storyRound?.cause === 'CLUTCH' ? 4
+    : storyRound?.cause === 'ANTI_STRAT' || storyRound?.cause === 'TACTICAL_EDGE' ? 1
+      : storyRound?.cause === 'FATIGUE' || storyRound?.cause === 'COMMUNICATION' ? 1
+        : normalizedMargin >= 8 ? 0
+          : normalizedMargin >= 5 ? 1
+            : normalizedMargin >= 3 ? 2 : 3
+  const causalContactShift = storyRound?.cause === 'ANTI_STRAT' ? -520
+    : storyRound?.cause === 'TACTICAL_EDGE' ? -320
+      : storyRound?.cause === 'COMMUNICATION' ? -220
+        : storyRound?.cause === 'FATIGUE' ? 180
+          : storyRound?.cause === 'CLUTCH' ? 260
+            : 0
+  const contactBase = 3400 + causalContactShift + Math.floor(rng() * 360) + Math.max(0, 4 - normalizedMargin) * 110
   const duelStep = normalizedMargin >= 8 ? 500 : normalizedMargin >= 5 ? 610 : 720
   let duelIndex = 0
   let time = contactBase
 
+  const allWinningIds = new Set(winningIds)
+  const allLosingIds = new Set(losingIds)
+  const aliveWinning = new Set(winningIds)
+  const aliveLosing = new Set(losingIds)
+  const firstAlive = (order: string[], alive: Set<string>, excluded?: string) =>
+    order.find((id) => alive.has(id) && id !== excluded)
+
   const addDuel = (killerId: string, victimId: string, at: number) => {
+    const killerAlive = aliveWinning.has(killerId) || aliveLosing.has(killerId)
+    const victimAlive = aliveWinning.has(victimId) || aliveLosing.has(victimId)
+    if (!killerAlive || !victimAlive || killerId === victimId) return false
+
     const side = sideForId(killerId)
     const weapon = side === 'CT'
       ? (duelIndex % 4 === 2 ? 'AWP' : 'M4A1-S')
@@ -368,41 +421,73 @@ const buildCombatEvents = (
       weapon,
       headshot,
     })
+
+    if (allWinningIds.has(victimId)) aliveWinning.delete(victimId)
+    if (allLosingIds.has(victimId)) aliveLosing.delete(victimId)
     duelIndex += 1
+    return true
   }
 
-  let losingIndex = 0
-  if (losingIds[losingIndex] && winningIds[0]) {
-    addDuel(winningIds[0], losingIds[losingIndex], time)
-    losingIndex += 1
-  }
+  const causalLoser = (storyRound?.cause === 'PLAYER_ERROR' || storyRound?.cause === 'FATIGUE')
+    && causalPlayerId
+    && aliveLosing.has(causalPlayerId)
+    ? causalPlayerId
+    : undefined
 
-  for (
-    let casualty = 0;
-    casualty < winnerCasualties && losingIndex < losingIds.length;
-    casualty += 1
-  ) {
-    const trader = losingIds[losingIndex]
-    const winnerVictim = winningIds[winningIds.length - 1 - casualty]
-    if (trader && winnerVictim) {
+  if (storyRound?.cause === 'CLUTCH' && causalPlayerId && aliveWinning.has(causalPlayerId)) {
+    // Make the label physically true: establish a 1v3 and let the named player
+    // take every remaining duel. No dead player can re-enter the exchange chain.
+    const setupKillers = winningIds.filter((id) => id !== causalPlayerId)
+    for (let index = 0; index < 2; index += 1) {
+      const killer = firstAlive(setupKillers, aliveWinning)
+      const victim = firstAlive(losingIds, aliveLosing)
+      if (!killer || !victim) break
+      if (index > 0) time += Math.round(duelStep * .58)
+      addDuel(killer, victim, time)
+    }
+
+    const nonClutchWinners = winningIds.filter((id) => id !== causalPlayerId)
+    for (const victim of nonClutchWinners) {
+      if (!aliveWinning.has(victim)) continue
+      const killer = firstAlive(losingIds, aliveLosing)
+      if (!killer) break
+      time += Math.round(duelStep * .62)
+      addDuel(killer, victim, time)
+    }
+
+    while (aliveLosing.size > 0 && aliveWinning.has(causalPlayerId)) {
+      const victim = firstAlive(losingIds, aliveLosing)
+      if (!victim) break
+      time += Math.round(duelStep * .66)
+      addDuel(causalPlayerId, victim, time)
+    }
+  } else {
+    const openingKiller = firstAlive(winningIds, aliveWinning)
+    const openingVictim = causalLoser ?? firstAlive(losingIds, aliveLosing)
+    if (openingKiller && openingVictim) addDuel(openingKiller, openingVictim, time)
+
+    for (let casualty = 0; casualty < winnerCasualties; casualty += 1) {
+      const trader = firstAlive(losingIds, aliveLosing)
+      const winnerVictim = [...winningIds].reverse().find((id) => aliveWinning.has(id))
+      if (!trader || !winnerVictim) break
+
       time += Math.round(duelStep * .72)
-      addDuel(trader, winnerVictim, time)
+      if (!addDuel(trader, winnerVictim, time)) break
+
+      const tradeBack = firstAlive(winningIds, aliveWinning)
+      if (tradeBack && aliveLosing.has(trader)) {
+        time += Math.round(duelStep * .68)
+        addDuel(tradeBack, trader, time)
+      }
     }
 
-    const tradeBack = winningIds[Math.min(casualty + 1, winningIds.length - 1)]
-    if (tradeBack && trader) {
-      time += Math.round(duelStep * .68)
-      addDuel(tradeBack, trader, time)
-      losingIndex += 1
+    while (aliveLosing.size > 0 && aliveWinning.size > 0) {
+      const killer = firstAlive(winningIds, aliveWinning)
+      const victim = firstAlive(losingIds, aliveLosing)
+      if (!killer || !victim) break
+      time += duelStep
+      addDuel(killer, victim, time)
     }
-  }
-
-  while (losingIndex < losingIds.length) {
-    time += duelStep
-    const killer = winningIds[Math.min(losingIndex, winningIds.length - 1)] ?? winningIds[0]
-    const victim = losingIds[losingIndex]
-    if (killer && victim) addDuel(killer, victim, time)
-    losingIndex += 1
   }
 
   const tSide = homeSide === 'T' ? 'HOME' : 'AWAY'
@@ -480,8 +565,7 @@ const makeRound = (
     : SCENARIOS[tactic]
   const scenario = scenarioPool[Math.floor(rng() * scenarioPool.length)]
   const site = siteForScenario(scenario)
-  const half = Math.floor(roundIndex / 12)
-  const homeSide: SimSide = (mapIndex + half) % 2 === 0 ? 'CT' : 'T'
+  const homeSide = homeSideForRound(mapIndex, roundIndex)
   const mapResult = result.maps[mapIndex] ?? result.maps[0]
   const winner: 'HOME' | 'AWAY' = storyRound
     ? (storyRound.winner === 'US' ? 'HOME' : 'AWAY')
@@ -498,7 +582,7 @@ const makeRound = (
       : storyRound?.cause === 'PLAYER_ERROR'
         ? 3
         : Math.abs(mapResult.us - mapResult.them)
-  const events = buildCombatEvents(result, starters, homeSide, winner, site, scoreMargin, rng)
+  const events = buildCombatEvents(result, starters, homeSide, winner, site, scoreMargin, rng, storyRound)
   const away = awayNames(result)
   const bombHome = homeSide === 'T'
 
@@ -609,6 +693,7 @@ const makeRound = (
     scoreThem: storyRound?.scoreThem,
     cause: storyRound?.cause,
     keyPlayer: storyRound?.keyPlayer,
+    keyPlayerSide: storyRound?.keyPlayerSide,
   }
 }
 

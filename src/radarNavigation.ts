@@ -508,38 +508,132 @@ export const constrainRoundToNavigation = (
   // HP/alive state from those corrected events.
   const clearCombatTimeByPair = new Map<string, number>()
   const blockedCombatPairs = new Set<string>()
+  const causalPairRemap = new Map<string, {
+    actorId: string
+    targetId: string
+    actorName: string
+    targetName: string
+    side: SimPlayerFrame['side']
+    time: number
+  }>()
+  const usedCausalCounterparts = new Set<string>()
   const pairKey = (actorId?: string, targetId?: string) => actorId && targetId ? actorId + '>' + targetId : ''
+  const firstFramePlayers = frames[0]?.players ?? []
+  const causalPlayer = round.keyPlayer
+    ? firstFramePlayers.find((player) => player.name === round.keyPlayer)
+    : undefined
+  const causalAsActor = round.cause === 'CLUTCH'
+  const causalAsTarget = round.cause === 'PLAYER_ERROR' || round.cause === 'FATIGUE'
 
   for (const event of round.events) {
     if (event.type !== 'kill' || !event.actorId || !event.targetId) continue
-    const orderedFrames = [...frames].sort((a, b) =>
-      Math.abs(a.time - event.time) - Math.abs(b.time - event.time),
-    )
-    const clearFrame = orderedFrames.find((frame) => {
+    const nearbyFrames = frames
+      .filter((frame) => Math.abs(frame.time - event.time) <= 1200)
+      .sort((a, b) => Math.abs(a.time - event.time) - Math.abs(b.time - event.time))
+    const clearFrame = nearbyFrames.find((frame) => {
       const actor = frame.players.find((player) => player.id === event.actorId)
       const target = frame.players.find((player) => player.id === event.targetId)
-      return Boolean(actor && target && isNavigationSegmentClear(
-        grid,
-        { x: actor.x, y: actor.y },
-        { x: target.x, y: target.y },
-      ))
+      return Boolean(
+        actor &&
+        target &&
+        actor.alive &&
+        target.alive &&
+        isNavigationSegmentClear(
+          grid,
+          { x: actor.x, y: actor.y },
+          { x: target.x, y: target.y },
+        )
+      )
     })
     const key = pairKey(event.actorId, event.targetId)
-    if (clearFrame) clearCombatTimeByPair.set(key, clearFrame.time)
-    else blockedCombatPairs.add(key)
+    if (clearFrame) {
+      clearCombatTimeByPair.set(key, clearFrame.time)
+      continue
+    }
+
+    const isCriticalPair = Boolean(
+      causalPlayer &&
+      ((causalAsActor && event.actorId === causalPlayer.id) ||
+       (causalAsTarget && event.targetId === causalPlayer.id)),
+    )
+    if (!isCriticalPair || !causalPlayer) {
+      blockedCombatPairs.add(key)
+      continue
+    }
+
+    let fallback: { frame: SimRound['frames'][number]; counterpart: SimPlayerFrame } | null = null
+    for (const frame of nearbyFrames) {
+      const critical = frame.players.find((player) => player.id === causalPlayer.id)
+      if (!critical?.alive) continue
+      const candidates = frame.players.filter((player) =>
+        player.id !== critical.id &&
+        player.side !== critical.side &&
+        player.alive &&
+        !usedCausalCounterparts.has(player.id) &&
+        isNavigationSegmentClear(
+          grid,
+          { x: critical.x, y: critical.y },
+          { x: player.x, y: player.y },
+        ),
+      )
+      const counterpart = candidates[0]
+      if (counterpart) {
+        fallback = { frame, counterpart }
+        break
+      }
+    }
+
+    if (!fallback) {
+      blockedCombatPairs.add(key)
+      continue
+    }
+
+    usedCausalCounterparts.add(fallback.counterpart.id)
+    const remap = causalAsActor
+      ? {
+          actorId: causalPlayer.id,
+          targetId: fallback.counterpart.id,
+          actorName: causalPlayer.name,
+          targetName: fallback.counterpart.name,
+          side: causalPlayer.side,
+          time: fallback.frame.time,
+        }
+      : {
+          actorId: fallback.counterpart.id,
+          targetId: causalPlayer.id,
+          actorName: fallback.counterpart.name,
+          targetName: causalPlayer.name,
+          side: fallback.counterpart.side,
+          time: fallback.frame.time,
+        }
+    causalPairRemap.set(key, remap)
+    clearCombatTimeByPair.set(key, remap.time)
   }
 
   const navigatedEvents = round.events
     .filter((event) => {
       if (event.type !== 'shot' && event.type !== 'damage' && event.type !== 'kill') return true
-      return !blockedCombatPairs.has(pairKey(event.actorId, event.targetId))
+      const key = pairKey(event.actorId, event.targetId)
+      return !blockedCombatPairs.has(key) || causalPairRemap.has(key)
     })
     .map((event) => {
       if ((event.type === 'shot' || event.type === 'damage' || event.type === 'kill') && event.actorId && event.targetId) {
-        const clearKillTime = clearCombatTimeByPair.get(pairKey(event.actorId, event.targetId))
+        const key = pairKey(event.actorId, event.targetId)
+        const remap = causalPairRemap.get(key)
+        const clearKillTime = clearCombatTimeByPair.get(key)
         if (clearKillTime != null) {
           const offset = event.type === 'shot' ? -240 : event.type === 'damage' ? -130 : 0
-          return { ...event, time: Math.max(0, clearKillTime + offset) }
+          return {
+            ...event,
+            ...(remap ? {
+              actorId: remap.actorId,
+              targetId: remap.targetId,
+              actorName: remap.actorName,
+              targetName: remap.targetName,
+              side: remap.side,
+            } : {}),
+            time: Math.max(0, clearKillTime + offset),
+          }
         }
       }
       return event

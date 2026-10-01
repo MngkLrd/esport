@@ -12,6 +12,7 @@ import {
   defaultNegotiationTerms,
   deriveMapNarrativeTags,
   evaluateNegotiation,
+  findTurningPoint,
   lineupFitScore,
   migrateState,
   negotiateProspect,
@@ -26,7 +27,7 @@ import { rollWelcomePack } from '../src/welcomePack'
 import { rarityForPlayer, rollPack } from '../src/packs'
 import { REAL_PLAYERS } from '../src/players'
 import { executeGameCommand } from '../src/gameCommands'
-import { generateMatchPlayback, simulationFrameAt, type SimRound } from '../src/matchSimulation'
+import { generateMatchPlayback, homeSideForRound, simulationFrameAt, type SimRound } from '../src/matchSimulation'
 import { constrainRoundToNavigation, isNavigationSegmentClear, type RadarNavigationGrid } from '../src/radarNavigation'
 import { addGameHours, hoursBetween } from '../src/calendar'
 import { PLAYER_CLUB_WORLD_ID, createWorldState } from '../src/world'
@@ -359,6 +360,126 @@ describe('P0 career flow', () => {
       ...Array.from({ length: 2 }, () => ({ winner: 'THEM' as const })),
     ])
     expect(deriveMapNarrativeTags(stomp, factors)).toContain('STOMP')
+  })
+
+  it('uses the vetoed map order as the actual simulation input', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const vetoedMaps = ['Mirage', 'Nuke', 'Ancient']
+    const result = playMatch(ready, 'practice', 'structured', vetoedMaps).history[0]
+
+    expect(result.maps.map((map) => map.map)).toEqual(vetoedMaps.slice(0, result.maps.length))
+    result.maps.forEach((map) => {
+      expect(map.story?.map).toBe(map.map)
+      expect(map.story?.opponentFactors).toBeTruthy()
+    })
+  })
+
+  it('never resolves an overtime map as a tie', () => {
+    for (let index = 0; index < 24; index += 1) {
+      const initial = { ...createInitialState(), seed: 271828 + index * 97, saveId: 'overtime-' + index }
+      const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+      const result = playMatch(ready, 'practice', index % 2 ? 'aggressive' : 'structured').history[0]
+
+      result.maps.forEach((map) => {
+        expect(map.us).not.toBe(map.them)
+        expect(Math.max(map.us, map.them)).toBeGreaterThanOrEqual(13)
+        if (Math.min(map.us, map.them) >= 12) {
+          expect(Math.abs(map.us - map.them)).toBeGreaterThanOrEqual(2)
+        }
+      })
+    }
+  })
+
+  it('swaps sides every three rounds in MR12 overtime', () => {
+    expect(homeSideForRound(0, 0)).toBe('CT')
+    expect(homeSideForRound(0, 11)).toBe('CT')
+    expect(homeSideForRound(0, 12)).toBe('T')
+    expect(homeSideForRound(0, 23)).toBe('T')
+    expect(homeSideForRound(0, 24)).toBe('CT')
+    expect(homeSideForRound(0, 26)).toBe('CT')
+    expect(homeSideForRound(0, 27)).toBe('T')
+    expect(homeSideForRound(0, 29)).toBe('T')
+    expect(homeSideForRound(0, 30)).toBe('CT')
+  })
+
+  it('picks the start of the decisive run as a turning point instead of the final maximum lead', () => {
+    let us = 0
+    let them = 0
+    const sequence = [
+      ...Array.from({ length: 5 }, () => 'THEM' as const),
+      ...Array.from({ length: 13 }, () => 'US' as const),
+    ]
+    const rounds = sequence.map((winner, index): MatchRoundStory => {
+      if (winner === 'US') us += 1
+      else them += 1
+      return {
+        round: index + 1,
+        winner,
+        scoreUs: us,
+        scoreThem: them,
+        cause: 'AIM',
+        note: 'test',
+      }
+    })
+
+    expect(findTurningPoint(rounds)?.round).toBe(6)
+  })
+
+  it('makes player-error and clutch causes visible in the radar events', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const base = playMatch(ready, 'practice', 'balanced').history[0]
+    const template = base.maps[0]
+    const homeAlias = ready.roster[0].alias
+
+    const errorMap = {
+      ...template,
+      us: 0,
+      them: 1,
+      story: {
+        ...template.story!,
+        tags: [],
+        rounds: [{
+          round: 1,
+          winner: 'THEM' as const,
+          scoreUs: 0,
+          scoreThem: 1,
+          cause: 'PLAYER_ERROR' as const,
+          keyPlayer: homeAlias,
+          keyPlayerSide: 'US' as const,
+          note: 'forced error',
+        }],
+      },
+    }
+    const errorResult = { ...base, id: 'causal-error-test', won: false, maps: [errorMap] }
+    const errorRound = generateMatchPlayback(errorResult, ready.roster, 'balanced').rounds[0]
+    expect(errorRound.events.some((event) => event.type === 'kill' && event.targetName === homeAlias)).toBe(true)
+
+    const clutchMap = {
+      ...template,
+      us: 1,
+      them: 0,
+      story: {
+        ...template.story!,
+        tags: [],
+        rounds: [{
+          round: 1,
+          winner: 'US' as const,
+          scoreUs: 1,
+          scoreThem: 0,
+          cause: 'CLUTCH' as const,
+          keyPlayer: homeAlias,
+          keyPlayerSide: 'US' as const,
+          clutch: true,
+          note: 'forced clutch',
+        }],
+      },
+    }
+    const clutchResult = { ...base, id: 'causal-clutch-test', won: true, maps: [clutchMap] }
+    const clutchRound = generateMatchPlayback(clutchResult, ready.roster, 'balanced').rounds[0]
+    const clutchKills = clutchRound.events.filter((event) => event.type === 'kill' && event.actorName === homeAlias)
+    expect(clutchKills.length).toBeGreaterThanOrEqual(2)
   })
 
   it('builds deterministic frame-based tactical playback for every map', () => {

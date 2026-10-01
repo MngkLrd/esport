@@ -388,15 +388,18 @@ describe('P0 career flow', () => {
     const base = played.history[0]
     const map = base.maps[0]
 
+    // This test isolates the fallback playback generated from the final score.
+    // Do not reuse the original causal story: it may legitimately contain
+    // individual lost rounds even when the source map happened to end 13:2.
     const dominant = {
       ...base,
       id: 'score-margin-visual-test',
       won: true,
-      maps: [{ ...map, us: 13, them: 2 }],
+      maps: [{ ...map, story: undefined, us: 13, them: 2 }],
     }
     const close = {
       ...dominant,
-      maps: [{ ...map, us: 13, them: 11 }],
+      maps: [{ ...map, story: undefined, us: 13, them: 11 }],
     }
 
     const dominantRound = generateMatchPlayback(dominant, ready.roster, 'balanced').rounds[0]

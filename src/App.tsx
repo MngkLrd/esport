@@ -1087,6 +1087,7 @@ function App() {
             state={state}
             onResolveDecision={resolveDecision}
             onNavigate={(target) => openTab(target)}
+            onOpenPlayer={setSelectedPlayer}
             onReset={reset}
           />
         )}

@@ -694,6 +694,7 @@ function App() {
         ...current,
         nextState: resolvedState,
         result: resolvedResult,
+        returnTab: current.mode === 'practice' ? 'Training' : resolvedState.activeTournament ? 'Play' : 'HQ',
         veto,
         stage: 'simulation',
       }

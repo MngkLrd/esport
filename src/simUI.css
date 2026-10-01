@@ -1949,7 +1949,7 @@ body{
   border:1px solid #675f54;border-radius:50%;
   color:var(--sim-cyan);font-size:29px
 }
-.sim-squad-empty b{font-size: 12px}.sim-squad-empty small{font-size: 10px}
+.sim-squad-empty b{font-size: 12px}.sim-squad-empty small{font-size: 12px}
 
 .sim-staff-card{
   align-self:center;
@@ -1967,7 +1967,7 @@ body{
 }
 .sim-staff-card>span{font-size:32px;color:#8b857d}
 .sim-staff-card b{font-size: 13px;color:#9a9389}
-.sim-staff-card small{max-width:100px;text-align:center;font-size: 10px;line-height:1.3}
+.sim-staff-card small{max-width:100px;text-align:center;font-size: 12px;line-height:1.3}
 .sim-staff-slot>button{
   min-height:28px;
   border:1px solid rgb(var(--ui-line-rgb) / .12);
@@ -2009,7 +2009,7 @@ body{
   grid-column:1/-1;
   margin-top:3px;
   color:#78726b;
-  font-size: 10px;
+  font-size: 12px;
 }
 .sim-pool-filters{
   min-width:0;
@@ -2116,7 +2116,7 @@ body{
 .sim-pool-card-top span{color:#d1cbc1;font:900 7px/1 Arial,sans-serif;letter-spacing:.08em;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-name{min-width:0;display:grid;gap:2px;margin-top:8px}
 .sim-pool-card-name b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size: 14px}
-.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b7b0a7;font-size: 10px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.sim-pool-card-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b7b0a7;font-size: 12px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .sim-pool-card-stats{
   margin-top:auto;
   display:grid;
@@ -2223,7 +2223,7 @@ body{
   object-position:center bottom;
 }
 .sim-inspector-name{padding:9px 12px 8px}
-.sim-inspector-name>span{color:#8c877f;font-size: 10px}
+.sim-inspector-name>span{color:#8c877f;font-size: 12px}
 .sim-inspector-name h2{
   margin:4px 0 2px;
   font:1000 18px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
@@ -2350,7 +2350,7 @@ body{
 }
 .sim-market .market-candidate{padding:6px;border:1px solid rgb(var(--ui-line-rgb) / .16);background:#101213}
 .sim-market .market-card-visual:hover,.sim-market .market-card-visual:focus-visible{border-color:var(--sim-cyan);box-shadow:0 15px 35px rgba(0,0,0,.26)}
-.sim-market .market-card-top span,.sim-market .market-card-country span,.sim-market .market-card-name span,.sim-market .market-card-stats span{font-size: 10px}
+.sim-market .market-card-top span,.sim-market .market-card-country span,.sim-market .market-card-name span,.sim-market .market-card-stats span{font-size: 12px}
 .sim-market .market-card-stats b{font-size: 13px}
 .sim-market .market-card-meta{font-size: 11px}
 .sim-market .market-negotiate{min-height:32px!important;font-size: 12px!important}
@@ -2562,7 +2562,7 @@ body{
   min-height:2.2em;
   overflow:hidden;
   color:#77726c;
-  font-size: 10px;
+  font-size: 12px;
   line-height:1.15;
   text-transform:uppercase
 }
@@ -2578,7 +2578,7 @@ body{
 }
 .sim-pack-selector-price small{
   color:#8b857d;
-  font-size: 10px;
+  font-size: 12px;
   white-space:nowrap
 }
 
@@ -2813,7 +2813,7 @@ body{
   .sim-pack-selector-copy{gap:4px}
   .sim-pack-selector-copy small{display:none}
   .sim-pack-selector-price{font-size:15px}
-  .sim-pack-selector-price small{font-size: 9px}
+  .sim-pack-selector-price small{font-size: 12px}
   .sim-profile-overview>strong{font-size:66px}
 }
 
@@ -2864,7 +2864,7 @@ body{
 .sim-pool-filters select{
   min-height:29px;
   padding-inline:8px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .sim-player-pool-body{
@@ -4268,14 +4268,14 @@ body{
   font:900 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   font-style:normal
 }
-.match-lobby-veto-timeline b{font-size: 10px}
+.match-lobby-veto-timeline b{font-size: 12px}
 .match-lobby-veto-timeline span{
   width:100%;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
   color:#827d75;
-  font-size: 10px
+  font-size: 12px
 }
 .match-lobby-veto-timeline .is-complete i,
 .match-lobby-veto-timeline .is-current i{
@@ -4371,7 +4371,7 @@ body{
   border-left:1px solid rgb(var(--ui-line-rgb) / .18)
 }
 .match-lobby-map-facts span{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.match-lobby-map-facts small{color:#77736d;font-size: 10px}
+.match-lobby-map-facts small{color:#77736d;font-size: 12px}
 .match-lobby-map-facts b{color:#e7e1d8;font-size: 14px}
 .match-lobby-map-facts span:last-child b{color:var(--sim-cyan)}
 
@@ -4437,7 +4437,7 @@ body{
   .match-lobby-team-title small{display:none}
   .match-lobby-score-center>div{grid-template-columns:52px 32px 52px}
   .match-lobby-score-center>div b{font-size:40px}
-  .match-lobby-score-center p{font-size: 10px}
+  .match-lobby-score-center p{font-size: 12px}
   .match-lobby-body{grid-template-columns:1fr;padding:10px}
   .match-lobby-roster{grid-template-columns:repeat(5,190px);grid-template-rows:110px;overflow-x:auto}
   .match-lobby-roster.away{order:3}
@@ -4525,7 +4525,7 @@ body{
   margin:0;
   overflow:hidden;
   color:#7f7a73;
-  font-size: 10px;
+  font-size: 12px;
   line-height:1.25
 }
 .fifa-career-objectives article footer{
@@ -4929,7 +4929,7 @@ body{
 .sim-pack-selector-copy small{
   min-height:0;
   max-height:2.2em;
-  font-size: 9px;
+  font-size: 12px;
 }
 .sim-pack-selector-price{
   align-self:center;
@@ -5070,7 +5070,7 @@ body{
 }
 .manager-level-milestones b{
   color:var(--sim-cyan);
-  font-size: 10px;
+  font-size: 12px;
 }
 .manager-level-milestones span{
   color:#aaa39a;
@@ -5175,7 +5175,7 @@ body{
 }
 .manager-career-list-head b{
   color:#a9a198;
-  font-size: 10px;
+  font-size: 12px;
 }
 .manager-career-list{
   min-height:0;
@@ -5267,7 +5267,7 @@ body{
 .manager-career-objective-progress>b{
   grid-column:1/-1;
   color:var(--sim-cyan);
-  font-size: 10px;
+  font-size: 12px;
   text-align:right;
 }
 .manager-career-objective-progress>i{
@@ -5282,7 +5282,7 @@ body{
 }
 .manager-career-objective-progress>span{
   color:#8a847c;
-  font-size: 10px;
+  font-size: 12px;
 }
 .sim-manager-career .sim-profile-stats{
   border-color:rgb(var(--ui-line-rgb) / .30);
@@ -8196,7 +8196,7 @@ body{
   color:#c9c4bd;
   font-size: 12px;
 }
-.newsroom-follow-list button small{color:#6f6b65;font-size: 10px;letter-spacing:.06em}
+.newsroom-follow-list button small{color:#6f6b65;font-size: 12px;letter-spacing:.06em}
 .newsroom-follow-list button strong{
   width:24px;
   height:24px;

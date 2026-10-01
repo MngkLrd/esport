@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 const css = readFileSync(new URL('../src/simUI.css', import.meta.url), 'utf8')
 const roster = readFileSync(new URL('../src/RosterBoard.tsx', import.meta.url), 'utf8')
 const training = readFileSync(new URL('../src/TrainingGround.tsx', import.meta.url), 'utf8')
+const squadWorkspace = readFileSync(new URL('../src/SquadWorkspace.tsx', import.meta.url), 'utf8')
 
 describe('sim UI viewport contract', () => {
   it('forces redesigned desktop pages out of legacy two-row app grids', () => {
@@ -59,5 +60,29 @@ describe('sim UI viewport contract', () => {
     expect(training).toContain('LAST SCRIM REPORT')
     expect(training).toContain('OVR GAIN')
     expect(training).toContain('<b>0</b>')
+  })
+
+
+  it('uses the optimized squad geometry on desktop', () => {
+    expect(css).toMatch(/\.squad-opt-layout\s*\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) 360px;/)
+    expect(css).toMatch(/\.squad-opt-left\s*\{[\s\S]*?grid-template-rows:minmax\(340px,52fr\) minmax\(260px,48fr\);/)
+    expect(css).toMatch(/\.squad-opt-stage-grid\s*\{[\s\S]*?grid-template-columns:repeat\(5,minmax\(0,1fr\)\) 118px;/)
+    expect(css).toMatch(/\.squad-opt-pool-grid\s*\{[\s\S]*?grid-template-columns:repeat\(7,minmax\(132px,1fr\)\);/)
+  })
+
+  it('keeps candidate discovery contextual instead of restoring the old filter dashboard', () => {
+    expect(squadWorkspace).toContain('BEST OPTIONS FOR')
+    expect(squadWorkspace).toContain('filteredPool.slice(0, 7)')
+    expect(squadWorkspace).toContain('lineupFitScore(player, selectedSlot)')
+    expect(squadWorkspace).toContain('SHOW ALL')
+    expect(squadWorkspace).not.toContain('ALL ROLES')
+  })
+
+  it('supports compare-before-replace and local contract warnings', () => {
+    expect(squadWorkspace).toContain('CANDIDATE FOR ')
+    expect(squadWorkspace).toContain('REPLACE ')
+    expect(squadWorkspace).toContain('squad-opt-compare-grid')
+    expect(squadWorkspace).toContain('squad-opt-contract-alert')
+    expect(squadWorkspace).toContain('EXPIRING ≤ 4W')
   })
 })

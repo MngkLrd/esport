@@ -10,6 +10,7 @@ import {
   clearLineupSlot,
   createInitialState,
   defaultNegotiationTerms,
+  deriveMapNarrativeTags,
   evaluateNegotiation,
   lineupFitScore,
   migrateState,
@@ -18,6 +19,8 @@ import {
   resolveClubDecision,
   scout,
   startNextSeason,
+  type MatchRoundCause,
+  type MatchRoundStory,
 } from '../src/game'
 import { rollWelcomePack } from '../src/welcomePack'
 import { rarityForPlayer, rollPack } from '../src/packs'
@@ -267,6 +270,95 @@ describe('P0 career flow', () => {
       expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
     }
     expect(combatEvents).toHaveLength(0)
+  })
+
+  it('derives map score from a causal round history and persists the explanation', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const result = playMatch(ready, 'practice', 'structured').history[0]
+
+    expect(result.story).toBeTruthy()
+    expect(result.story?.maps).toHaveLength(result.maps.length)
+    expect(result.story?.summary.length).toBeGreaterThan(20)
+
+    result.maps.forEach((map) => {
+      expect(map.story).toBeTruthy()
+      expect(map.story?.rounds.length).toBe(map.us + map.them)
+      const finalRound = map.story?.rounds.at(-1)
+      expect(finalRound?.scoreUs).toBe(map.us)
+      expect(finalRound?.scoreThem).toBe(map.them)
+      expect(map.story?.turningPoint).toContain('R')
+      expect(map.story?.explanation.length).toBeGreaterThan(20)
+    })
+  })
+
+  it('recognizes the full match-story vocabulary from round facts', () => {
+    const factors = {
+      tactics: 72,
+      preparation: 72,
+      fatigue: 45,
+      communication: 72,
+      clutch: 72,
+      individual: 72,
+    }
+    const makeRounds = (sequence: Array<{ winner: 'US' | 'THEM'; cause?: MatchRoundCause; clutch?: boolean; keyPlayer?: string }>) => {
+      let us = 0
+      let them = 0
+      return sequence.map((entry, index): MatchRoundStory => {
+        if (entry.winner === 'US') us += 1
+        else them += 1
+        return {
+          round: index + 1,
+          winner: entry.winner,
+          scoreUs: us,
+          scoreThem: them,
+          cause: entry.cause ?? 'AIM',
+          clutch: entry.clutch,
+          keyPlayer: entry.keyPlayer,
+          note: 'test',
+        }
+      })
+    }
+
+    const comeback = makeRounds([
+      ...Array.from({ length: 5 }, () => ({ winner: 'THEM' as const })),
+      ...Array.from({ length: 13 }, (_, index) => ({
+        winner: 'US' as const,
+        cause: index < 3 ? 'ANTI_STRAT' as const : index < 6 ? 'TACTICAL_EDGE' as const : 'AIM' as const,
+        clutch: index < 4,
+      })),
+    ])
+    const collapse = makeRounds([
+      ...Array.from({ length: 5 }, () => ({ winner: 'US' as const })),
+      ...Array.from({ length: 3 }, () => ({ winner: 'THEM' as const, cause: 'PLAYER_ERROR' as const, keyPlayer: 'fragile' })),
+      ...Array.from({ length: 3 }, () => ({ winner: 'THEM' as const, cause: 'FATIGUE' as const })),
+      ...Array.from({ length: 3 }, () => ({ winner: 'THEM' as const, cause: 'COMMUNICATION' as const })),
+      ...Array.from({ length: 4 }, () => ({ winner: 'THEM' as const, cause: 'TACTICAL_EDGE' as const })),
+    ])
+
+    const comebackTags = deriveMapNarrativeTags(comeback, factors)
+    expect(comebackTags).toEqual(expect.arrayContaining([
+      'COMEBACK',
+      'CLUTCH_HEAVY',
+      'TACTICAL_OUTPLAY',
+      'ANTI_STRAT_SUCCESS',
+    ]))
+
+    const collapseTags = deriveMapNarrativeTags(collapse, { ...factors, preparation: 30 })
+    expect(collapseTags).toEqual(expect.arrayContaining([
+      'CHOKE',
+      'TACTICAL_OUTPLAY',
+      'WEAK_MAP',
+      'PLAYER_COLLAPSE',
+      'FATIGUE',
+      'COMMUNICATION_BREAKDOWN',
+    ]))
+
+    const stomp = makeRounds([
+      ...Array.from({ length: 13 }, () => ({ winner: 'US' as const })),
+      ...Array.from({ length: 2 }, () => ({ winner: 'THEM' as const })),
+    ])
+    expect(deriveMapNarrativeTags(stomp, factors)).toContain('STOMP')
   })
 
   it('builds deterministic frame-based tactical playback for every map', () => {

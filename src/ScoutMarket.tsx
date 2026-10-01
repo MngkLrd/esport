@@ -17,8 +17,8 @@ import {
   type ScoutAgeProfile,
   type ScoutBrief,
 } from './game'
-import { PlayerPortrait } from './PlayerPortrait'
-import { cardTier, countryFlag } from './playerVisuals'
+import { cardTier } from './playerVisuals'
+import { PlayerIdentity } from './PlayerIdentity'
 import './ScoutMarket.css'
 import { CollectiblePlayerCard } from './CollectiblePlayerCard'
 
@@ -294,15 +294,18 @@ export function ScoutMarket({
             <button type="button" className="market-negotiation-close" onClick={() => setNegotiating(null)} aria-label="Закрыть">×</button>
 
             <div className="market-negotiation-player">
-              <div className="market-negotiation-photo">
-                <span>{negotiating.alias.slice(0, 3).toUpperCase()}</span>
-                <PlayerPortrait alias={negotiating.alias} playerId={negotiating.profileId} alt={negotiating.alias} loading="eager" />
-              </div>
-              <div>
-                <span className="eyebrow">{countryFlag(negotiating.country)} {negotiating.team} · {ROLE_LABELS[negotiating.role]}</span>
-                <h2 id="negotiation-title">{negotiating.alias}</h2>
-                <p>{negotiating.realName} · OVR {overall(negotiating)} · POT {negotiating.potential}</p>
-              </div>
+              <PlayerIdentity
+                alias={negotiating.alias}
+                realName={negotiating.realName}
+                country={negotiating.country}
+                team={negotiating.team}
+                role={ROLE_LABELS[negotiating.role]}
+                profileId={negotiating.profileId}
+                size="lg"
+                className="market-negotiation-identity"
+                trailing={<span className="market-negotiation-rating"><small>OVR</small><b>{overall(negotiating)}</b><em>POT {negotiating.potential}</em></span>}
+              />
+              <h2 id="negotiation-title" className="market-negotiation-a11y-title">{negotiating.alias}</h2>
             </div>
 
             <div className="market-interest">

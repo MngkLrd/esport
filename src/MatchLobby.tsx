@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { overall, type MatchResult, type Player } from './game'
+import { overall, type MatchNarrativeTag, type MatchResult, type Player } from './game'
 import type { TournamentRosterPlayer } from './tournamentEngine'
 import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
@@ -108,6 +108,67 @@ function AwayPlayerCard({ player }: { player: TournamentRosterPlayer }) {
       </div>
       <div className="match-lobby-player-ovr"><small>OVR</small><b>{player.rating}</b></div>
     </article>
+  )
+}
+
+const STORY_TAG_LABELS: Record<MatchNarrativeTag, string> = {
+  COMEBACK: 'COMEBACK',
+  STOMP: 'STOMP',
+  CHOKE: 'CHOKE',
+  CLUTCH_HEAVY: 'CLUTCH HEAVY',
+  TACTICAL_OUTPLAY: 'TACTICAL OUTPLAY',
+  WEAK_MAP: 'WEAK MAP',
+  PLAYER_COLLAPSE: 'PLAYER COLLAPSE',
+  ANTI_STRAT_SUCCESS: 'ANTI-STRAT',
+  FATIGUE: 'FATIGUE',
+  COMMUNICATION_BREAKDOWN: 'COMMUNICATION',
+}
+
+function MatchStoryPanel({ result }: { result: MatchResult }) {
+  const story = result.story
+  if (!story) return null
+
+  return (
+    <section className="match-story-panel" aria-label="Разбор матча">
+      <header>
+        <div>
+          <span>MATCH STORY</span>
+          <strong>{result.headline}</strong>
+        </div>
+        <div className="match-story-tags">
+          {story.tags.slice(0, 5).map((tag) => <b key={tag}>{STORY_TAG_LABELS[tag]}</b>)}
+          {!story.tags.length && <b>CONTROLLED SERIES</b>}
+        </div>
+      </header>
+
+      <p className="match-story-summary">{story.summary}</p>
+
+      <div className="match-story-maps">
+        {story.maps.map((mapStory, index) => {
+          const score = result.maps[index]
+          return (
+            <article key={mapStory.map + index}>
+              <div className="match-story-map-head">
+                <span>MAP {index + 1}</span>
+                <strong>{mapStory.map}</strong>
+                <b>{score ? score.us + ':' + score.them : '—'}</b>
+              </div>
+              <div className="match-story-map-tags">
+                {mapStory.tags.slice(0, 4).map((tag) => <span key={tag}>{STORY_TAG_LABELS[tag]}</span>)}
+              </div>
+              <p>{mapStory.explanation}</p>
+              <small>{mapStory.turningPoint}</small>
+              <div className="match-story-factors">
+                <span><i style={{ width: mapStory.factors.tactics + '%' }} /><b>TACTICS</b><em>{mapStory.factors.tactics}</em></span>
+                <span><i style={{ width: mapStory.factors.preparation + '%' }} /><b>PREP</b><em>{mapStory.factors.preparation}</em></span>
+                <span><i style={{ width: mapStory.factors.communication + '%' }} /><b>COMMS</b><em>{mapStory.factors.communication}</em></span>
+                <span><i style={{ width: mapStory.factors.fatigue + '%' }} /><b>ENERGY</b><em>{mapStory.factors.fatigue}</em></span>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 
@@ -236,7 +297,7 @@ export function MatchLobby({
             {starters.slice(0, 5).map((player) => <HomePlayerCard key={player.id} player={player} />)}
           </aside>
 
-          <main className="match-lobby-center">
+          <main className={'match-lobby-center' + (phase === 'result' && result.story ? ' is-story' : '')}>
             <div className="match-lobby-veto-head">
               <div>
                 <span>MAP VETO & PICKS</span>
@@ -258,48 +319,55 @@ export function MatchLobby({
               })}
             </div>
 
-            <div className="match-lobby-map-grid">
-              {MAPS.map((map) => {
-                const action = actionByMap.get(map.name)
-                const isFocused = focusedMap === map.name
-                const stateClass = action ? 'is-' + action.type.toLowerCase() : 'is-available'
-                return (
-                  <button
-                    type="button"
-                    key={map.name}
-                    className={'match-lobby-map ' + stateClass + (isFocused ? ' is-focused' : '')}
-                    onClick={() => chooseMap(map)}
-                    disabled={phase === 'prematch' && Boolean(action)}
-                  >
-                    <img src={mapAsset(map.key)} alt="" />
-                    <strong>{map.name}</strong>
-                    <span>
-                      {action
-                        ? action.type === 'DECIDER'
-                          ? 'DECIDER'
-                          : action.type + ' · ' + (action.team === 'HOME' ? 'YOU' : 'OPP')
-                        : phase === 'prematch' && nextStep?.team === 'HOME'
-                          ? 'SELECT'
-                          : 'AVAILABLE'}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="match-lobby-map-detail">
-              <div className="match-lobby-map-preview"><img src={mapAsset(focused.key)} alt="" /></div>
-              <div className="match-lobby-map-copy">
-                <span>TACTICAL OVERVIEW</span>
-                <h2>{focused.name}</h2>
-                <p>{focused.description}</p>
+            {phase === 'result' && result.story ? (
+              <MatchStoryPanel result={result} />
+            ) : (
+              <>
+              <div className="match-lobby-map-grid">
+                {MAPS.map((map) => {
+                  const action = actionByMap.get(map.name)
+                  const isFocused = focusedMap === map.name
+                  const stateClass = action ? 'is-' + action.type.toLowerCase() : 'is-available'
+                  return (
+                    <button
+                      type="button"
+                      key={map.name}
+                      className={'match-lobby-map ' + stateClass + (isFocused ? ' is-focused' : '')}
+                      onClick={() => chooseMap(map)}
+                      disabled={phase === 'prematch' && Boolean(action)}
+                    >
+                      <img src={mapAsset(map.key)} alt="" />
+                      <strong>{map.name}</strong>
+                      <span>
+                        {action
+                          ? action.type === 'DECIDER'
+                            ? 'DECIDER'
+                            : action.type + ' · ' + (action.team === 'HOME' ? 'YOU' : 'OPP')
+                          : phase === 'prematch' && nextStep?.team === 'HOME'
+                            ? 'SELECT'
+                            : 'AVAILABLE'}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-              <div className="match-lobby-map-facts">
-                <span><small>YOUR OVR</small><b>{homeRating}</b></span>
-                <span><small>OPP OVR</small><b>{awayRating}</b></span>
-                <span><small>DELTA</small><b>{homeRating - awayRating > 0 ? '+' : ''}{homeRating - awayRating}</b></span>
+  
+              <div className="match-lobby-map-detail">
+                <div className="match-lobby-map-preview"><img src={mapAsset(focused.key)} alt="" /></div>
+                <div className="match-lobby-map-copy">
+                  <span>TACTICAL OVERVIEW</span>
+                  <h2>{focused.name}</h2>
+                  <p>{focused.description}</p>
+                </div>
+                <div className="match-lobby-map-facts">
+                  <span><small>YOUR OVR</small><b>{homeRating}</b></span>
+                  <span><small>OPP OVR</small><b>{awayRating}</b></span>
+                  <span><small>DELTA</small><b>{homeRating - awayRating > 0 ? '+' : ''}{homeRating - awayRating}</b></span>
+                </div>
               </div>
-            </div>
+  
+              </>
+            )}
 
             <div className="match-lobby-actions">
               {phase === 'prematch' ? (

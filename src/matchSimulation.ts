@@ -619,7 +619,15 @@ export const generateMatchPlayback = (
 ): MatchPlayback => {
   const rounds = result.maps.flatMap((map, mapIndex) => {
     const storyRounds = map.story?.rounds
-    if (!storyRounds?.length) return [makeRound(result, map.map, mapIndex, 0, undefined, starters, tactic)]
+    const finalStoryRound = storyRounds?.at(-1)
+    const storyMatchesScore = Boolean(
+      finalStoryRound &&
+      finalStoryRound.scoreUs === map.us &&
+      finalStoryRound.scoreThem === map.them,
+    )
+    if (!storyRounds?.length || !storyMatchesScore) {
+      return [makeRound(result, map.map, mapIndex, 0, undefined, starters, tactic)]
+    }
     return storyRounds.map((storyRound, roundIndex) =>
       makeRound(result, map.map, mapIndex, roundIndex, storyRound, starters, tactic),
     )

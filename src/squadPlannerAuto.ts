@@ -166,7 +166,8 @@ export const buildAutoPlannerRole = (
   reservedPrimaryKeys: ReadonlySet<string> = new Set(),
 ) => {
   const ranked = rankedForRole(candidates, role, context)
-  const primary = ranked.find((candidate) => !reservedPrimaryKeys.has(candidate.key)) ?? ranked[0]
+    .filter((candidate) => !reservedPrimaryKeys.has(candidate.key))
+  const primary = ranked[0]
   if (!primary) return []
 
   const depth = [primary.key]

@@ -5205,7 +5205,7 @@ body{
   cursor:pointer;
 }
 .sim-planner-slot-actions .icon-action{width:36px}
-.sim-planner-conflict-chip{min-height:28px;font-size:10px}
+.sim-planner-conflict-chip{min-height:36px;font-size:10px}
 .sim-planner-player-meta>span{min-height:26px;font-size:10px}
 .source-chip{min-height:24px;font-size:10px}
 

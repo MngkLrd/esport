@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  advanceCareerTo,
   createInitialState,
   trainPlayer,
   type Player,
@@ -177,5 +178,57 @@ describe('training ground', () => {
     expect(after.clutch).toBe(before.clutch)
     expect(after.leadership).toBe(before.leadership)
     expect(trained.training.development[before.id]?.progress).toBeGreaterThan(0)
+  })
+
+
+  it('mechanics session feeds slow development without farming an instant stat point', () => {
+    const state = baseState()
+    const before = state.roster[0]
+    const scheduledAt = trainingSlotTime(state, 1, 'am')
+    const scheduled = upsertTrainingSession(state, {
+      scheduledAt,
+      type: 'mechanics',
+      intensity: 'normal',
+      focus: 'general',
+      map: null,
+      opponentTeamId: null,
+      opponentName: null,
+    })
+
+    const processed = processTrainingSessionsThrough(scheduled, scheduledAt)
+    const after = processed.roster[0]
+
+    expect(processed.training.development[before.id]?.progress).toBeGreaterThan(0)
+    expect(after.aim).toBe(before.aim)
+    expect(after.gameSense).toBe(before.gameSense)
+    expect(after.utility).toBe(before.utility)
+    expect(after.clutch).toBe(before.clutch)
+    expect(after.leadership).toBe(before.leadership)
+  })
+
+  it('temporary preparation decays over an idle week', () => {
+    const state = baseState()
+    const prepared = {
+      ...state,
+      training: {
+        ...state.training,
+        readiness: 80,
+        tacticalCohesion: 76,
+        sharpness: 78,
+        mapPreparation: { ...state.training.mapPreparation, Nuke: 82 },
+        opponentKnowledge: { enemy: 70 },
+      },
+    }
+    const target = new Date(prepared.now + 'Z')
+    target.setUTCDate(target.getUTCDate() + 7)
+    const iso = target.toISOString().slice(0, 19)
+
+    const advanced = advanceCareerTo(prepared, iso)
+
+    expect(advanced.training.readiness).toBeLessThan(prepared.training.readiness)
+    expect(advanced.training.tacticalCohesion).toBeLessThan(prepared.training.tacticalCohesion)
+    expect(advanced.training.sharpness).toBeLessThan(prepared.training.sharpness)
+    expect(advanced.training.mapPreparation.Nuke).toBeLessThan(prepared.training.mapPreparation.Nuke)
+    expect(advanced.training.opponentKnowledge.enemy).toBeLessThan(prepared.training.opponentKnowledge.enemy)
   })
 })

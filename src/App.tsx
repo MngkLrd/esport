@@ -1125,7 +1125,7 @@ function App() {
           </>
         )}
 
-        {tab === 'World' && <WorldMap state={state} onBook={bookEvent} onPrepareMatch={() => openTab('Play')} focusEventId={worldFocusId} />}
+        {tab === 'World' && <WorldMap state={state} onBook={bookEvent} onPrepareMatch={() => openTab('Play')} focusEventId={worldFocusId} onOpenInbox={() => openTab('Inbox')} />}
 
         {tab === 'Calendar' && (
           <SeasonCalendar

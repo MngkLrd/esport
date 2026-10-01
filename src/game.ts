@@ -5,7 +5,7 @@ import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEv
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
-import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, type TrainingMap, type TrainingState } from './trainingTypes'
+import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -1728,22 +1728,23 @@ export const startNextSeason = (state: GameState): GameState => {
   }
 }
 
-export const trainPlayer = (state: GameState, playerId: string): GameState => {
-  if (state.staffEnergy < 1 || state.credits < 120) return state
-  const training = state.training ?? createTrainingState()
-  const player = state.roster.find((candidate) => candidate.id === playerId)
-  if (!player) return state
-
+export const playerDevelopmentThreshold = (player: Player) => {
   const currentOverall = overall(player)
-  const development = training.development[playerId] ?? { focus: 'balanced' as const, progress: 0 }
   const age = player.age ?? 25
-  const headroom = Math.max(0, player.potential - currentOverall)
-  const ageGain = age <= 21 ? 6 : age <= 24 ? 5 : age <= 27 ? 3 : age <= 30 ? 2 : 1
-  const gain = headroom <= 0 ? 0 : Math.max(1, Math.min(ageGain, Math.ceil(headroom / 4)))
-  const threshold =
+  return (
     (currentOverall < 70 ? 90 : currentOverall < 80 ? 125 : currentOverall < 88 ? 175 : 240) +
     Math.max(0, age - 23) * 8
-  const nextProgress = development.progress + gain
+  )
+}
+
+export const advancePlayerDevelopment = (
+  player: Player,
+  development: PlayerDevelopmentState,
+  gain: number,
+) => {
+  const currentOverall = overall(player)
+  const threshold = playerDevelopmentThreshold(player)
+  const nextProgress = development.progress + Math.max(0, gain)
   const earnsPoint = nextProgress >= threshold && currentOverall < player.potential
 
   const focusKey =
@@ -1763,6 +1764,29 @@ export const trainPlayer = (state: GameState, playerId: string): GameState => {
   const targetKey = focusKey ?? [...skills].sort((a, b) => a[1] - b[1])[0][0]
 
   return {
+    player: earnsPoint ? { ...player, [targetKey]: clamp(player[targetKey] + 1) } : player,
+    development: {
+      ...development,
+      progress: earnsPoint ? nextProgress - threshold : nextProgress,
+    },
+  }
+}
+
+export const trainPlayer = (state: GameState, playerId: string): GameState => {
+  if (state.staffEnergy < 1 || state.credits < 120) return state
+  const training = state.training ?? createTrainingState()
+  const player = state.roster.find((candidate) => candidate.id === playerId)
+  if (!player) return state
+
+  const currentOverall = overall(player)
+  const development = training.development[playerId] ?? { focus: 'balanced' as const, progress: 0 }
+  const age = player.age ?? 25
+  const headroom = Math.max(0, player.potential - currentOverall)
+  const ageGain = age <= 21 ? 6 : age <= 24 ? 5 : age <= 27 ? 3 : age <= 30 ? 2 : 1
+  const gain = headroom <= 0 ? 0 : Math.max(1, Math.min(ageGain, Math.ceil(headroom / 4)))
+  const advanced = advancePlayerDevelopment(player, development, gain)
+
+  return {
     ...state,
     credits: state.credits - 120,
     staffEnergy: state.staffEnergy - 1,
@@ -1771,17 +1795,13 @@ export const trainPlayer = (state: GameState, playerId: string): GameState => {
       sharpness: clamp(training.sharpness + 1),
       development: {
         ...training.development,
-        [playerId]: {
-          ...development,
-          progress: earnsPoint ? nextProgress - threshold : nextProgress,
-        },
+        [playerId]: advanced.development,
       },
     },
     roster: state.roster.map((candidate) =>
       candidate.id === playerId
         ? {
-            ...candidate,
-            [targetKey]: earnsPoint ? clamp(candidate[targetKey] + 1) : candidate[targetKey],
+            ...advanced.player,
             form: clamp(candidate.form + 1),
             morale: clamp(candidate.morale + 1),
             fatigue: clamp(candidate.fatigue + 4),

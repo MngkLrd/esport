@@ -3414,47 +3414,6 @@ body{
 .squad-opt-empty>b{font:1000 9px/1 Arial,sans-serif}
 .squad-opt-empty>small{font:800 8px/1 Arial,sans-serif}
 
-.squad-opt-staff{
-  display:none;
-}
-
-.squad-opt-staff>span{
-  align-self:center;
-  color:#777169;
-  font:900 8px/1 Arial,sans-serif;
-  letter-spacing:.08em;
-}
-
-.squad-opt-staff>div{
-  min-height:0;
-  display:grid;
-  place-items:center;
-  align-content:center;
-  gap:7px;
-  text-align:center;
-  color:#837c74;
-}
-
-.squad-opt-staff>div>b{
-  font:400 28px/1 Arial,sans-serif;
-}
-
-.squad-opt-staff>div>strong{
-  font:1000 8px/1 Arial,sans-serif;
-}
-
-.squad-opt-staff>div>small{
-  color:#69635d;
-  font:800 8px/1 Arial,sans-serif;
-}
-
-.squad-opt-staff>button{
-  border:0;
-  background:rgba(255,255,255,.018);
-  color:#5f5a54;
-  font:900 8px/1 Arial,sans-serif;
-}
-
 .squad-opt-pool{
   display:grid;
   grid-template-rows:52px minmax(0,1fr);

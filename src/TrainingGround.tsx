@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from
 import {
   activeTournamentMatch,
   getStartingFive,
+  playerDevelopmentThreshold,
   teamRating,
   type GameState,
 } from './game'
@@ -19,12 +20,14 @@ import {
   autoPlanTrainingWeek,
   removeTrainingSession,
   scrimOpponentCandidates,
+  setDevelopmentFocus,
   TRAINING_SESSION_DEFS,
   trainingSlotTime,
   upsertTrainingSession,
 } from './trainingSystem'
 import {
   TRAINING_MAPS,
+  type TrainingDevelopmentFocus,
   type TrainingFocus,
   type TrainingIntensity,
   type TrainingMap,
@@ -396,6 +399,39 @@ export function TrainingGround({
                 <div className="training-all-good">План выглядит сбалансированным. Не перегружай состав без причины.</div>
               )}
             </div>
+          </section>
+
+          <section className="training-development">
+            <div className="training-side-head">
+              <div><span>PLAYER DEVELOPMENT</span><strong>Долгосрочный фокус</strong></div>
+            </div>
+            <div className="training-development-list">
+              {starters.map((player) => {
+                const development = training.development[player.id] ?? { focus: 'balanced' as const, progress: 0 }
+                const threshold = playerDevelopmentThreshold(player)
+                const percent = Math.min(100, Math.round(development.progress / Math.max(1, threshold) * 100))
+                return (
+                  <article key={player.id}>
+                    <div>
+                      <b>{player.alias}</b>
+                      <small>{development.progress}/{threshold} · {percent}%</small>
+                    </div>
+                    <i><em style={{ width: percent + '%' }} /></i>
+                    <select
+                      value={development.focus}
+                      onChange={(event) => setState((current) => setDevelopmentFocus(current, player.id, event.target.value as TrainingDevelopmentFocus))}
+                    >
+                      <option value="balanced">BALANCED</option>
+                      <option value="mechanics">MECHANICS</option>
+                      <option value="game-sense">GAME SENSE</option>
+                      <option value="utility">UTILITY</option>
+                      <option value="leadership">LEADERSHIP</option>
+                    </select>
+                  </article>
+                )
+              })}
+            </div>
+            <p>Mechanics-сессии двигают этот прогресс медленно. Постоянный +1 требует десятков тренировок, а не одной кнопки.</p>
           </section>
 
           <section className="training-report">

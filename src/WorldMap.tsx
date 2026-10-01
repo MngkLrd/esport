@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { geoCentroid, geoEqualEarth, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import worldMap from 'world-atlas/countries-110m.json'
-import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState } from './game'
+import { canBookTournament, managerLevelProgress, newsBelongsInInbox, weeklyPayroll, type GameState } from './game'
 import { addGameHours, compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
 import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
 import { worldVrsStandings } from './world'
@@ -110,13 +110,15 @@ export function WorldMap({
   onBook,
   onPrepareMatch,
   focusEventId,
+  onOpenInbox,
 }: {
   state: GameState
   onBook: (eventId: string) => void
   onPrepareMatch: () => void
   focusEventId?: string | null
+  onOpenInbox?: () => void
 }) {
-  const [viewMode, setViewMode] = useState<'map' | 'vrs'>('map')
+  const [viewMode, setViewMode] = useState<'hub' | 'map' | 'vrs'>('hub')
   const [region, setRegion] = useState<'All' | TournamentRegion>('All')
   const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
   const [format, setFormat] = useState<'All' | EventFormat>('All')
@@ -189,6 +191,22 @@ export function WorldMap({
         : booking.ok
           ? 'REGISTRATION OPEN'
           : 'LOCKED'
+
+  const hubNews = state.news.filter(newsBelongsInInbox).slice(0, 7)
+  const hubEvents = [...TOURNAMENTS]
+    .filter((event) => compareGameTime(tournamentEndsAt(event, state.seasonStart), state.now) >= 0)
+    .sort((a, b) => compareGameTime(tournamentStartsAt(a, state.seasonStart), tournamentStartsAt(b, state.seasonStart)))
+    .slice(0, 8)
+  const featuredEvent = active
+    ?? hubEvents.find((event) => canBookTournament(state, event.id).ok)
+    ?? hubEvents[0]
+    ?? TOURNAMENTS[0]
+  const featuredStart = tournamentStartsAt(featuredEvent, state.seasonStart)
+  const featuredEnd = tournamentEndsAt(featuredEvent, state.seasonStart)
+  const featuredGate = canBookTournament(state, featuredEvent.id)
+  const featuredBooked = state.activeEventId === featuredEvent.id
+  const featuredRun = featuredBooked ? state.activeTournament : null
+  const featuredMatch = nextPlayerMatch(featuredRun)
 
   const focusRegion = (nextRegion: 'All' | TournamentRegion) => {
     setRegion(nextRegion)
@@ -273,7 +291,7 @@ export function WorldMap({
       <div className="sim-screen-head sim-world-head">
         <div>
           <span>GLOBAL CIRCUIT · MANAGER LVL {level}</span>
-          <h1>{active ? 'NEXT EVENT' : 'WORLD CIRCUIT'}</h1>
+          <h1>{viewMode === 'hub' ? 'CIRCUIT HUB' : active ? 'NEXT EVENT' : 'WORLD CIRCUIT'}</h1>
         </div>
         <div className="sim-head-stat">
           <small>AVAILABLE</small>
@@ -283,7 +301,8 @@ export function WorldMap({
 
       <div className="sim-world-toolbar">
         <div className="sim-segmented sim-world-tabs" role="tablist" aria-label="Circuit view">
-          <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>WORLD MAP</button>
+          <button className={viewMode === 'hub' ? 'active' : ''} onClick={() => setViewMode('hub')}>OVERVIEW</button>
+          <button className={viewMode === 'map' ? 'active' : ''} onClick={() => setViewMode('map')}>SELECT EVENT</button>
           <button className={viewMode === 'vrs' ? 'active' : ''} onClick={() => setViewMode('vrs')}>VRS RANKING</button>
           <span>{clubVrs ? '#' + clubVrs.rank + ' · ' + clubVrs.points.toLocaleString('ru-RU') + ' VRS' : state.clubVrsPoints + ' VRS'}</span>
         </div>
@@ -315,6 +334,153 @@ export function WorldMap({
           </div>
         </div>
       </div>
+
+      {viewMode === 'hub' && (
+        <section className="world-hub" aria-label="Circuit overview">
+          <aside className="world-hub-panel world-hub-inbox">
+            <header className="world-hub-panel-head">
+              <div><span>CLUB INBOX</span><b>{hubNews.length}</b></div>
+              {onOpenInbox && <button type="button" onClick={onOpenInbox}>ALL →</button>}
+            </header>
+            <div className="world-hub-message-list">
+              {hubNews.map((item, index) => (
+                <article key={item.id} className={item.attention === 'action' ? 'is-action' : ''}>
+                  <span className="world-hub-message-dot">{item.attention === 'action' ? '!' : '•'}</span>
+                  <div>
+                    <small>W{item.week} · {item.kind.toUpperCase()}</small>
+                    <strong>{item.title}</strong>
+                    <p>{item.body}</p>
+                  </div>
+                  <b>{String(index + 1).padStart(2, '0')}</b>
+                </article>
+              ))}
+              {hubNews.length === 0 && <div className="world-hub-empty">Новых клубных сообщений нет.</div>}
+            </div>
+          </aside>
+
+          <main className="world-hub-center">
+            <article className="world-hub-feature">
+              <div className="world-hub-feature-copy">
+                <span>{featuredBooked ? 'ACTIVE EVENT' : 'NEXT OPPORTUNITY'} · T{featuredEvent.circuitTier} · {featuredEvent.format}</span>
+                <h2>{featuredEvent.name}</h2>
+                <p>{featuredEvent.city} · {featuredEvent.region} · {formatGameDateTime(featuredStart)} — {formatGameDateTime(featuredEnd)}</p>
+                <div className="world-hub-feature-meta">
+                  <div><small>PRIZE</small><b>{featuredEvent.prize.toLocaleString('ru-RU')}</b></div>
+                  <div><small>ENTRY</small><b>{featuredEvent.format === 'ONLINE' ? 'FREE' : tournamentEntryCost(featuredEvent) + ' CR.'}</b></div>
+                  <div><small>START</small><b>{humanTimeUntil(state.now, featuredStart)}</b></div>
+                </div>
+              </div>
+              <div className="world-hub-feature-side">
+                <span>{featuredBooked ? 'REGISTERED' : featuredGate.ok ? 'REGISTRATION OPEN' : 'ACCESS CHECK'}</span>
+                <TeamBadge name="YOUR CLUB" size="lg" />
+                <strong>{featuredBooked ? featuredRun?.status.replaceAll('_', ' ').toUpperCase() ?? 'ACTIVE' : 'YOUR CLUB'}</strong>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(featuredEvent.id)
+                      setViewMode('map')
+                    }}
+                  >
+                    {featuredBooked ? 'EVENT DETAILS' : 'SELECT EVENT'} <span>→</span>
+                  </button>
+                  {featuredBooked && <button className="primary" type="button" onClick={onPrepareMatch}>OPEN TOURNAMENT →</button>}
+                </div>
+              </div>
+            </article>
+
+            <div className="world-hub-midgrid">
+              <section className="world-hub-panel world-hub-campaign">
+                <header className="world-hub-panel-head"><div><span>CURRENT CAMPAIGN</span><b>{active ? 'LIVE' : 'OPEN'}</b></div></header>
+                {active ? (
+                  <div className="world-hub-campaign-body">
+                    <div>
+                      <small>EVENT</small>
+                      <strong>{active.name}</strong>
+                      <span>{active.city} · T{active.circuitTier}</span>
+                    </div>
+                    <div>
+                      <small>NEXT CLUB MATCH</small>
+                      <strong>{featuredMatch ? formatGameDateTime(featuredMatch.scheduledAt) : 'BRACKET PENDING'}</strong>
+                      <span>{featuredMatch ? humanTimeUntil(state.now, featuredMatch.scheduledAt) : 'Ожидаем сетку'}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="world-hub-empty-cta" type="button" onClick={() => setViewMode('map')}>
+                    <span>NO ACTIVE EVENT</span>
+                    <strong>Выбрать следующий турнир</strong>
+                    <b>→</b>
+                  </button>
+                )}
+              </section>
+
+              <section className="world-hub-panel world-hub-club">
+                <header className="world-hub-panel-head"><div><span>CLUB SNAPSHOT</span><b>LIVE</b></div></header>
+                <div className="world-hub-club-stats">
+                  <div><small>VRS</small><strong>{clubVrs ? '#' + clubVrs.rank : '—'}</strong><span>{clubVrs?.points.toLocaleString('ru-RU') ?? state.clubVrsPoints} PTS</span></div>
+                  <div><small>RECORD</small><strong>{state.wins}-{state.losses}</strong><span>SEASON {state.season}</span></div>
+                  <div><small>CASH</small><strong>{state.credits.toLocaleString('ru-RU')}</strong><span>PAYROLL {payroll}</span></div>
+                </div>
+              </section>
+            </div>
+
+            <section className="world-hub-panel world-hub-calendar">
+              <header className="world-hub-panel-head">
+                <div><span>EVENT CALENDAR</span><b>{hubEvents.length} UPCOMING</b></div>
+                <button type="button" onClick={() => setViewMode('map')}>SELECT EVENT →</button>
+              </header>
+              <div className="world-hub-calendar-strip">
+                {hubEvents.slice(0, 6).map((event) => {
+                  const start = tournamentStartsAt(event, state.seasonStart)
+                  const isActive = event.id === state.activeEventId
+                  return (
+                    <button key={event.id} type="button" className={isActive ? 'is-active' : ''} onClick={() => { setSelectedId(event.id); setViewMode('map') }}>
+                      <span>{formatGameDateTime(start).split(' · ')[0]}</span>
+                      <strong>{event.name}</strong>
+                      <small>T{event.circuitTier} · {event.format} · {event.city}</small>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          </main>
+
+          <aside className="world-hub-side">
+            <section className="world-hub-panel world-hub-schedule">
+              <header className="world-hub-panel-head"><div><span>EVENT SCHEDULE</span><b>NEXT</b></div></header>
+              <div>
+                {hubEvents.slice(0, 6).map((event) => {
+                  const start = tournamentStartsAt(event, state.seasonStart)
+                  return (
+                    <button key={event.id} type="button" onClick={() => { setSelectedId(event.id); setViewMode('map') }}>
+                      <span>T{event.circuitTier}</span>
+                      <div><strong>{event.name}</strong><small>{formatGameDateTime(start)} · {event.format}</small></div>
+                      <b>→</b>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            <section className="world-hub-panel world-hub-ranking">
+              <header className="world-hub-panel-head">
+                <div><span>VRS STANDINGS</span><b>TOP 8</b></div>
+                <button type="button" onClick={() => setViewMode('vrs')}>FULL →</button>
+              </header>
+              <div>
+                {vrsStandings.slice(0, 8).map((row) => (
+                  <button key={row.teamId} type="button" className={row.isPlayer ? 'is-player' : ''} onClick={() => setSelectedTeamId(row.teamId)}>
+                    <span>{row.rank}</span>
+                    <TeamBadge name={row.name} size="sm" />
+                    <strong>{row.name}</strong>
+                    <b>{row.points.toLocaleString('ru-RU')}</b>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </section>
+      )}
 
       <div className="sim-event-carousel" aria-label="Tournament selector">
         {visible.map((event) => {

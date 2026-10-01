@@ -623,7 +623,7 @@ body{
 .sim-event-group>header{
   min-height:32px;display:flex;align-items:center;justify-content:space-between;
   padding:0 11px;border-bottom:1px solid rgb(var(--ui-line-rgb) / .10);
-  color:#dce5f7;font:900 9px/1 Arial,sans-serif;letter-spacing:.08em
+  color:var(--ui-text);font:900 9px/1 Arial,sans-serif;letter-spacing:.08em
 }
 .sim-event-group>header b{color:#79746d}
 .sim-event-row{
@@ -633,13 +633,13 @@ body{
 }
 .sim-event-row.tier-1{border-left-color:#ff8a5e}.sim-event-row.tier-2{border-left-color:#ad7aff}
 .sim-event-row.active{background:linear-gradient(90deg,rgb(var(--ui-positive-rgb) / .08),transparent 72%)}
-.sim-event-badge{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--sim-line);background:#101831;font:1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
+.sim-event-badge{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--sim-line);background:var(--ui-panel-raised);font:1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-event-main{min-width:0;display:grid;gap:3px}
 .sim-event-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
 .sim-event-main small,.sim-event-main span,.sim-event-main i{color:#8b867e;font-size: 11px;font-style:normal}
 .sim-event-actions{display:grid;gap:5px}
-.sim-event-actions button{min-height:27px;border:1px solid rgb(var(--ui-accent-rgb) / .34);background:transparent;color:#dbe7fa;cursor:pointer;font-size: 11px}
-.sim-event-actions .register{background:rgb(var(--ui-accent-rgb) / .10);color:#fff}
+.sim-event-actions button{min-height:27px;border:1px solid rgb(var(--ui-accent-rgb) / .34);background:transparent;color:var(--ui-muted);cursor:pointer;font-size: 11px}
+.sim-event-actions .register{background:rgb(var(--ui-accent-rgb) / .10);color:var(--ui-text)}
 
 /* MATCHDAY --------------------------------------------------------------- */
 
@@ -2611,7 +2611,7 @@ body{
   display:grid;
   grid-template-columns:310px minmax(0,1fr);
   border:1px solid var(--sim-line-strong);
-  background:rgba(8,13,33,.88);
+  background:rgb(var(--ui-panel-rgb) / .88);
   box-shadow:var(--sim-shadow)
 }
 .sim-profile-overview{
@@ -2619,23 +2619,23 @@ body{
   display:flex;flex-direction:column;justify-content:center;
   padding:30px 26px;
   border-right:1px solid rgb(var(--ui-line-rgb) / .14);
-  background:linear-gradient(160deg,rgba(92,72,220,.18),transparent 52%)
+  background:linear-gradient(160deg,rgb(var(--ui-accent-rgb) / .10),transparent 52%)
 }
 .sim-profile-overview>span{color:var(--sim-cyan);font-size: 12px;font-weight:900}
-.sim-profile-overview>strong{margin:12px 0;color:#fff;font:1000 82px/.78 'Cyril UI','Noto Sans',system-ui,sans-serif}
+.sim-profile-overview>strong{margin:12px 0;color:var(--ui-text);font:1000 82px/.78 'Cyril UI','Noto Sans',system-ui,sans-serif}
 .sim-profile-overview h2{margin:8px 0;font-size:22px}
-.sim-profile-overview p{margin:0;color:#8996b2;font-size: 14px;line-height:1.45}
+.sim-profile-overview p{margin:0;color:var(--ui-muted);font-size: 14px;line-height:1.45}
 .sim-profile-track{min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);align-content:center;padding:28px;overflow:hidden}
-.sim-xp-line{height:8px;background:#202948;overflow:hidden}
-.sim-xp-line i{display:block;height:100%;background:linear-gradient(90deg,var(--sim-violet),var(--sim-cyan))}
+.sim-xp-line{height:8px;background:rgb(var(--ui-line-rgb) / .20);overflow:hidden}
+.sim-xp-line i{display:block;height:100%;background:linear-gradient(90deg,var(--ui-accent-2),var(--ui-accent))}
 .sim-xp-labels{display:flex;justify-content:space-between;margin-top:7px;color:#8b867e;font-size: 12px}
 .sim-milestones{min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:18px;overflow-y:auto}
 .sim-milestones article{min-height:108px;padding:14px;border:1px solid rgb(var(--ui-line-rgb) / .14);background:rgba(255,255,255,.016);opacity:.64}
 .sim-milestones article.complete{opacity:1;border-color:rgb(var(--ui-accent-rgb) / .30);background:rgb(var(--ui-accent-rgb) / .025)}
-.sim-milestones b{color:var(--sim-cyan);font-size: 12px}.sim-milestones strong{display:block;margin:10px 0 6px;font-size:14px}.sim-milestones p{margin:0;color:#7d89a5;font-size: 13px;line-height:1.35}
+.sim-milestones b{color:var(--sim-cyan);font-size: 12px}.sim-milestones strong{display:block;margin:10px 0 6px;font-size:14px}.sim-milestones p{margin:0;color:var(--ui-muted);font-size: 13px;line-height:1.35}
 .sim-profile-stats{
   display:grid;grid-template-columns:repeat(5,1fr);
-  border:1px solid var(--sim-line-strong);background:rgba(9,14,35,.86)
+  border:1px solid var(--sim-line-strong);background:rgb(var(--ui-panel-rgb) / .86)
 }
 .sim-profile-stats>div{display:grid;gap:4px;align-content:center;padding:10px 15px;border-right:1px solid rgb(var(--ui-line-rgb) / .12)}
 .sim-profile-stats>div:last-child{border-right:0}

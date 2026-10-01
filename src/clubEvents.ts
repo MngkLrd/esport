@@ -93,13 +93,18 @@ export const projectEventToNews = (event: ClubEvent) => {
   const requestedId = event.data?.newsId
   const requestedScope = event.data?.newsScope
   const requestedAttention = event.data?.newsAttention
+  const scope: 'club' | 'world' | undefined =
+    requestedScope === 'club' || requestedScope === 'world' ? requestedScope : undefined
+  const attention: 'info' | 'action' | undefined =
+    requestedAttention === 'info' || requestedAttention === 'action' ? requestedAttention : undefined
+
   return {
     id: typeof requestedId === 'string' ? requestedId : 'event-news-' + event.id,
     week: event.week,
     kind: eventNewsKind(event),
     title: event.title,
     body: event.detail,
-    ...(requestedScope === 'club' || requestedScope === 'world' ? { scope: requestedScope } : {}),
-    ...(requestedAttention === 'info' || requestedAttention === 'action' ? { attention: requestedAttention } : {}),
+    ...(scope ? { scope } : {}),
+    ...(attention ? { attention } : {}),
   }
 }

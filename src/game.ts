@@ -2310,21 +2310,43 @@ export const bookTournament = (state: GameState, eventId: string): GameState => 
     tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity),
   )
 
-  return {
+  let next: GameState = {
     ...state,
-    credits: Math.max(0, state.credits - cost),
     activeEventId: event.id,
     activeTournament,
-    news: [{
-      id: 'event-' + event.id + '-' + state.season,
-      week: state.week,
-      kind: 'media' as const,
-      title: event.name + ' подтверждён',
-      body: event.format === 'ONLINE'
-        ? 'Онлайн-регистрация бесплатна. Первый матч появится в турнирной сетке по расписанию.'
-        : 'Поездка подтверждена: ' + cost + ' кр. Первый матч появится в турнирной сетке по расписанию.',
-    }, ...state.news].slice(0, 50),
   }
+
+  if (cost > 0) {
+    next = postClubFinance(next, {
+      id: 'event-cost-' + event.id + '-' + state.season,
+      at: state.now,
+      week: state.week,
+      amount: -cost,
+      account: 'operating',
+      title: event.name + ' entry',
+      description: 'Поездка и сервисные расходы на турнир.',
+      sourceType: 'tournament',
+      sourceId: event.id,
+      eventId: 'event-booked-' + event.id + '-' + state.season,
+    })
+  }
+
+  return recordClubEvent(next, {
+    id: 'event-booked-' + event.id + '-' + state.season,
+    at: state.now,
+    week: state.week,
+    kind: 'tournament',
+    title: event.name + ' подтверждён',
+    detail: event.format === 'ONLINE'
+      ? 'Онлайн-регистрация бесплатна. Первый матч появится в турнирной сетке по расписанию.'
+      : 'Поездка подтверждена: ' + cost + ' кр. Первый матч появится в турнирной сетке по расписанию.',
+    importance: event.circuitTier === 1 ? 80 : event.circuitTier === 2 ? 60 : 45,
+    actorIds: state.roster.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    sourceId: event.id,
+    financeEntryIds: cost > 0 ? ['event-cost-' + event.id + '-' + state.season] : [],
+    data: { eventId: event.id, tier: event.circuitTier, format: event.format },
+  })
 }
 
 export const advanceToNextTournamentMatch = (state: GameState): GameState => {

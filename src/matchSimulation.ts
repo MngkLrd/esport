@@ -586,6 +586,22 @@ const makeRound = (
   const away = awayNames(result)
   const bombHome = homeSide === 'T'
 
+  const oppositeSide: SimSide = homeSide === 'CT' ? 'T' : 'CT'
+  const winnerSide: SimSide = winner === 'HOME' ? homeSide : oppositeSide
+  const loserSide: SimSide = winnerSide === 'CT' ? 'T' : 'CT'
+  const utilityActor = (side: SimSide, index: number) => {
+    const homeActor = side === homeSide
+    return homeActor
+      ? {
+          id: starters[index]?.id ?? starters[0]?.id ?? 'home-0',
+          name: starters[index]?.alias ?? starters[0]?.alias ?? 'HOME',
+        }
+      : {
+          id: 'away-' + Math.min(4, index),
+          name: away[Math.min(4, index)] ?? result.opponent,
+        }
+  }
+
   const utility: SimEvent[] = [
     {
       id: 'smoke-entry',
@@ -621,7 +637,50 @@ const makeRound = (
       y: (site === 'A' ? map.a : map.b)[1] - 14,
     },
   ]
-  const allEvents = [...utility, ...events].sort((a, b) => a.time - b.time)
+
+  const storyUtility: SimEvent[] = []
+  const pushStoryUtility = (
+    id: string,
+    time: number,
+    side: SimSide,
+    utilityType: SimUtility,
+    x: number,
+    y: number,
+    actorIndex: number,
+  ) => {
+    const actor = utilityActor(side, actorIndex)
+    storyUtility.push({
+      id,
+      time,
+      type: 'utility',
+      actorId: actor.id,
+      actorName: actor.name,
+      side,
+      utility: utilityType,
+      x,
+      y,
+    })
+  }
+
+  if (storyRound?.cause === 'ANTI_STRAT') {
+    const entry = site === 'A' ? map.aEntry : map.bEntry
+    const target = site === 'A' ? map.a : map.b
+    pushStoryUtility('story-counter-smoke', 1680, winnerSide, 'smoke', entry[0] - 18, entry[1] + 12, 3)
+    pushStoryUtility('story-counter-flash', 2140, winnerSide, 'flash', target[0] + 12, target[1] - 8, 2)
+  } else if (storyRound?.cause === 'TACTICAL_EDGE') {
+    const target = site === 'A' ? map.a : map.b
+    pushStoryUtility('story-tactical-molly', 1980, winnerSide, 'molotov', target[0] - 32, target[1] + 24, 1)
+    pushStoryUtility('story-tactical-flash', 2660, winnerSide, 'flash', target[0] + 34, target[1] + 10, 2)
+  } else if (storyRound?.cause === 'COMMUNICATION') {
+    const entry = site === 'A' ? map.aEntry : map.bEntry
+    pushStoryUtility('story-late-smoke', 4280, loserSide, 'smoke', entry[0] + 20, entry[1] + 18, 3)
+    pushStoryUtility('story-late-flash', 4720, loserSide, 'flash', entry[0] - 16, entry[1] - 10, 2)
+  } else if (storyRound?.cause === 'FATIGUE') {
+    const target = site === 'A' ? map.a : map.b
+    pushStoryUtility('story-fatigue-molly', 4480, loserSide, 'molotov', target[0] + 26, target[1] + 20, 1)
+  }
+
+  const allEvents = [...utility, ...storyUtility, ...events].sort((a, b) => a.time - b.time)
   const plantEvent = allEvents.find((event) => event.type === 'plant')
   const bombCarrierId = plantEvent?.actorId ?? (bombHome ? starters[0]?.id : 'away-0')
 

@@ -94,7 +94,7 @@ const after = (at: string, days: number) => {
 
 export const snapshotWorldEcology = (world: WorldState, at: string): WorldEcologySnapshot => {
   const ecology = world.ecology
-  const activeTeams = world.teams.filter((team) => team.active !== false)
+  const activeTeams = world.teams.filter((team) => team.active !== false && team.rosterKeys.length >= 5)
   const activePlayers = Object.values(world.players).filter((player) => !player.retiredAt)
   const freePlayers = activePlayers.filter((player) => !player.teamId)
   const operators = ecology ? Object.values(ecology.operators).filter((operator) => operator.active) : []

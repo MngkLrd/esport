@@ -11,6 +11,7 @@ import {
   newsRequiresAction,
   overall,
   playMatch,
+  prepareMatchFixture,
   releasePlayer,
   renewContract,
   restPlayer,
@@ -19,6 +20,7 @@ import {
   trainPlayer,
   weeklyPayroll,
   type GameState,
+  type MatchFixture,
   type MatchMode,
   type MatchResult,
   type Player,
@@ -61,6 +63,26 @@ const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ defau
 
 const saveRepository = createBrowserSaveRepository()
 type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Training' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'
+type PendingMatch =
+  | {
+      sourceState: GameState
+      mode: MatchMode
+      fixture: MatchFixture
+      returnTab: Tab
+      stage: 'lobby'
+      veto: LobbyVetoAction[]
+    }
+  | {
+      sourceState: GameState
+      mode: MatchMode
+      fixture: MatchFixture
+      nextState: GameState
+      result: MatchResult
+      returnTab: Tab
+      stage: 'simulation' | 'result'
+      veto: LobbyVetoAction[]
+    }
+
 
 const TAB_LABELS: Record<Tab, string> = {
   HQ: 'HOME',
@@ -481,15 +503,7 @@ function App() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
-  const [pendingMatch, setPendingMatch] = useState<{
-    sourceState: GameState
-    mode: MatchMode
-    nextState: GameState
-    result: MatchResult
-    returnTab: Tab
-    stage: 'lobby' | 'simulation' | 'result'
-    veto: LobbyVetoAction[]
-  } | null>(null)
+  const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
   const [worldFocusId, setWorldFocusId] = useState<string | null>(null)
   const [tutorialDismissed, setTutorialDismissed] = useState(() =>
     window.localStorage.getItem('eam:tutorial:' + state.saveId) === 'dismissed',
@@ -667,7 +681,7 @@ function App() {
 
   const finishPendingMatch = useCallback(() => {
     setPendingMatch((current) => {
-      if (!current) return null
+      if (!current || current.stage === 'lobby') return current
       setState(current.nextState)
       setTab(current.returnTab)
       return null
@@ -676,11 +690,9 @@ function App() {
 
   const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[], selectedTactic: TacticalPlan) => {
     setPendingMatch((current) => {
-      if (!current) return null
+      if (!current || current.stage !== 'lobby') return current
 
-      // The lobby veto is authoritative. Re-simulate from the untouched pre-match
-      // state so map preparation, causal rounds, scoreline and post-match effects
-      // are all produced from the maps the player actually selected.
+      // The match is resolved for the first time only after veto + tactical choice.
       const resolvedState = playMatch(
         current.sourceState,
         current.mode,
@@ -692,6 +704,7 @@ function App() {
 
       return {
         ...current,
+        fixture: { ...current.fixture, tactic: selectedTactic },
         nextState: resolvedState,
         result: resolvedResult,
         returnTab: current.mode === 'practice' ? 'Training' : resolvedState.activeTournament ? 'Play' : 'HQ',
@@ -702,21 +715,23 @@ function App() {
   }, [])
 
   const completePendingSimulation = useCallback(() => {
-    setPendingMatch((current) => current ? { ...current, stage: 'result' } : null)
+    setPendingMatch((current) =>
+      current && current.stage === 'simulation'
+        ? { ...current, stage: 'result' }
+        : current,
+    )
   }, [])
 
   const play = (mode: MatchMode) => {
     const gate = canPlayMatch(state, mode)
     if (!gate.ok || pendingMatch) return
-    const result = executeGameCommand(state, { type: 'PLAY_MATCH', mode, tactic })
-    const match = result.state.history[0]
-    if (result.state === state || !match) return
+    const fixture = prepareMatchFixture(state, mode, tactic)
+    if (!fixture) return
     setPendingMatch({
       sourceState: state,
       mode,
-      nextState: result.state,
-      result: match,
-      returnTab: mode === 'practice' ? 'Training' : result.state.activeTournament ? 'Play' : 'HQ',
+      fixture,
+      returnTab: mode === 'practice' ? 'Training' : 'Play',
       stage: 'lobby',
       veto: [],
     })
@@ -1103,7 +1118,7 @@ function App() {
 
       {pendingMatch?.stage === 'lobby' && (
         <MatchLobby
-          result={pendingMatch.result}
+          result={pendingMatch.fixture}
           starters={starters}
           phase="prematch"
           onStart={startPendingSeries}

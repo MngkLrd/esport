@@ -427,8 +427,13 @@ export function MatchRadar({
   const [imageReady, setImageReady] = useState(false)
   const [navigationRound, setNavigationRound] = useState<SimRound | null>(null)
   const simulationKey = useMemo(
-    () => result.id + ':' + result.tactic + ':' + starters.map((player) => player.id).join(','),
-    [result.id, result.tactic, starters],
+    () => [
+      result.id,
+      result.tactic,
+      starters.map((player) => player.id).join(','),
+      result.maps.map((map) => map.map + ':' + map.us + '-' + map.them).join('|'),
+    ].join(':'),
+    [result.id, result.maps, result.tactic, starters],
   )
 
   useEffect(() => {

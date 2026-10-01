@@ -18,6 +18,7 @@ import {
   migrateState,
   negotiateProspect,
   playMatch,
+  prepareMatchFixture,
   resolveClubDecision,
   scout,
   startNextSeason,
@@ -431,6 +432,25 @@ describe('P0 career flow', () => {
       ...Array.from({ length: 2 }, () => ({ winner: 'THEM' as const })),
     ])
     expect(deriveMapNarrativeTags(stomp, factors)).toContain('STOMP')
+  })
+
+  it('prepares a fixture without simulating or mutating the match result', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const historyBefore = ready.history
+
+    const fixture = prepareMatchFixture(ready, 'practice', 'balanced')
+    expect(fixture).toBeTruthy()
+    expect(ready.history).toBe(historyBefore)
+    expect(ready.history).toHaveLength(0)
+
+    const resolved = playMatch(ready, 'practice', 'structured', ['Mirage', 'Nuke', 'Ancient'])
+    const result = resolved.history[0]
+    expect(result).toBeTruthy()
+    expect(result.opponent).toBe(fixture?.opponent)
+    expect(result.opponentTeamId).toBe(fixture?.opponentTeamId)
+    expect(result.opponentRoster).toEqual(fixture?.opponentRoster)
+    expect(result.tactic).toBe('structured')
   })
 
   it('uses the vetoed map order as the actual simulation input', () => {

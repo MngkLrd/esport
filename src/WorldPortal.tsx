@@ -290,11 +290,6 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer
 
   const openClubItem = (item: NewsItem) => {
     clubRead.add(item.id)
-    if (item.attention === 'action') {
-      const target = newsTarget(item)
-      if (target) onNavigate(target)
-      return
-    }
     setSelectedStory(null)
     setSelectedClubItem(item)
     setView('article')
@@ -377,7 +372,7 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer
                     </div>
                     <div className="newsroom-inbox-actions">
                       {unread && <button onClick={() => clubRead.add(item.id)}>ПРОЧИТАНО</button>}
-                      {target && <button className="primary" onClick={() => openClubItem(item)}>ОТКРЫТЬ →</button>}
+                      <button className="primary" onClick={() => openClubItem(item)}>ЧИТАТЬ →</button>
                     </div>
                   </article>
                 )
@@ -423,6 +418,13 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer
               <div><small>TYPE</small><b>{selectedStory?.category.toUpperCase() ?? selectedClubItem?.kind.toUpperCase()}</b></div>
               <div><small>STATUS</small><b>{selectedClubItem?.attention === 'action' ? 'ACTION REQUIRED' : 'INFORMATION'}</b></div>
             </section>
+            {selectedClubItem && newsTarget(selectedClubItem) && (
+              <div className="newsroom-article-actions">
+                <button type="button" onClick={() => onNavigate(newsTarget(selectedClubItem)!)}>
+                  {selectedClubItem.attention === 'action' ? 'ПЕРЕЙТИ К РЕШЕНИЮ' : 'ОТКРЫТЬ КОНТЕКСТ'} <span>→</span>
+                </button>
+              </div>
+            )}
           </div>
         </article>
       )}

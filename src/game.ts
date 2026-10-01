@@ -3016,9 +3016,8 @@ export const trainPlayer = (state: GameState, playerId: string): GameState => {
   const gain = headroom <= 0 ? 0 : Math.max(1, Math.min(ageGain, Math.ceil(headroom / 4)))
   const advanced = advancePlayerDevelopment(player, development, gain)
 
-  return {
+  let next: GameState = {
     ...state,
-    credits: state.credits - 120,
     staffEnergy: state.staffEnergy - 1,
     training: {
       ...training,
@@ -3039,6 +3038,31 @@ export const trainPlayer = (state: GameState, playerId: string): GameState => {
         : candidate,
     ),
   }
+  const eventId = 'training-event-' + playerId + '-' + state.now
+  next = postClubFinance(next, {
+    id: 'training-cost-' + playerId + '-' + state.now,
+    at: state.now,
+    week: state.week,
+    amount: -120,
+    account: 'operating',
+    title: 'Индивидуальная тренировка',
+    description: player.alias + ' · развитие игрока.',
+    sourceType: 'training',
+    sourceId: playerId,
+    eventId,
+  })
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'training',
+    title: player.alias + ' проходит индивидуальную тренировку',
+    detail: 'Штаб инвестировал 120 кр. в развитие игрока.',
+    importance: 25,
+    actorIds: [player.playerKey ?? player.id],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    financeEntryIds: ['training-cost-' + playerId + '-' + state.now],
+  }, false)
 }
 
 export const restPlayer = (state: GameState, playerId: string): GameState => {

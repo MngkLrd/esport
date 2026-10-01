@@ -15,6 +15,7 @@ import {
   findTurningPoint,
   lineupFitScore,
   mapStyleFit,
+  matchDurationHoursForRounds,
   migrateState,
   negotiateProspect,
   playMatch,
@@ -323,6 +324,12 @@ describe('P0 career flow', () => {
     const actor = frame.players.find((player) => player.id === kill?.actorId)!
     const target = frame.players.find((player) => player.id === kill?.targetId)!
     expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
+  })
+
+  it('makes long series consume more game-clock time than short series', () => {
+    expect(matchDurationHoursForRounds(26, 2)).toBeLessThan(matchDurationHoursForRounds(70, 3))
+    expect(matchDurationHoursForRounds(26, 2)).toBeGreaterThanOrEqual(1)
+    expect(matchDurationHoursForRounds(90, 3)).toBeLessThanOrEqual(5)
   })
 
   it('gives maps different skill demands instead of treating veto as a label swap', () => {

@@ -7,6 +7,7 @@ import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTourname
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 import { advanceWorldEcology, ensureWorldEcology, worldEventsSince, type WorldHistoryEvent } from './worldEcology'
 import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPreparationModifier, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
+import { cardStatsForAlias } from './cardStats'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -1200,10 +1201,22 @@ const buildOpponentMatchProfile = (
     if (stat === 'clutch') return role === 'AWP' ? 4 : role === 'Rifler' ? 3 : role === 'IGL' ? 2 : 0
     return role === 'IGL' ? 10 : role === 'Support' ? 3 : 0
   }
+  const enrichedPlayers = players.map((player) => ({
+    player,
+    stats: cardStatsForAlias(player.alias, player.role),
+  }))
   const statFromRoster = (stat: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership') =>
     clamp(
-      players.length
-        ? players.reduce((sum, player) => sum + player.rating + roleBoost(player.role, stat), 0) / players.length
+      enrichedPlayers.length
+        ? enrichedPlayers.reduce((sum, entry) => {
+            const { player, stats } = entry
+            if (!stats) return sum + player.rating + roleBoost(player.role, stat)
+            if (stat === 'aim') return sum + stats.aim
+            if (stat === 'sense') return sum + clamp(stats.positioning + roleBoost(player.role, 'sense') * .45)
+            if (stat === 'utility') return sum + stats.utility
+            if (stat === 'clutch') return sum + stats.clutch
+            return sum + clamp(player.rating + roleBoost(player.role, 'leadership'))
+          }, 0) / enrichedPlayers.length
         : averageRating,
     )
 
@@ -1220,12 +1233,13 @@ const buildOpponentMatchProfile = (
   )
   const tactical = clamp(45 + (gameSense - 60) * .42 + (utility - 60) * .3 + (leadership - 60) * .22 + adaptation * 4)
   const preparation = clamp(47 + (gameSense - 65) * .22 + (rng() - .5) * 18 + adaptation * 6)
-  const vulnerable = [...players].sort((a, b) => a.rating - b.rating)[0]
-  const clutchPlayer = [...players].sort((a, b) => {
-    const aBoost = roleBoost(a.role, 'clutch')
-    const bBoost = roleBoost(b.role, 'clutch')
-    return (b.rating + bBoost) - (a.rating + aBoost)
-  })[0]
+  const vulnerable = [...enrichedPlayers].sort((a, b) =>
+    (a.stats?.ovr ?? a.player.rating) - (b.stats?.ovr ?? b.player.rating),
+  )[0]?.player
+  const clutchPlayer = [...enrichedPlayers].sort((a, b) =>
+    (b.stats?.clutch ?? b.player.rating + roleBoost(b.player.role, 'clutch')) -
+    (a.stats?.clutch ?? a.player.rating + roleBoost(a.player.role, 'clutch')),
+  )[0]?.player
 
   return {
     aim,

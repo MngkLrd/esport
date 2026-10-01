@@ -1249,3 +1249,187 @@
 .team-profile-roster-list .player-identity-trailing{
   align-self:center;
 }
+
+
+/* FINAL QUALITY PASS: profile depth, article actions, hierarchy, contrast. */
+.player-profile-form{margin-top:14px}
+.player-profile-form-list{
+  display:grid;
+  gap:0;
+  padding-top:6px;
+}
+.player-profile-form-list>div{
+  min-height:34px;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+  border-bottom:1px solid rgb(var(--ui-line-rgb) / .07);
+}
+.player-profile-form-list>div>span{
+  width:24px;
+  height:20px;
+  display:grid;
+  place-items:center;
+  background:rgb(255 255 255 / .025);
+  color:var(--ui-muted);
+  font:1000 8px/1 Arial,sans-serif;
+}
+.player-profile-form-list>div>span.win{color:var(--ui-positive)}
+.player-profile-form-list>div>span.loss{color:var(--ui-danger)}
+.player-profile-form-list strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--ui-text);
+  font:900 10px/1 Arial,sans-serif;
+}
+.player-profile-form-list b{
+  color:var(--ui-text);
+  font:1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.player-profile-form-list>small{
+  padding:12px 0;
+  color:var(--ui-muted);
+  font:800 9px/1.4 Arial,sans-serif;
+}
+
+.newsroom-article-actions{
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px solid rgb(var(--ui-line-rgb) / .09);
+}
+.newsroom-article-actions>button{
+  min-width:220px;
+  min-height:40px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:0 12px;
+  border:1px solid rgb(var(--ui-accent-rgb) / .36);
+  background:rgb(var(--ui-accent-rgb) / .08);
+  color:var(--ui-text);
+  cursor:pointer;
+  font:900 9px/1 Arial,sans-serif;
+}
+.newsroom-article-actions>button:hover{
+  border-color:var(--ui-accent);
+  background:rgb(var(--ui-accent-rgb) / .13);
+}
+
+:where(.sim-screen,.training-ground,.newsroom,.match-lobby-shell,.match-radar-shell,.player-profile-v2,.team-profile)
+  :where(button,[role="button"]):disabled{
+  color:var(--ui-muted)!important;
+  text-shadow:none!important;
+}
+:where(.sim-screen,.training-ground,.newsroom,.match-lobby-shell,.match-radar-shell,.player-profile-v2,.team-profile)
+  :where(button,[role="button"]):hover:not(:disabled){
+  color:var(--ui-text);
+}
+:where(.sim-screen,.training-ground,.newsroom,.match-lobby-shell,.match-radar-shell,.player-profile-v2,.team-profile)
+  :where(button,[role="button"]).active,
+:where(.sim-screen,.training-ground,.newsroom,.match-lobby-shell,.match-radar-shell,.player-profile-v2,.team-profile)
+  :where(button,[role="button"]).selected,
+:where(.sim-screen,.training-ground,.newsroom,.match-lobby-shell,.match-radar-shell,.player-profile-v2,.team-profile)
+  :where(button,[role="button"]).is-active{
+  color:var(--ui-text);
+}
+
+/* Game-screen hierarchy: strong primary action, quieter secondary information. */
+.fifa-mode-grid .fifa-mode-hero{
+  box-shadow:inset 0 0 0 1px rgb(var(--ui-accent-rgb) / .16),0 18px 42px rgb(0 0 0 / .18);
+}
+.fifa-mode-grid .fifa-mode-tile:not(.fifa-mode-hero){
+  box-shadow:none;
+}
+.sim-match-launch .sim-primary-action,
+.pack-spin-launch .pack-spin-button{
+  min-height:46px!important;
+  font-size:11px!important;
+}
+.sim-match-format,
+.sim-match-recap,
+.sim-world-filters,
+.sim-subnav,
+.sim-segmented{
+  box-shadow:none!important;
+}
+
+/* Cards are vertical assets, never layout fillers. */
+.visual-player-card.collectible-player-card{
+  width:100%;
+  aspect-ratio:5 / 7!important;
+  height:auto!important;
+  min-height:0!important;
+  align-self:start!important;
+}
+.collection-card-shell,
+.pack-reel-card.shared-card-reel,
+.squad-opt-starter-card,
+.squad-opt-pool-card{
+  aspect-ratio:5 / 7;
+  align-self:start;
+}
+
+/* Desktop pages behave as game views: only data regions scroll. */
+@media (min-width:901px){
+  .app-main,
+  .app-main>.sim-screen,
+  .app-main>.training-ground,
+  .app-main>.newsroom{
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  .sim-schedule-scroll,
+  .vrs-table-scroll,
+  .sim-collection-scroll,
+  .sim-market-body,
+  .newsroom-feed,
+  .newsroom-inbox-list,
+  .newsroom-editorial,
+  .match-story-panel,
+  .player-profile-body>main,
+  .player-profile-body>aside,
+  .team-profile-main,
+  .team-profile-side{
+    min-height:0;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+  }
+}
+
+/* Responsive profiles retain hierarchy without page scrolling. */
+@media (max-width:900px){
+  .player-profile-backdrop,.team-profile-backdrop{padding:8px}
+  .player-profile-v2{
+    width:100%;
+    max-height:96vh;
+    grid-template-rows:190px minmax(0,1fr);
+  }
+  .player-profile-head{
+    grid-template-columns:150px minmax(0,1fr) 86px;
+    padding:12px 48px 0 10px;
+  }
+  .player-profile-portrait{height:175px}
+  .player-profile-identity h2{font-size:30px}
+  .player-profile-rating strong{font-size:45px}
+  .player-profile-body{grid-template-columns:1fr}
+  .player-profile-body>aside{border-left:0;border-top:1px solid rgb(var(--ui-line-rgb) / .10)}
+  .team-profile{
+    width:100%;
+    height:96vh;
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .team-profile-head{
+    grid-template-columns:54px minmax(0,1fr);
+    padding:14px 48px 14px 12px;
+  }
+  .team-profile-kpis{grid-column:1 / -1;gap:10px}
+  .team-profile-body{grid-template-columns:1fr}
+  .team-profile-side{border-left:0;border-top:1px solid rgb(var(--ui-line-rgb) / .10)}
+  .team-profile-roster-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .newsroom-article-page{grid-template-columns:1fr;grid-template-rows:46px 220px minmax(0,1fr)}
+  .newsroom-article-head{grid-column:1}
+}

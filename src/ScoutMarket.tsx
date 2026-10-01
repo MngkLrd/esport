@@ -3,6 +3,7 @@ import {
   DEFAULT_SCOUT_BRIEF,
   LINEUP_SLOTS,
   SCOUT_REPORT_COST,
+  beginTransferCase,
   defaultNegotiationTerms,
   evaluateNegotiation,
   negotiateProspect,
@@ -136,6 +137,7 @@ export function ScoutMarket({
   )
 
   const openNegotiation = (player: Player) => {
+    setState((current) => beginTransferCase(current, player.id))
     setNegotiating(player)
     setTerms(defaultNegotiationTerms(player))
     setFeedback(null)
@@ -164,12 +166,17 @@ export function ScoutMarket({
 
   const submitOffer = () => {
     if (!negotiating || !terms || !evaluation) return
-    if (!evaluation.accepted) {
-      setFeedback(evaluation.reason)
+    const playerId = negotiating.id
+    let outcome = evaluation
+    setState((current) => {
+      const result = negotiateProspect(current, playerId, terms)
+      outcome = result.evaluation
+      return result.state
+    })
+    if (!outcome.accepted) {
+      setFeedback(outcome.reason)
       return
     }
-    const playerId = negotiating.id
-    setState((current) => negotiateProspect(current, playerId, terms).state)
     setNegotiating(null)
     setTerms(null)
     setFeedback(null)

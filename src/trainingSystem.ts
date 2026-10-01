@@ -1,5 +1,6 @@
 import {
   activeTournamentMatch,
+  advancePlayerDevelopment,
   getStartingFive,
   teamRating,
   type GameState,
@@ -375,14 +376,25 @@ const applySession = (state: GameState, session: TrainingSession): GameState => 
   if (opponentKey) nextKnowledge[opponentKey] = clamp((nextKnowledge[opponentKey] ?? 0) + knowledgeDelta)
 
   const activeIds = new Set(state.startingFive)
-  const nextRoster = state.roster.map((player) => activeIds.has(player.id)
-    ? {
-        ...player,
-        fatigue: clamp(player.fatigue + fatigueDelta * multiplier),
-        form: clamp(player.form + (session.type === 'scrim' || session.type === 'mechanics' ? 1 : 0)),
-        morale: clamp(player.morale + (session.type === 'team' ? 1 : 0)),
-      }
-    : player)
+  const nextDevelopment = { ...state.training.development }
+  const nextRoster = state.roster.map((player) => {
+    if (!activeIds.has(player.id)) return player
+
+    let developed = player
+    if (session.type === 'mechanics') {
+      const development = nextDevelopment[player.id] ?? { focus: 'balanced' as const, progress: 0 }
+      const advanced = advancePlayerDevelopment(player, development, Math.max(1, Math.round(2 * multiplier)))
+      developed = advanced.player
+      nextDevelopment[player.id] = advanced.development
+    }
+
+    return {
+      ...developed,
+      fatigue: clamp(developed.fatigue + fatigueDelta * multiplier),
+      form: clamp(developed.form + (session.type === 'scrim' || session.type === 'mechanics' ? 1 : 0)),
+      morale: clamp(developed.morale + (session.type === 'team' ? 1 : 0)),
+    }
+  })
 
   const sessions = state.training.sessions.map((item) =>
     item.id === session.id ? { ...item, status: 'completed' as const, reportId } : item,
@@ -400,6 +412,7 @@ const applySession = (state: GameState, session: TrainingSession): GameState => 
       mapPreparation: nextMapPreparation,
       opponentKnowledge: nextKnowledge,
       sessions,
+      development: nextDevelopment,
       reports: report ? [report, ...state.training.reports].slice(0, 40) : state.training.reports,
     },
   }

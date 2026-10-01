@@ -51,6 +51,20 @@ export const careerTimeline = (events: ClubEvent[], limit = 80) =>
 export const matchHistoryEvents = (events: ClubEvent[]) =>
   eventsByKind(events, 'match')
 
+export const matchHistoryFromEvents = <T,>(events: ClubEvent[]): T[] =>
+  careerTimeline(events, 600)
+    .filter((event) => event.kind === 'match' && event.data?.matchSnapshot)
+    .map((event) => event.data?.matchSnapshot as T)
+
+export const vrsDeltaFromEvents = (events: ClubEvent[]) =>
+  events.reduce((sum, event) => {
+    const value = event.data?.vrsDelta
+    return sum + (typeof value === 'number' ? value : 0)
+  }, 0)
+
+export const clubVrsFromEvents = (events: ClubEvent[], openingPoints = 720) =>
+  Math.max(0, Math.round(openingPoints + vrsDeltaFromEvents(events)))
+
 export const normalizeClubEvents = (raw: unknown): ClubEvent[] => {
   if (!Array.isArray(raw)) return []
   return raw

@@ -524,11 +524,16 @@ export const constrainRoundToNavigation = (
     : undefined
   const causalAsActor = round.cause === 'CLUTCH'
   const causalAsTarget = round.cause === 'PLAYER_ERROR' || round.cause === 'FATIGUE'
+  let lastResolvedKillTime = -100
 
   for (const event of round.events) {
     if (event.type !== 'kill' || !event.actorId || !event.targetId) continue
+    const minimumKillTime = lastResolvedKillTime + 100
     const nearbyFrames = frames
-      .filter((frame) => Math.abs(frame.time - event.time) <= 1200)
+      .filter((frame) =>
+        Math.abs(frame.time - event.time) <= 1200 &&
+        frame.time >= minimumKillTime,
+      )
       .sort((a, b) => Math.abs(a.time - event.time) - Math.abs(b.time - event.time))
     const clearFrame = nearbyFrames.find((frame) => {
       const actor = frame.players.find((player) => player.id === event.actorId)
@@ -546,16 +551,19 @@ export const constrainRoundToNavigation = (
       )
     })
     const key = pairKey(event.actorId, event.targetId)
-    if (clearFrame) {
-      clearCombatTimeByPair.set(key, clearFrame.time)
-      continue
-    }
-
     const isCriticalPair = Boolean(
       causalPlayer &&
       ((causalAsActor && event.actorId === causalPlayer.id) ||
        (causalAsTarget && event.targetId === causalPlayer.id)),
     )
+    if (clearFrame) {
+      clearCombatTimeByPair.set(key, clearFrame.time)
+      lastResolvedKillTime = clearFrame.time
+      if (isCriticalPair) {
+        usedCausalCounterparts.add(causalAsActor ? event.targetId : event.actorId)
+      }
+      continue
+    }
     if (!isCriticalPair || !causalPlayer) {
       blockedCombatPairs.add(key)
       continue
@@ -608,6 +616,7 @@ export const constrainRoundToNavigation = (
         }
     causalPairRemap.set(key, remap)
     clearCombatTimeByPair.set(key, remap.time)
+    lastResolvedKillTime = remap.time
   }
 
   const navigatedEvents = round.events

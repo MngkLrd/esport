@@ -52,6 +52,7 @@ import { metadataForAlias } from './playerMetadata'
 import { careerObjectives, completedCareerObjectiveIds, onboardingStep } from './progression'
 import { TimeProgressionOverlay, type TimeProgressionSession, type TimeProgressionSpeed, type TimeProgressionStop } from './TimeProgression'
 import { TrainingGround } from './TrainingGround'
+import { TeamBadge } from './TeamBadge'
 import { WorldPortal } from './WorldPortal'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 
@@ -329,27 +330,97 @@ function PlayerCard({
   )
 }
 
-function PlayerProfileModal({ player, onClose }: { player: Player; onClose: () => void }) {
+function PlayerProfileModal({
+  player,
+  state,
+  setState,
+  onClose,
+}: {
+  player: Player
+  state: GameState
+  setState: Dispatch<SetStateAction<GameState>>
+  onClose: () => void
+}) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const rating = overall(player)
+  const expiring = player.contractWeeks <= 4
+  const statRows = [
+    ['AIM', player.aim],
+    ['GAME SENSE', player.gameSense],
+    ['UTILITY', player.utility],
+    ['CLUTCH', player.clutch],
+    ['LEADERSHIP', player.leadership],
+    ['POTENTIAL', player.potential],
+  ] as const
+
   return (
-    <div className="card-detail-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="card-detail-modal player-profile-modal" role="dialog" aria-modal="true" aria-label={'Профиль ' + player.alias} onMouseDown={(event) => event.stopPropagation()}>
-        <button className="card-detail-close" onClick={onClose} aria-label="Закрыть">×</button>
-        <div className="card-detail-hero">
-          <div className="card-detail-rating"><strong>{overall(player)}</strong><span>{ROLE_LABELS[player.role]}</span></div>
-          <div className="card-detail-portrait"><span>{player.alias.slice(0, 3).toUpperCase()}</span><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="eager" /></div>
-          <div className="card-detail-name"><h2>{player.alias}</h2><p>{player.realName}</p></div>
-        </div>
-        <div className="card-detail-content">
-          <div className="card-detail-kicker">ТЕКУЩЕЕ СОСТОЯНИЕ КЛУБА</div>
-          <h3>{countryFlag(player.country)} {player.team}</h3>
-          <div className="card-detail-facts"><span><b>Форма</b>{player.form}</span><span><b>Мораль</b>{player.morale}</span><span><b>Усталость</b>{player.fatigue}</span><span><b>Контракт</b>{player.contractWeeks} нед.</span><span><b>Зарплата</b>{player.salary} кр./нед.</span><span><b>Потенциал</b>{player.potential}</span></div>
-          <div className="card-detail-section-title">Базовые характеристики</div>
-          <div className="card-detail-scores"><span><b>{player.aim}</b>АИМ</span><span><b>{player.utility}</b>УТИЛИТИ</span><span><b>{player.gameSense}</b>ПОЗИЦИЯ</span><span><b>{player.clutch}</b>КЛАТЧ</span></div>
+    <div className="player-profile-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="player-profile-v2" role="dialog" aria-modal="true" aria-label={'Профиль ' + player.alias} onMouseDown={(event) => event.stopPropagation()}>
+        <button className="player-profile-close" onClick={onClose} aria-label="Закрыть">×</button>
+
+        <header className="player-profile-head">
+          <div className="player-profile-portrait">
+            <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="eager" />
+          </div>
+          <div className="player-profile-identity">
+            <span>{countryFlag(player.country)} {player.country} · {ROLE_LABELS[player.role]}</span>
+            <h2>{player.alias}</h2>
+            <p>{player.realName}</p>
+            <div className="player-profile-team">
+              <TeamBadge name={player.team} size="sm" />
+              <span><small>TEAM</small><b>{player.team}</b></span>
+            </div>
+          </div>
+          <div className="player-profile-rating">
+            <span>OVERALL</span>
+            <strong>{rating}</strong>
+            <small>POT {player.potential}</small>
+          </div>
+        </header>
+
+        <div className="player-profile-body">
+          <main>
+            <section className="player-profile-state">
+              <div><small>FORM</small><b>{player.form}</b><i><em style={{ width: player.form + '%' }} /></i></div>
+              <div><small>MORALE</small><b>{player.morale}</b><i><em style={{ width: player.morale + '%' }} /></i></div>
+              <div className={player.fatigue >= 65 ? 'risk' : ''}><small>FATIGUE</small><b>{player.fatigue}</b><i><em style={{ width: player.fatigue + '%' }} /></i></div>
+            </section>
+
+            <section className="player-profile-stats">
+              <div className="player-profile-section-head"><span>PLAYER ATTRIBUTES</span><b>CORE</b></div>
+              <div className="player-profile-stat-grid">
+                {statRows.map(([label, value]) => (
+                  <div key={label}><small>{label}</small><b>{value}</b><i><em style={{ width: value + '%' }} /></i></div>
+                ))}
+              </div>
+            </section>
+
+            <section className="player-profile-traits">
+              <div className="player-profile-section-head"><span>ROLE & TRAITS</span><b>{ROLE_LABELS[player.role]}</b></div>
+              <div>{player.traits.length ? player.traits.map((trait) => <span key={trait}>{trait}</span>) : <small>Нет выраженных traits.</small>}</div>
+            </section>
+          </main>
+
+          <aside>
+            <section className="player-profile-contract">
+              <div className="player-profile-section-head"><span>CONTRACT</span><b className={expiring ? 'risk' : ''}>{expiring ? 'ATTENTION' : 'ACTIVE'}</b></div>
+              <div><small>REMAINING</small><strong className={expiring ? 'risk' : ''}>{player.contractWeeks} weeks</strong></div>
+              <div><small>SALARY</small><strong>{player.salary.toLocaleString('ru-RU')} cr./week</strong></div>
+            </section>
+
+            <section className="player-profile-actions">
+              <div className="player-profile-section-head"><span>CLUB ACTIONS</span><b>MANAGE</b></div>
+              <button onClick={() => setState((current) => renewContract(current, player.id))} disabled={state.credits < player.salary * 4}>RENEW CONTRACT <span>→</span></button>
+              <button onClick={() => setState((current) => restPlayer(current, player.id))} disabled={state.staffEnergy < 1}>RECOVERY</button>
+              <button onClick={() => setState((current) => trainPlayer(current, player.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>DEVELOPMENT FOCUS</button>
+              <button className="danger" onClick={() => { setState((current) => releasePlayer(current, player.id)); onClose() }} disabled={state.roster.length <= 5 || state.credits < player.salary}>RELEASE PLAYER</button>
+            </section>
+          </aside>
         </div>
       </section>
     </div>
@@ -820,7 +891,7 @@ function App() {
         </div>
       )}
       {selectedCard && <Suspense fallback={null}><CardDetails card={selectedCard} onClose={() => setSelectedCard(null)} /></Suspense>}
-      {selectedPlayer && <PlayerProfileModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
+      {selectedPlayer && <PlayerProfileModal player={selectedPlayer} state={state} setState={setState} onClose={() => setSelectedPlayer(null)} />}
       {transition && (
         <div className="fifa-title-transition" aria-hidden="true">
           <div><span>ESPORT AI MANAGER</span><strong>{transition.title}</strong><i /></div>

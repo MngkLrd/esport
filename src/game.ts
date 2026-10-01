@@ -5,6 +5,7 @@ import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEv
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { createTrainingState, normalizeTrainingState, type TrainingState } from './trainingTypes'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -187,6 +188,7 @@ export interface GameState {
   scoutCycle: number
   scoutBrief: ScoutBrief
   squadPlanner: SquadPlannerState
+  training: TrainingState
   history: MatchResult[]
   news: NewsItem[]
   lastPayroll: number
@@ -514,6 +516,7 @@ export const createInitialState = (): GameState => ({
   scoutCycle: 0,
   scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
   squadPlanner: createSquadPlannerState(),
+  training: createTrainingState(),
   history: [],
   news: [
     {
@@ -699,6 +702,7 @@ export const migrateState = (raw: unknown): GameState => {
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
       squadPlanner: normalizeSquadPlanner(parsed.squadPlanner),
+      training: normalizeTrainingState(parsed.training),
       packs,
     }
   }
@@ -729,6 +733,7 @@ export const migrateState = (raw: unknown): GameState => {
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
       squadPlanner: normalizeSquadPlanner(parsed.squadPlanner),
+      training: normalizeTrainingState(parsed.training),
       packs,
     } as GameState
   }
@@ -784,6 +789,7 @@ export const migrateState = (raw: unknown): GameState => {
       lineupSlots: normalizeLineupSlots(roster, startingFive, null),
       scoutBrief: { ...DEFAULT_SCOUT_BRIEF },
       squadPlanner: createSquadPlannerState(),
+      training: createTrainingState(),
       packTokens: 2600,
       managerXp: 0,
       clubVrsPoints: 720,
@@ -828,6 +834,7 @@ export const migrateState = (raw: unknown): GameState => {
       version: 12,
       saveId: createSaveId(),
       squadPlanner: createSquadPlannerState(),
+      training: createTrainingState(),
       welcomeComplete: true,
       season: 1,
       seasonStart: INITIAL_SEASON_START,

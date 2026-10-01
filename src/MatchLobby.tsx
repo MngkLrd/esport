@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react'
-import { overall, type MatchNarrativeTag, type MatchResult, type Player } from './game'
+import {
+  lineupMapStyleFit,
+  opponentRosterMapStyleFit,
+  overall,
+  type MatchNarrativeTag,
+  type MatchResult,
+  type Player,
+} from './game'
 import type { TournamentRosterPlayer } from './tournamentEngine'
 import { metadataForAlias } from './playerMetadata'
 import { cardStatsForAlias } from './cardStats'
@@ -45,6 +52,8 @@ const hashSeed = (input: string) => {
   }
   return hash >>> 0
 }
+
+const candidateTieKey = (map: string) => map.toLocaleLowerCase('en-US').replace(/[^a-z0-9]/g, '')
 
 const mapAsset = (key: string) => '/esport/maps/' + key + '.png'
 
@@ -235,7 +244,21 @@ export function MatchLobby({
 
       const map = expected.type === 'DECIDER'
         ? remaining[0]
-        : remaining[hashSeed(result.id + ':' + next.length + ':' + result.opponent) % remaining.length]
+        : expected.team === 'AWAY'
+          ? [...remaining].sort((a, b) => {
+              const score = (candidate: LobbyMap) =>
+                opponentRosterMapStyleFit(rivals, result.opponentRating, candidate.name) -
+                lineupMapStyleFit(starters, candidate.name)
+              const delta = score(a) - score(b)
+              if (Math.abs(delta) > .001) {
+                return expected.type === 'PICK' ? -delta : delta
+              }
+              return (
+                hashSeed(result.id + ':' + candidateTieKey(a.name) + ':' + next.length) -
+                hashSeed(result.id + ':' + candidateTieKey(b.name) + ':' + next.length)
+              )
+            })[0]
+          : remaining[hashSeed(result.id + ':' + next.length + ':' + result.opponent) % remaining.length]
 
       next.push({
         step: next.length,

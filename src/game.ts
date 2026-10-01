@@ -1975,9 +1975,20 @@ export const resolveClubDecision = (state: GameState, choice: 'a' | 'b'): GameSt
     if (choice === 'a') {
       next = {
         ...next,
-        credits: Math.max(0, next.credits - 120),
         roster: next.roster.map((player) => ({ ...player, fatigue: clamp(player.fatigue - 12), morale: clamp(player.morale + 2) })),
       }
+      next = postClubFinance(next, {
+        id: 'recovery-' + decision.id,
+        at: state.now,
+        week: state.week,
+        amount: -120,
+        account: 'operating',
+        title: 'Восстановительный блок',
+        description: 'Расходы штаба на восстановление состава.',
+        sourceType: 'training',
+        sourceId: decision.id,
+        eventId: 'decision-event-' + decision.id,
+      })
       result = 'Клуб оплатил восстановительный блок. Усталость состава снизилась.'
     } else {
       next = {
@@ -1989,7 +2000,19 @@ export const resolveClubDecision = (state: GameState, choice: 'a' | 'b'): GameSt
     }
   } else if (decision.kind === 'sponsor') {
     if (choice === 'a') {
-      next = { ...next, credits: next.credits + 450, fans: next.fans + 40 }
+      next = { ...next, fans: next.fans + 40 }
+      next = postClubFinance(next, {
+        id: 'sponsor-' + decision.id,
+        at: state.now,
+        week: state.week,
+        amount: 450,
+        account: 'sponsor',
+        title: 'Спонсорская активация',
+        description: 'Доход за медиа-активацию партнёра.',
+        sourceType: 'sponsor',
+        sourceId: decision.id,
+        eventId: 'decision-event-' + decision.id,
+      })
       result = 'Активация принесла 450 кр. и дополнительный охват.'
     } else {
       next = { ...next, reputation: clamp(next.reputation + 2), managerXp: next.managerXp + 25 }
@@ -2011,16 +2034,23 @@ export const resolveClubDecision = (state: GameState, choice: 'a' | 'b'): GameSt
     result = 'Жёсткая позиция повысила ожидания вокруг клуба, но добавила давления игрокам.'
   }
 
-  return {
-    ...next,
-    news: [{
-      id: 'resolved-' + decision.id,
-      week: state.week,
-      kind: decision.kind === 'sponsor' ? 'finance' as const : 'media' as const,
-      title: decision.title,
-      body: result,
-    }, ...state.news].slice(0, 50),
-  }
+  return recordClubEvent(next, {
+    id: 'decision-event-' + decision.id,
+    at: state.now,
+    week: state.week,
+    kind: decision.kind === 'sponsor' ? 'finance' : 'media',
+    title: decision.title,
+    detail: result,
+    importance: decision.kind === 'sponsor' ? 55 : 35,
+    actorIds: state.roster.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    sourceId: decision.id,
+    financeEntryIds: decision.kind === 'sponsor' && choice === 'a'
+      ? ['sponsor-' + decision.id]
+      : decision.kind === 'recovery' && choice === 'a'
+        ? ['recovery-' + decision.id]
+        : [],
+  })
 }
 
 export const activeTournamentMatch = (state: GameState) => {

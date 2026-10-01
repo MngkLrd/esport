@@ -89,10 +89,17 @@ export const eventNewsKind = (event: ClubEvent) => {
   return 'media' as const
 }
 
-export const projectEventToNews = (event: ClubEvent) => ({
-  id: 'event-news-' + event.id,
-  week: event.week,
-  kind: eventNewsKind(event),
-  title: event.title,
-  body: event.detail,
-})
+export const projectEventToNews = (event: ClubEvent) => {
+  const requestedId = event.data?.newsId
+  const requestedScope = event.data?.newsScope
+  const requestedAttention = event.data?.newsAttention
+  return {
+    id: typeof requestedId === 'string' ? requestedId : 'event-news-' + event.id,
+    week: event.week,
+    kind: eventNewsKind(event),
+    title: event.title,
+    body: event.detail,
+    ...(requestedScope === 'club' || requestedScope === 'world' ? { scope: requestedScope } : {}),
+    ...(requestedAttention === 'info' || requestedAttention === 'action' ? { attention: requestedAttention } : {}),
+  }
+}

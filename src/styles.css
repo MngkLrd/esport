@@ -2590,7 +2590,7 @@ button.secondary { border-color: #4a5662; background: transparent; }
 }
 .visual-live-state b {
   color: var(--card-text);
-  font-size: 10px;
+  font-size: 12px;
 }
 .visual-live-state span.danger b {
   color: #ff9d77;
@@ -5621,7 +5621,7 @@ button.primary:hover,
   padding-top: 9px;
 }
 .world-event-panel-v2 .world-budget-preview strong { font-size: 17px; }
-.world-event-panel-v2 .world-budget-preview small { font-size: 10px; }
+.world-event-panel-v2 .world-budget-preview small { font-size: 12px; }
 .world-event-panel-v2 .fifa-primary-cta {
   min-height: 38px;
   font-size: 12px;
@@ -5653,7 +5653,7 @@ button.primary:hover,
   font-size: clamp(19px, 2vw, 28px);
 }
 .tournament-hub-compact .tournament-hero p {
-  font-size: 10px;
+  font-size: 12px;
 }
 .tournament-hub-compact .tournament-status { display: none; }
 .tournament-hub-compact .tournament-next-match {
@@ -6529,7 +6529,7 @@ button.primary:hover,
 .calendar-event-main { min-width: 0; display: grid; gap: 3px; }
 .calendar-event-main small, .calendar-event-main span, .calendar-event-main i { color: #74809d; font: 800 8px/1.15 Arial,sans-serif; font-style: normal; }
 .calendar-event-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eee9df; font: 1000 14px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif; }
-.calendar-event-main i { color: #56627f; font-size: 10px; }
+.calendar-event-main i { color: #56627f; font-size: 12px; }
 .calendar-event-actions { display: grid; gap: 5px; }
 .calendar-event-actions > b { color: var(--fifa-cyan); font: 1000 7px/1 Arial,sans-serif; letter-spacing: .08em; }
 .calendar-event-actions button { min-height: 27px; border: 1px solid rgb(var(--ui-accent-rgb) / .42); background: transparent; color: #dceaff; cursor: pointer; font: 1000 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
@@ -7175,7 +7175,7 @@ button.primary:hover,
   }
 
   .app-main-world .fifa-screen-rank small {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .app-main-world .fifa-screen-rank b {
@@ -7228,7 +7228,7 @@ button.primary:hover,
   .app-main-world .world-event-rail span {
     grid-column: 1;
     grid-row: 1;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .app-main-world .world-event-rail b {
@@ -7252,7 +7252,7 @@ button.primary:hover,
     grid-column: 2;
     grid-row: 1;
     align-self: start;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   /* Give the information rail a little more usable width without stealing the map. */
@@ -8262,7 +8262,7 @@ button.primary:hover,
   padding:7px 9px;
   border:1px solid rgb(var(--ui-line-rgb) / .16);
   background:rgba(255,255,255,.018);
-  font-size: 10px;
+  font-size: 12px;
 }
 .pack-top-winner .pack-reveal-meta b{
   margin-bottom:3px;

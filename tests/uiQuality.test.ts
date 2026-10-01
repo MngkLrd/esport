@@ -15,6 +15,8 @@ const world = read('src/WorldMap.tsx')
 const lobby = read('src/MatchLobby.tsx')
 const radar = read('src/MatchRadar.tsx')
 const packs = read('src/PacksView.tsx')
+const scout = read('src/ScoutMarket.tsx')
+const roster = read('src/RosterBoard.tsx')
 
 describe('2026 UI quality pass', () => {
   it('locks collectible cards to the intended portrait ratio', () => {
@@ -33,6 +35,8 @@ describe('2026 UI quality pass', () => {
     expect(simCss).not.toContain('#0e1731')
     expect(simCss).not.toContain('rgba(96,69,214,.12)')
     expect(simCss).not.toContain('background:rgba(12,18,43,.78)')
+    expect(simCss).not.toContain('background:rgba(8,13,33,.88)')
+    expect(simCss).not.toContain('background:rgba(9,14,35,.86)')
     expect(visual).toContain('Dark-theme contrast guard for interactive states.')
     expect(visual).toMatch(/:disabled\{[\s\S]*?color:var\(--ui-muted\)!important;/)
     expect(visual).toMatch(/:focus-visible\{[\s\S]*?outline:2px solid var\(--ui-accent\)/)
@@ -55,6 +59,8 @@ describe('2026 UI quality pass', () => {
     expect(playerIdentity).toContain('PlayerPortrait')
     expect(playerIdentity).toContain('countryFlag')
     expect(playerIdentity).toContain("team ? ' · ' + team")
+    expect(scout).toContain('className="market-negotiation-identity"')
+    expect(roster).toContain('className="sim-planner-inspector-identity"')
   })
 
   it('uses team identities in VRS, bracket, prematch lobby and current matchup', () => {

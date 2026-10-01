@@ -1064,10 +1064,18 @@ const finishCompetition = (
   if (!competition || competition.status === 'complete' || competition.status === 'cancelled') return
   const operator = ecology.operators[competition.operatorId]
   const rng = rngFor(seed, 'finish:' + competition.id)
-  const entrants = competition.participantTeamIds
+  let entrants = competition.participantTeamIds
     .map((id) => world.teams.find((team) => team.id === id))
     .filter((team): team is WorldTeam => team != null && team.active !== false)
-  if (entrants.length < 2) {
+  if (entrants.length < 8) {
+    const existing = new Set(entrants.map((team) => team.id))
+    const replacements = activeTeams(world)
+      .filter((team) => !existing.has(team.id))
+      .sort((a, b) => a.vrsRank - b.vrsRank)
+      .slice(0, 8 - entrants.length)
+    entrants = [...entrants, ...replacements]
+  }
+  if (entrants.length < 8) {
     competition.status = 'cancelled'
     if (operator) {
       operator.capital -= Math.round(competition.cost * .25)

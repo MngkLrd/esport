@@ -582,7 +582,7 @@ export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState
     ...state,
     welcomeComplete: true,
     roster,
-    world: reconcileWorldWithClubRoster(state.world, roster, state.now, state.seed),
+    world: reconcileWorldWithClubRoster(state.world, clubWorldRosterProjection(roster), state.now, state.seed),
     startingFive: roster.map((player) => player.id),
     lineupSlots: inferLineupSlots(roster, roster.map((player) => player.id)),
     lineupContinuity: 50,
@@ -3002,8 +3002,22 @@ export const advancePlayerDevelopment = (
   ] as const
   const targetKey = focusKey ?? [...skills].sort((a, b) => a[1] - b[1])[0][0]
 
+  const developedPlayer = earnsPoint
+    ? { ...player, [targetKey]: clamp(player[targetKey] + 1) }
+    : player
+  const refreshedPlayer = earnsPoint
+    ? {
+        ...developedPlayer,
+        ratingV2: buildPlayerRatingV2(
+          playerRatingSkills(developedPlayer),
+          developedPlayer.role,
+          developedPlayer.ratingV2?.evidence ?? [],
+        ),
+      }
+    : developedPlayer
+
   return {
-    player: earnsPoint ? { ...player, [targetKey]: clamp(player[targetKey] + 1) } : player,
+    player: refreshedPlayer,
     development: {
       ...development,
       progress: earnsPoint ? nextProgress - threshold : nextProgress,

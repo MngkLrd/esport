@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import {
   activeTournamentMatch,
   canPlayMatch,
+  canonicalMatchHistory,
   chemistry,
   getStartingFive,
   lineupWarnings,
@@ -59,6 +60,7 @@ import { TeamBadge } from './TeamBadge'
 import { WorldPortal } from './WorldPortal'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 import { FinanceView } from './FinanceView'
+import { eventsForPlayer } from './clubEvents'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -375,6 +377,9 @@ function PlayerProfileModal({
 
   const rating = overall(player)
   const expiring = player.contractWeeks <= 4
+  const ratingV2 = player.ratingV2
+  const playerEventKey = player.playerKey ?? player.id
+  const playerTimeline = eventsForPlayer(state.clubEvents ?? [], playerEventKey).slice(0, 5)
   const statRows = [
     ['AIM', player.aim],
     ['GAME SENSE', player.gameSense],
@@ -417,6 +422,18 @@ function PlayerProfileModal({
               <div className={player.fatigue >= 65 ? 'risk' : ''}><small>FATIGUE</small><b>{player.fatigue}</b><i><em style={{ width: player.fatigue + '%' }} /></i></div>
             </section>
 
+            <section className="player-profile-rating-v2">
+              <div className="player-profile-section-head"><span>RATING ENGINE V2</span><b>{ratingV2?.provenTier ?? 'UNPROVEN'}</b></div>
+              <div className="player-rating-v2-grid">
+                <div><small>CONFIDENCE</small><strong>{ratingV2?.confidence ?? 16}%</strong><i><em style={{ width: (ratingV2?.confidence ?? 16) + '%' }} /></i></div>
+                <div><small>STABILITY</small><strong>{ratingV2?.stability ?? 58}</strong><i><em style={{ width: (ratingV2?.stability ?? 58) + '%' }} /></i></div>
+                <div><small>SAMPLE</small><strong>{ratingV2?.sampleSize ?? 0}</strong><span>rounds</span></div>
+                <div><small>OPPOSITION</small><strong>{ratingV2?.opposition || '—'}</strong><span>avg OVR</span></div>
+                <div><small>BASELINE</small><strong>{ratingV2?.baseline ?? rating}</strong><span>role prior</span></div>
+                <div><small>ADJ. PERF</small><strong>{ratingV2?.adjustedPerformance ?? rating}</strong><span>contextual</span></div>
+              </div>
+            </section>
+
             <section className="player-profile-stats">
               <div className="player-profile-section-head"><span>PLAYER ATTRIBUTES</span><b>CORE</b></div>
               <div className="player-profile-stat-grid">
@@ -429,6 +446,20 @@ function PlayerProfileModal({
             <section className="player-profile-traits">
               <div className="player-profile-section-head"><span>ROLE & TRAITS</span><b>{ROLE_LABELS[player.role]}</b></div>
               <div>{player.traits.length ? player.traits.map((trait) => <span key={trait}>{trait}</span>) : <small>Нет выраженных traits.</small>}</div>
+            </section>
+
+            <section className="player-profile-timeline">
+              <div className="player-profile-section-head"><span>CAREER TIMELINE</span><b>{playerTimeline.length}</b></div>
+              <div className="player-profile-timeline-list">
+                {playerTimeline.length === 0 && <small>Событий пока нет.</small>}
+                {playerTimeline.map((event) => (
+                  <div key={event.id}>
+                    <span>W{event.week} · {event.kind.toUpperCase()}</span>
+                    <strong>{event.title}</strong>
+                    <small>{event.detail}</small>
+                  </div>
+                ))}
+              </div>
             </section>
           </main>
 
@@ -527,7 +558,8 @@ function App() {
   )
   const warnings = useMemo(() => lineupWarnings(state.roster, state.startingFive), [state.roster, state.startingFive])
   const payroll = useMemo(() => weeklyPayroll(state), [state])
-  const last = state.history[0]
+  const matchHistory = useMemo(() => canonicalMatchHistory(state), [state.clubEvents, state.history])
+  const last = matchHistory[0]
   const activeEvent = tournamentForId(state.activeEventId)
   const activeEventMode = activeEvent ? tournamentMode(activeEvent) : null
   const bracketMatch = activeTournamentMatch(state)

@@ -13,6 +13,7 @@ import {
   startOfGameDay,
 } from './calendar'
 import { opponentForPlayerMatch, tournamentStartsAt } from './tournamentEngine'
+import { TRAINING_SESSION_DEFS } from './trainingSystem'
 
 export type TimeProgressionSpeed = 1 | 2 | 3
 export type TimeProgressionStopKind = 'match' | 'decision' | 'contract' | 'injury' | 'transfer' | 'tournament' | 'message' | 'season'
@@ -51,38 +52,19 @@ const SPEED_LABELS: Record<TimeProgressionSpeed, string> = {
   3: '▶▶▶',
 }
 
-const routineForDay = (day: string): TimelineEvent[] => {
-  const date = parseGameDate(day)
-  const weekday = date.getUTCDay()
+const trainingEventsForDay = (state: GameState, day: string): TimelineEvent[] => {
   const key = gameDayKey(day)
-  const at = (hour: number) => key + 'T' + String(hour).padStart(2, '0') + ':00:00'
-
-  if (weekday === 0) return [
-    { id: key + '-recovery', at: at(10), kind: 'recovery', label: 'RECOVERY', detail: 'Восстановление состава' },
-  ]
-  if (weekday === 1) return [
-    { id: key + '-review', at: at(10), kind: 'training', label: 'TEAM REVIEW', detail: 'Разбор предыдущей недели' },
-    { id: key + '-aim', at: at(15), kind: 'training', label: 'AIM TRAINING', detail: 'Индивидуальная работа' },
-  ]
-  if (weekday === 2) return [
-    { id: key + '-tactics', at: at(11), kind: 'training', label: 'TACTICAL', detail: 'Командная структура' },
-    { id: key + '-scrim', at: at(18), kind: 'scrim', label: 'SCRIM', detail: 'Тренировочная серия' },
-  ]
-  if (weekday === 3) return [
-    { id: key + '-recovery', at: at(9), kind: 'recovery', label: 'RECOVERY', detail: 'Лёгкий день' },
-    { id: key + '-utility', at: at(15), kind: 'training', label: 'UTILITY LAB', detail: 'Гранаты и сетапы' },
-  ]
-  if (weekday === 4) return [
-    { id: key + '-team', at: at(12), kind: 'training', label: 'TEAM TRAINING', detail: 'Полная сессия' },
-    { id: key + '-scrim', at: at(19), kind: 'scrim', label: 'SCRIM', detail: 'BO3 practice' },
-  ]
-  if (weekday === 5) return [
-    { id: key + '-prep', at: at(13), kind: 'training', label: 'MATCH PREP', detail: 'Подготовка к серии' },
-  ]
-  return [
-    { id: key + '-recovery', at: at(10), kind: 'recovery', label: 'RECOVERY', detail: 'Сброс усталости' },
-    { id: key + '-review', at: at(17), kind: 'training', label: 'DEMO REVIEW', detail: 'Подготовка штаба' },
-  ]
+  return state.training.sessions
+    .filter((session) => gameDayKey(session.scheduledAt) === key)
+    .map((session) => ({
+      id: session.id,
+      at: session.scheduledAt,
+      kind: session.type === 'scrim' ? 'scrim' as const : session.type === 'recovery' ? 'recovery' as const : 'training' as const,
+      label: TRAINING_SESSION_DEFS[session.type].short,
+      detail: session.map ?? session.opponentName ?? session.focus.toUpperCase(),
+      important: false,
+    }))
+    .sort((a, b) => compareGameTime(a.at, b.at))
 }
 
 const dayLabel = (value: string) => {
@@ -135,7 +117,7 @@ const nextImportantEvent = (state: GameState) => {
 }
 
 const timelineEventsForDay = (state: GameState, day: string): TimelineEvent[] => {
-  const events = routineForDay(day)
+  const events = trainingEventsForDay(state, day)
   const key = gameDayKey(day)
   const match = activeTournamentMatch(state)
 

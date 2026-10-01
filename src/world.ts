@@ -1,6 +1,7 @@
 import { cardStatsForAlias } from './cardStats'
 import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
 import { VRS_RANKED_ROSTERS, VRS_SNAPSHOT_DATE } from './vrs'
+import { advanceWorldEcology, createWorldEcology, type EcologyRegion, type WorldEcologyState } from './worldEcology'
 
 export const WORLD_VERSION = 1
 export const PLAYER_CLUB_WORLD_ID = 'club'
@@ -20,6 +21,13 @@ export interface WorldPlayer {
   morale: number
   fatigue: number
   contractWeeks: number
+  generated?: boolean
+  potentialRating?: number
+  salary?: number
+  marketValue?: number
+  careerStartedAt?: string
+  retiredAt?: string | null
+  region?: EcologyRegion
 }
 
 export interface WorldTeam {
@@ -30,6 +38,14 @@ export interface WorldTeam {
   rosterKeys: string[]
   rating: number
   form: number
+  generated?: boolean
+  active?: boolean
+  region?: EcologyRegion
+  foundedYear?: number
+  cash?: number
+  prestige?: number
+  ambition?: number
+  fanbase?: number
 }
 
 export interface WorldTransfer {
@@ -50,6 +66,7 @@ export interface WorldState {
   teams: WorldTeam[]
   freeAgentKeys: string[]
   transferHistory: WorldTransfer[]
+  ecology?: WorldEcologyState
 }
 
 export interface VrsStanding {
@@ -257,7 +274,11 @@ export const createWorldState = (): WorldState => {
     transferHistory: [],
   }
 
-  return syncTeamRatings(world)
+  const rated = syncTeamRatings(world)
+  return {
+    ...rated,
+    ecology: createWorldEcology(rated, 271828, VRS_SNAPSHOT_DATE + 'T09:00:00'),
+  }
 }
 
 export const worldTeamById = (world: WorldState, teamId: string | null | undefined) =>
@@ -536,45 +557,49 @@ export const advanceWorldWeeks = (
   seed: number,
   date: string,
 ): WorldState => {
-  let world = source
+  if (weeks <= 0) return source
+
+  // Autonomous world systems own tournaments, transfers, entry/exit and VRS.
+  // This weekly pass only applies slow player-condition drift.
+  const from = source.ecology?.processedUntil ?? (() => {
+    const target = new Date(date.endsWith('Z') ? date : date + 'Z')
+    target.setUTCDate(target.getUTCDate() - weeks * 7)
+    return target.toISOString().slice(0, 19)
+  })()
+  let world = advanceWorldEcology(source, from, date, seed)
 
   for (let step = 0; step < weeks; step += 1) {
     const weekSeed = seed + (world.weeksSimulated + 1) * 7919
     const players: Record<string, WorldPlayer> = {}
+
     for (const player of Object.values(world.players)) {
+      if (player.retiredAt) {
+        players[player.key] = player
+        continue
+      }
       const rng = mulberry32(hashSeed(player.key + ':' + weekSeed))
       const isClub = player.teamId === PLAYER_CLUB_WORLD_ID
+      const age = player.age ?? 24
+      const potential = player.potentialRating ?? Math.max(player.baseRating, player.currentRating + 3)
+      const development = player.generated && age <= 23 && player.currentRating < potential && rng() > .62 ? 1 : 0
       players[player.key] = {
         ...player,
-        form: clamp(player.form + Math.round((rng() - .48) * 9)),
-        morale: clamp(player.morale + Math.round((rng() - .5) * 6)),
-        fatigue: isClub ? player.fatigue : clamp(player.fatigue + Math.round((rng() - .53) * 12)),
+        form: clamp(player.form + Math.round((rng() - .48) * 7)),
+        morale: clamp(player.morale + Math.round((rng() - .5) * 5)),
+        fatigue: isClub ? player.fatigue : clamp(player.fatigue + Math.round((rng() - .54) * 9)),
         currentRating: clamp(
-          player.baseRating + Math.round((player.form - 55) * .06) + Math.round((rng() - .5) * 2),
-          45,
+          player.currentRating + development + Math.round((player.form - 55) * .025) + Math.round((rng() - .5) * 1.2),
+          40,
           99,
         ),
-        contractWeeks: isClub ? player.contractWeeks : Math.max(1, player.contractWeeks - 1),
       }
     }
-
-    const teams = world.teams.map((team) => {
-      const rng = mulberry32(hashSeed('vrs:' + team.id + ':' + weekSeed))
-      const formSignal = (team.form - 50) * .06
-      const resultSwing = (rng() - .47) * 14
-      return {
-        ...team,
-        vrsPoints: Math.max(250, Math.round(team.vrsPoints + formSignal + resultSwing)),
-      }
-    })
 
     world = syncTeamRatings({
       ...world,
       players,
-      teams,
       weeksSimulated: world.weeksSimulated + 1,
     })
-    world = simulateAiTransfer(world, weekSeed, date)
   }
 
   return world

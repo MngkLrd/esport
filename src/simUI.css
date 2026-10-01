@@ -8604,3 +8604,28 @@ body{
   justify-self:start;
   margin-left:55px;
 }
+
+
+/* Complete compact player context in the planner without increasing card width. */
+.sim-planner-player-main>span{
+  gap:3px;
+}
+.sim-planner-player-context,
+.sim-planner-candidate-context{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--ui-muted)!important;
+  font:800 8px/1.1 Arial,sans-serif!important;
+}
+.sim-planner-player-main .source-chip{
+  min-height:18px;
+  font-size:8px;
+}
+.sim-planner-candidate-select{
+  min-height:62px;
+}
+.sim-planner-candidate-select>span{
+  gap:3px;
+}

@@ -1329,7 +1329,7 @@ const simulateStoryMap = (
     leadership: avgLeadership,
   }, map)
   const opponentMapFit = mapStyleFit(opponent, map)
-  const mapEdge = clamp((ourMapFit - opponentMapFit) * .0035, -.075, .075)
+  const mapEdge = clamp((ourMapFit - opponentMapFit) * .0022, -.05, .05)
 
   const rounds: MatchRoundStory[] = []
   let us = 0
@@ -2091,7 +2091,10 @@ export const playMatch = (
     // anti-strat and clutch are applied inside the round model exactly once.
     const effectiveRating = baseRating + momentum - rolePenalty - mapFatigue
     const ratingGap = effectiveRating - opponent.rating
-    const volatility = tactic === 'aggressive' ? 9.6 : tactic === 'structured' ? 9.0 : 9.3
+    // This is round-level probability, so the scale must be much wider than a
+    // map-level Elo/logistic model. Otherwise a small rating gap compounds into
+    // near-certain 13-x maps.
+    const volatility = tactic === 'aggressive' ? 48 : tactic === 'structured' ? 42 : 44
     const rawProbability = 1 / (1 + Math.exp(-ratingGap / volatility))
     const probability = clamp(rawProbability, .08, .92)
     const mapRng = mulberry32(hashSeed(matchSeed + ':map:' + map + ':' + maps.length))

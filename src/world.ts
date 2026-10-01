@@ -341,6 +341,119 @@ export const worldLineup = (world: WorldState, teamId: string) => {
     .slice(0, 5)
 }
 
+export interface WorldIntegrityReport {
+  ok: boolean
+  duplicateTeamMemberships: string[]
+  ownershipMismatches: string[]
+  staleFreeAgents: string[]
+  missingFreeAgents: string[]
+}
+
+export const inspectWorldIntegrity = (world: WorldState): WorldIntegrityReport => {
+  const memberships = new Map<string, string[]>()
+  for (const team of world.teams) {
+    for (const key of team.rosterKeys) {
+      memberships.set(key, [...(memberships.get(key) ?? []), team.id])
+    }
+  }
+
+  const duplicateTeamMemberships = [...memberships.entries()]
+    .filter(([, teamIds]) => new Set(teamIds).size > 1)
+    .map(([key]) => key)
+
+  const ownershipMismatches: string[] = []
+  for (const [key, teamIds] of memberships) {
+    const player = world.players[key]
+    if (!player) {
+      ownershipMismatches.push(key)
+      continue
+    }
+    if (player.teamId === PLAYER_CLUB_WORLD_ID || player.teamId == null || !teamIds.includes(player.teamId)) {
+      ownershipMismatches.push(key)
+    }
+  }
+  for (const player of Object.values(world.players)) {
+    if (player.teamId && player.teamId !== PLAYER_CLUB_WORLD_ID) {
+      const team = world.teams.find((candidate) => candidate.id === player.teamId)
+      if (!team?.rosterKeys.includes(player.key)) ownershipMismatches.push(player.key)
+    }
+  }
+
+  const free = new Set(world.freeAgentKeys)
+  const staleFreeAgents = [...free].filter((key) => world.players[key]?.teamId != null)
+  const missingFreeAgents = Object.values(world.players)
+    .filter((player) => player.teamId == null && !free.has(player.key))
+    .map((player) => player.key)
+
+  return {
+    ok: duplicateTeamMemberships.length === 0 &&
+      ownershipMismatches.length === 0 &&
+      staleFreeAgents.length === 0 &&
+      missingFreeAgents.length === 0,
+    duplicateTeamMemberships,
+    ownershipMismatches: [...new Set(ownershipMismatches)],
+    staleFreeAgents,
+    missingFreeAgents,
+  }
+}
+
+export const repairWorldIntegrity = (
+  source: WorldState,
+  clubRoster: ReadonlyArray<{
+    playerKey?: string
+    alias: string
+    contractWeeks?: number
+    salary?: number
+    rating?: number
+  }> = [],
+): WorldState => {
+  const players: Record<string, WorldPlayer> = Object.fromEntries(
+    Object.entries(source.players).map(([key, player]) => [key, { ...player }]),
+  )
+
+  const desiredClubKeys = new Set<string>()
+  for (const member of clubRoster) {
+    const key = member.playerKey && players[member.playerKey]
+      ? member.playerKey
+      : worldPlayerByAlias(source, member.alias)?.key
+    if (!key || !players[key]) continue
+    desiredClubKeys.add(key)
+    players[key] = {
+      ...players[key],
+      teamId: PLAYER_CLUB_WORLD_ID,
+      contractWeeks: member.contractWeeks ?? players[key].contractWeeks,
+      salary: member.salary ?? players[key].salary,
+      currentRating: member.rating ?? players[key].currentRating,
+    }
+  }
+
+  for (const player of Object.values(players)) {
+    if (player.teamId === PLAYER_CLUB_WORLD_ID && !desiredClubKeys.has(player.key)) {
+      players[player.key] = { ...player, teamId: null }
+    }
+  }
+
+  const teams = source.teams.map((team) => {
+    const ordered = [...new Set(team.rosterKeys)]
+      .filter((key) => players[key]?.teamId === team.id)
+    const missing = Object.values(players)
+      .filter((player) => player.teamId === team.id && !ordered.includes(player.key))
+      .sort((a, b) => effectivePlayerRating(b) - effectivePlayerRating(a))
+      .map((player) => player.key)
+    return { ...team, rosterKeys: [...ordered, ...missing] }
+  })
+
+  const normalized = {
+    ...source,
+    players,
+    teams,
+    freeAgentKeys: Object.values(players)
+      .filter((player) => player.teamId == null)
+      .map((player) => player.key),
+  }
+  return syncTeamRatings(normalized)
+}
+
 const removeFromAllTeams = (world: WorldState, playerKey: string) => ({
   ...world,
   teams: world.teams.map((team) =>
@@ -442,11 +555,11 @@ export const claimWorldPlayersForClub = (
     if (fromTeamId) world = refillTeam(world, fromTeamId, seed + index + hashSeed(player.key))
   })
 
-  return syncTeamRatings({
+  return repairWorldIntegrity(syncTeamRatings({
     ...world,
     freeAgentKeys: uniqueFreeAgents(world),
     transferHistory: history.slice(0, 120),
-  })
+  }))
 }
 
 export const releaseWorldPlayerFromClub = (
@@ -476,7 +589,7 @@ export const releaseWorldPlayerFromClub = (
       kind: 'club-release' as const,
     }, ...source.transferHistory].slice(0, 120),
   }
-  return syncTeamRatings(world)
+  return repairWorldIntegrity(syncTeamRatings(world))
 }
 
 export const advanceWorldWeeks = (
@@ -535,7 +648,13 @@ export const advanceWorldWeeks = (
 
 export const reconcileWorldWithClubRoster = (
   source: WorldState,
-  roster: ReadonlyArray<{ playerKey?: string; alias: string }>,
+  roster: ReadonlyArray<{
+    playerKey?: string
+    alias: string
+    contractWeeks?: number
+    salary?: number
+    rating?: number
+  }>,
   date: string,
   seed: number,
 ) => {
@@ -543,5 +662,6 @@ export const reconcileWorldWithClubRoster = (
     if (player.playerKey && source.players[player.playerKey]) return player.playerKey
     return worldPlayerByAlias(source, player.alias)?.key ?? player.playerKey ?? 'alias:' + normalizeAlias(player.alias)
   })
-  return claimWorldPlayersForClub(source, keys, date, seed)
+  const claimed = claimWorldPlayersForClub(source, keys, date, seed)
+  return repairWorldIntegrity(claimed, roster)
 }

@@ -1227,3 +1227,25 @@
 .sim-match-versus strong{
   color:var(--ui-accent)!important;
 }
+
+
+/* Team profile roster now uses the shared player identity row. */
+.team-profile-roster-list>button,
+.team-profile-roster-list>article{
+  min-height:82px!important;
+  display:block!important;
+  padding:8px!important;
+}
+.team-profile-roster-list .player-identity{
+  width:100%;
+  min-height:64px;
+}
+.team-profile-roster-list .player-identity-photo{
+  --player-id-size:58px;
+}
+.team-profile-roster-list .player-identity-copy>strong{
+  font-size:12px;
+}
+.team-profile-roster-list .player-identity-trailing{
+  align-self:center;
+}

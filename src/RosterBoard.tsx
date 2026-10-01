@@ -65,6 +65,8 @@ function SquadPlanner({
   const [horizon, setHorizon] = useState<PlannerHorizon>(0)
   const [selectedRole, setSelectedRole] = useState<LineupSlot>('AWP')
   const [selectedCandidateKey, setSelectedCandidateKey] = useState<string | null>(null)
+  const [targetSlotIndex, setTargetSlotIndex] = useState<number | null>(null)
+  const [draggedPlanner, setDraggedPlanner] = useState<{ role: LineupSlot; key: string } | null>(null)
   const planner = state.squadPlanner ?? { version: 1 as const, orders: {}, excluded: {} }
   const orders = planner.orders
   const excluded = planner.excluded
@@ -203,16 +205,65 @@ function SquadPlanner({
     }))
   }
 
-  const addDepth = (role: LineupSlot, entry: PlannerCandidate) => {
-    const currentDepth = depthForRole(role)
-    if (currentDepth.some((item) => item.key === entry.key) || currentDepth.length >= 3) return
+  const placeDepth = (role: LineupSlot, entry: PlannerCandidate, slotIndex: number | null = null) => {
+    const currentDepth = depthForRole(role).filter((item) => item.key !== entry.key)
     const key = orderKey(role)
+    const target = slotIndex == null
+      ? Math.min(currentDepth.length, 2)
+      : Math.max(0, Math.min(2, slotIndex))
+    const next = [...currentDepth]
+    if (target < next.length) next.splice(target, 1, entry)
+    else next.splice(target, 0, entry)
+
     updatePlanner((current) => ({
       ...current,
-      orders: { ...current.orders, [key]: [...currentDepth, entry].map((item) => item.key) },
+      orders: { ...current.orders, [key]: next.slice(0, 3).map((item) => item.key) },
       excluded: {
         ...current.excluded,
         [key]: (current.excluded[key] ?? []).filter((item) => item !== entry.key),
+      },
+    }))
+    setTargetSlotIndex(null)
+  }
+
+  const addDepth = (role: LineupSlot, entry: PlannerCandidate) => {
+    const currentDepth = depthForRole(role)
+    if (currentDepth.some((item) => item.key === entry.key)) return
+    if (targetSlotIndex != null || currentDepth.length >= 3) {
+      placeDepth(role, entry, targetSlotIndex ?? 2)
+      return
+    }
+    placeDepth(role, entry, currentDepth.length)
+  }
+
+  const movePlannerEntry = (fromRole: LineupSlot, toRole: LineupSlot, entryKey: string, slotIndex: number) => {
+    const entry = candidates.find((item) => item.key === entryKey)
+    if (!entry) return
+
+    if (fromRole === toRole) {
+      const depth = depthForRole(toRole).filter((item) => item.key !== entryKey)
+      const next = [...depth]
+      next.splice(Math.max(0, Math.min(slotIndex, 2)), 0, entry)
+      setDepth(toRole, next.slice(0, 3))
+      return
+    }
+
+    const fromKey = orderKey(fromRole)
+    const toKey = orderKey(toRole)
+    const fromDepth = depthForRole(fromRole).filter((item) => item.key !== entryKey)
+    const toDepth = depthForRole(toRole).filter((item) => item.key !== entryKey)
+    toDepth.splice(Math.max(0, Math.min(slotIndex, 2)), 0, entry)
+
+    updatePlanner((current) => ({
+      ...current,
+      orders: {
+        ...current.orders,
+        [fromKey]: fromDepth.slice(0, 3).map((item) => item.key),
+        [toKey]: toDepth.slice(0, 3).map((item) => item.key),
+      },
+      excluded: {
+        ...current.excluded,
+        [toKey]: (current.excluded[toKey] ?? []).filter((item) => item !== entry.key),
       },
     }))
   }
@@ -265,20 +316,29 @@ function SquadPlanner({
   const conflictCount = analyses.filter((item) => item.primaryConflicts.length > 0).length
   const selectedAnalysis = roleAnalysis(selectedRole)
   const selectedDepthKeys = new Set(selectedAnalysis.depth.map((entry) => entry.key))
-  const available = sortedForRole(selectedRole).filter((entry) => !selectedDepthKeys.has(entry.key)).slice(0, 12)
+  const allAvailable = sortedForRole(selectedRole).filter((entry) => !selectedDepthKeys.has(entry.key))
+  const available = allAvailable.slice(0, 5)
   const selectedCandidate = available.find((entry) => entry.key === selectedCandidateKey) ?? available[0] ?? null
 
   const comparison = selectedCandidate && selectedAnalysis.primary
     ? {
-        ovr: projectedOverall(selectedCandidate.player) - projectedOverall(selectedAnalysis.primary.player),
-        fit: lineupFitScore(selectedCandidate.player, selectedRole) - lineupFitScore(selectedAnalysis.primary.player, selectedRole),
-        potential: selectedCandidate.player.potential - selectedAnalysis.primary.player.potential,
-        salary: selectedCandidate.player.salary - selectedAnalysis.primary.player.salary,
+        current: {
+          ovr: projectedOverall(selectedAnalysis.primary.player),
+          fit: lineupFitScore(selectedAnalysis.primary.player, selectedRole),
+          potential: selectedAnalysis.primary.player.potential,
+          salary: selectedAnalysis.primary.player.salary,
+        },
+        candidate: {
+          ovr: projectedOverall(selectedCandidate.player),
+          fit: lineupFitScore(selectedCandidate.player, selectedRole),
+          potential: selectedCandidate.player.potential,
+          salary: selectedCandidate.player.salary,
+        },
       }
     : null
 
   const horizonLabel = horizon === 0 ? 'СЕЙЧАС' : 'СЕЗОН ' + (state.season + horizon)
-  const statusLabel = (status: 'good' | 'watch' | 'risk') => status === 'good' ? 'ГОТОВО' : status === 'watch' ? 'ВНИМАНИЕ' : 'РИСК'
+  const statusLabel = (status: 'good' | 'watch' | 'risk') => status === 'good' ? '✓ ГОТОВО' : status === 'watch' ? '! ВНИМАНИЕ' : '× РИСК'
 
   const openScoutForRole = () => {
     setState((current) => ({
@@ -301,11 +361,9 @@ function SquadPlanner({
         </div>
 
         <div className="sim-planner-summary">
-          <span className={riskCount ? 'risk' : ''}><b>{riskCount}</b> КРИТИЧЕСКИХ</span>
-          <span className={watchCount ? 'watch' : ''}><b>{watchCount}</b> ПОД НАБЛЮДЕНИЕМ</span>
-          <span><b>{targetCount}</b> ЦЕЛЕЙ</span>
-          <span className={expiringCount ? 'watch' : ''}><b>{expiringCount}</b> РИСК КОНТРАКТА</span>
-          <span className={conflictCount ? 'risk' : ''}><b>{conflictCount}</b> КОНФЛИКТОВ</span>
+          <button className={riskCount ? 'risk' : ''} onClick={() => setSelectedRole(analyses.find((item) => item.status === 'risk')?.role ?? selectedRole)}><b>{riskCount}</b><span>РИСКИ</span></button>
+          <button className={watchCount ? 'watch' : ''} onClick={() => setSelectedRole(analyses.find((item) => item.status === 'watch')?.role ?? selectedRole)}><b>{watchCount}</b><span>ВНИМАНИЕ</span></button>
+          <button className={conflictCount ? 'risk' : ''} onClick={() => setSelectedRole(analyses.find((item) => item.primaryConflicts.length > 0)?.role ?? selectedRole)}><b>{conflictCount}</b><span>КОНФЛИКТЫ</span></button>
         </div>
       </div>
 
@@ -316,7 +374,7 @@ function SquadPlanner({
               <span>ГЛУБИНА СОСТАВА · {horizonLabel}</span>
               <strong>План по пяти игровым ролям</strong>
             </div>
-            <small>1-й выбор → ротация → резерв. Порядок здесь не меняет реальный стартовый состав.</small>
+            <button className="sim-planner-help" title="Planner — безопасная песочница: изменения здесь не меняют стартовую пятёрку.">?</button>
           </div>
 
           <div className="sim-planner-lanes">
@@ -327,13 +385,21 @@ function SquadPlanner({
                   key={role}
                   className={'sim-planner-lane status-' + analysis.status + (selectedRole === role ? ' active' : '')}
                   onClick={() => setSelectedRole(role)}
+                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedRole(role) } }}
+                  tabIndex={0}
+                  role="button"
+                  aria-pressed={selectedRole === role}
                 >
                   <header>
                     <div>
                       <span>{ROLE_LABELS_RU[role]}</span>
-                      <small>{statusLabel(analysis.status)} · {analysis.manual ? 'MANAGER' : 'STAFF'}</small>
+                      <small>{statusLabel(analysis.status)}</small>
+                      <div className="sim-planner-role-chips">
+                        <i>{analysis.securedDepth.length}/3 DEPTH</i>
+                        <i>{analysis.manual ? 'РУЧНОЙ ПЛАН' : 'АВТОПЛАН'}</i>
+                      </div>
                     </div>
-                    <b>{analysis.quality || '—'}</b>
+                    <div className="sim-planner-role-score"><b>{analysis.quality || '—'}</b><button onClick={(event) => { event.stopPropagation(); resetRole(role) }} title="Сбросить роль">↺</button></div>
                   </header>
 
                   <div className="sim-planner-depth">
@@ -341,7 +407,7 @@ function SquadPlanner({
                       const entry = analysis.depth[index]
                       if (!entry) {
                         return (
-                          <button key={index} className="sim-planner-empty-slot" onClick={(event) => { event.stopPropagation(); setSelectedRole(role) }}>
+                          <button key={index} className="sim-planner-empty-slot" onClick={(event) => { event.stopPropagation(); setSelectedRole(role); setTargetSlotIndex(index) }}>
                             <i>{index + 1}</i>
                             <strong>ПУСТО</strong>
                             <small>добавить кандидата</small>
@@ -354,15 +420,23 @@ function SquadPlanner({
                       const projected = projectedOverall(player)
                       const fit = lineupFitScore(player, role)
                       return (
-                        <div className={'sim-planner-player source-' + entry.source + (contractRisk ? ' contract-risk' : '')} key={entry.key}>
+                        <div
+                          className={'sim-planner-player source-' + entry.source + (contractRisk ? ' contract-risk' : '') + (index === 0 ? ' is-primary' : '')}
+                          key={entry.key}
+                          draggable
+                          onDragStart={(event) => { event.stopPropagation(); setDraggedPlanner({ role, key: entry.key }); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', entry.key) }}
+                          onDragEnd={() => setDraggedPlanner(null)}
+                          onDragOver={(event) => { if (draggedPlanner) event.preventDefault() }}
+                          onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (draggedPlanner) movePlannerEntry(draggedPlanner.role, role, draggedPlanner.key, index); setDraggedPlanner(null) }}
+                        >
                           <div className="sim-planner-rank">{index + 1}</div>
                           <button className="sim-planner-player-main" onClick={(event) => { event.stopPropagation(); onOpenPlayer(player) }}>
                             <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} draggable={false} />
                             <span>
                               <b>{player.alias}</b>
-                              <small>{plannerSourceLabel[entry.source]} · {player.role}</small>
+                              <small><i className={'sim-planner-source source-' + entry.source}>{plannerSourceLabel[entry.source]}</i> · {player.role}</small>
                             </span>
-                            <strong>{projected}</strong>
+                            <strong>{projected}{horizon > 0 && projected !== overall(player) && <em className={projected > overall(player) ? 'up' : 'down'}>{projected > overall(player) ? '+' : ''}{projected - overall(player)}</em>}</strong>
                           </button>
                           <div className="sim-planner-player-meta">
                             <span className={fit >= 76 ? 'good' : fit >= 68 ? 'watch' : 'risk'}>{fit} FIT</span>
@@ -376,20 +450,15 @@ function SquadPlanner({
                             {(primaryRoleUsage.get(entry.key)?.length ?? 0) > 1 && index === 0 && <span className="risk">2 РОЛИ</span>}
                           </div>
                           <div className="sim-planner-order-actions">
-                            <button disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, -1) }} aria-label="Move up">↑</button>
-                            <button disabled={index >= analysis.depth.length - 1} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, 1) }} aria-label="Move down">↓</button>
-                            <button onClick={(event) => { event.stopPropagation(); removeDepth(role, entry.key) }} aria-label="Remove">×</button>
+                            <button disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, -1) }} aria-label="Выше">↑</button>
+                            <button disabled={index >= analysis.depth.length - 1} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, 1) }} aria-label="Ниже">↓</button>
+                            <button className="danger" onClick={(event) => { event.stopPropagation(); removeDepth(role, entry.key) }} aria-label="Исключить из плана">×</button>
                           </div>
                         </div>
                       )
                     })}
                   </div>
 
-                  <footer>
-                    <span><b>{analysis.depth.length}</b>/3 ГЛУБИНА</span>
-                    <span><b>{analysis.exact}</b> ПРОФИЛЬНЫХ</span>
-                    <button onClick={(event) => { event.stopPropagation(); resetRole(role) }}>СБРОС</button>
-                  </footer>
                 </article>
               )
             })}
@@ -417,11 +486,11 @@ function SquadPlanner({
           <div className="sim-planner-diagnostics">
             <span>ДИАГНОСТИКА</span>
             <ul>
-              {selectedAnalysis.securedDepth.length < 3 && <li className="watch">На выбранный горизонт подтверждено только {selectedAnalysis.securedDepth.length}/3 игроков.</li>}
-              {selectedAnalysis.exact === 0 && <li className="risk">Нет подтверждённого профильного игрока под роль {ROLE_LABELS[selectedRole]}.</li>}
+              {selectedAnalysis.securedDepth.length < 3 && <li className="watch"><span>На выбранный горизонт подтверждено только {selectedAnalysis.securedDepth.length}/3 игроков.</span><button onClick={() => { setTargetSlotIndex(selectedAnalysis.securedDepth.length); }}>ДОБАВИТЬ</button></li>}
+              {selectedAnalysis.exact === 0 && <li className="risk"><span>Нет подтверждённого профильного игрока под роль {ROLE_LABELS[selectedRole]}.</span><button onClick={openScoutForRole}>НАЙТИ</button></li>}
               {selectedAnalysis.departures > 0 && <li className="risk">{selectedAnalysis.departures} игрок(а) не имеют контракта до этого горизонта.</li>}
               {selectedAnalysis.expiring > 0 && <li className="watch">{selectedAnalysis.expiring} игрок(а) находятся в зоне контрактного риска.</li>}
-              {selectedAnalysis.primaryConflicts.length > 0 && <li className="risk">Первый выбор уже стоит №1 в роли: {selectedAnalysis.primaryConflicts.map((role) => ROLE_LABELS[role]).join(', ')}.</li>}
+              {selectedAnalysis.primaryConflicts.length > 0 && <li className="risk"><span>Первый выбор уже стоит №1 в роли: {selectedAnalysis.primaryConflicts.map((role) => ROLE_LABELS[role]).join(', ')}.</span><button onClick={() => setSelectedRole(selectedAnalysis.primaryConflicts[0] ?? selectedRole)}>ПЕРЕЙТИ</button></li>}
               {selectedAnalysis.quality > 0 && selectedAnalysis.quality < 76 && <li className="watch">Первый выбор ниже целевого уровня 76 OVR.</li>}
               {selectedAnalysis.securedDepth.length === 3 && selectedAnalysis.exact > 0 && selectedAnalysis.expiring === 0 && selectedAnalysis.primaryConflicts.length === 0 && selectedAnalysis.quality >= 76 && <li className="good">Позиция сбалансирована. Срочный трансфер не требуется.</li>}
             </ul>
@@ -430,7 +499,7 @@ function SquadPlanner({
           <div className="sim-planner-candidate-head">
             <div>
               <span>КАНДИДАТЫ</span>
-              <small>Лучшие варианты для {ROLE_LABELS[selectedRole]}</small>
+              <small>{targetSlotIndex != null ? 'Выберите игрока для #' + (targetSlotIndex + 1) : 'Top 5 вариантов для ' + ROLE_LABELS[selectedRole]}</small>
             </div>
             <button onClick={openScoutForRole}>ТРАНСФЕРЫ →</button>
           </div>
@@ -442,10 +511,16 @@ function SquadPlanner({
                 <b>{selectedCandidate.player.alias} vs {selectedAnalysis.primary.player.alias}</b>
               </div>
               <div className="sim-planner-compare-grid">
-                <span><small>OVR</small><b className={comparison.ovr > 0 ? 'up' : comparison.ovr < 0 ? 'down' : ''}>{comparison.ovr > 0 ? '+' : ''}{comparison.ovr}</b></span>
-                <span><small>FIT</small><b className={comparison.fit > 0 ? 'up' : comparison.fit < 0 ? 'down' : ''}>{comparison.fit > 0 ? '+' : ''}{comparison.fit}</b></span>
-                <span><small>POT</small><b className={comparison.potential > 0 ? 'up' : comparison.potential < 0 ? 'down' : ''}>{comparison.potential > 0 ? '+' : ''}{comparison.potential}</b></span>
-                <span><small>З/П</small><b className={comparison.salary < 0 ? 'up' : comparison.salary > 0 ? 'down' : ''}>{comparison.salary > 0 ? '+' : ''}{comparison.salary}</b></span>
+                {([
+                  ['OVR', comparison.current.ovr, comparison.candidate.ovr, false],
+                  ['FIT', comparison.current.fit, comparison.candidate.fit, false],
+                  ['POT', comparison.current.potential, comparison.candidate.potential, false],
+                  ['З/П', comparison.current.salary, comparison.candidate.salary, true],
+                ] as const).map(([label, from, to, inverse]) => {
+                  const delta = to - from
+                  const positive = inverse ? delta < 0 : delta > 0
+                  return <span key={label}><small>{label}</small><b>{from} → {to}</b><em className={delta === 0 ? '' : positive ? 'up' : 'down'}>{delta > 0 ? '+' : ''}{delta}</em></span>
+                })}
               </div>
             </div>
           )}
@@ -462,14 +537,14 @@ function SquadPlanner({
                   </span>
                   <strong>{projectedOverall(entry.player)}</strong>
                   <button
-                    disabled={selectedAnalysis.depth.length >= 3}
                     onClick={(event) => { event.stopPropagation(); addDepth(selectedRole, entry) }}
-                    aria-label={'Add ' + entry.player.alias}
-                  >+</button>
+                    aria-label={(targetSlotIndex != null || selectedAnalysis.depth.length >= 3 ? 'Заменить на ' : 'Добавить ') + entry.player.alias}
+                  >{targetSlotIndex != null || selectedAnalysis.depth.length >= 3 ? '↔' : '+'}</button>
                 </article>
               )
             })}
             {available.length === 0 && <div className="sim-planner-no-candidates">НЕТ ДОПОЛНИТЕЛЬНЫХ КАНДИДАТОВ</div>}
+            {allAvailable.length > available.length && <button className="sim-planner-more" onClick={openScoutForRole}>ЕЩЁ {allAvailable.length - available.length} В ТРАНСФЕРАХ →</button>}
           </div>
 
           <button className="sim-planner-scout-action" onClick={openScoutForRole}>

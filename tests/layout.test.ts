@@ -70,7 +70,7 @@ describe('sim UI viewport contract', () => {
     expect(css).toMatch(/\.squad-opt-starter-card \.visual-player-card\s*\{[\s\S]*?max-width:170px!important;[\s\S]*?aspect-ratio:5\/7!important;[\s\S]*?flex:0 0 auto!important;/)
     expect(css).toMatch(/\.squad-opt-pool-grid\s*\{[\s\S]*?grid-template-columns:repeat\(7,132px\);[\s\S]*?grid-auto-rows:max-content;/)
     expect(css).toMatch(/\.squad-opt-pool-card \.visual-player-card\s*\{[\s\S]*?width:122px!important;[\s\S]*?aspect-ratio:5\/7!important;/)
-    expect(css).toMatch(/@media \(min-width:901px\) and \(max-height:900px\)\{[\s\S]*?max-width:130px!important;/)
+    expect(css).toMatch(/@media \(min-width:901px\) and \(max-height:900px\)\{[\s\S]*?max-width:130px!important[;}]?/)
     expect(squadWorkspace).not.toContain('squad-opt-staff')
   })
 

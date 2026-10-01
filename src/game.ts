@@ -2393,7 +2393,7 @@ export const prepareMatchFixture = (
   if (!gate.ok) return null
   const context = prepareMatchContext(state, mode)
   return {
-    id: 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, ''),
+    id: resultId,
     mode: context.effectiveMode,
     tactic,
     opponent: context.opponent.name,
@@ -2529,6 +2529,11 @@ export const playMatch = (
   const won = ourMaps > theirMaps
   const totalRoundsPlayed = maps.reduce((sum, map) => sum + map.us + map.them, 0)
   const matchDurationHours = matchDurationHoursForRounds(totalRoundsPlayed, maps.length)
+  const resultId = 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, '')
+  const ratingTier: RatingEvidence['tier'] = isPractice
+    ? 0
+    : event?.circuitTier ?? (effectiveMode === 'cup' ? 1 : effectiveMode === 'showmatch' ? 2 : 3)
+  const ratingEnvironment: RatingEvidence['environment'] = event?.format ?? 'ONLINE'
   const matchVrs = matchVrsAward(effectiveMode, event ?? null, won, opponent.rating, baseRating)
   const opponentVrs = !won ? matchVrsBase(effectiveMode, event ?? null) : 0
   const matchEnd = addGameHours(state.now, matchDurationHours)
@@ -2602,6 +2607,7 @@ export const playMatch = (
   const activeIds = new Set(active.map((player) => player.id))
   const roster = state.roster.map((player) => {
     const played = activeIds.has(player.id)
+    const performance = performances.find((entry) => entry.playerId === player.id)
     const formDelta = isPractice
       ? (played ? Math.round((rng() - .5) * 2) : 0)
       : played
@@ -2617,8 +2623,26 @@ export const playMatch = (
       : (tactic === 'aggressive' ? 8 : tactic === 'structured' ? 5 : 6)
         + roundLoad
         + (event ? Math.round(event.fatigue * .35) : 0)
+    const ratingV2 = played && performance
+      ? appendRatingEvidence(
+          player.ratingV2,
+          playerRatingSkills(player),
+          player.role,
+          {
+            matchId: resultId,
+            at: matchEnd,
+            performance: performance.rating,
+            opponentRating: opponent.rating,
+            tier: ratingTier,
+            environment: ratingEnvironment,
+            rounds: totalRoundsPlayed,
+            won,
+          },
+        )
+      : player.ratingV2
     return {
       ...player,
+      ratingV2,
       form: clamp(player.form + formDelta),
       morale: clamp(player.morale + moraleDelta),
       fatigue: clamp(player.fatigue + (played ? fatigueGain : -6)),
@@ -2682,9 +2706,15 @@ export const playMatch = (
     ? [resolvedRun, ...state.tournamentHistory].slice(0, 30)
     : state.tournamentHistory
 
-  const updatedWorld = !isPractice && opponent.teamId && opponent.teamId !== PLAYER_CLUB_WORLD_ID
+  const vrsWorld = !isPractice && opponent.teamId && opponent.teamId !== PLAYER_CLUB_WORLD_ID
     ? awardWorldTeamVrs(state.world, opponent.teamId, opponentVrs)
     : state.world
+  const updatedWorld = reconcileWorldWithClubRoster(
+    vrsWorld,
+    clubWorldRosterProjection(roster),
+    matchEnd,
+    state.seed + state.history.length * 43,
+  )
 
   const next: GameState = {
     ...state,

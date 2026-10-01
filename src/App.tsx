@@ -82,7 +82,7 @@ const SCREEN_TITLES: Record<Tab, string> = {
   Roster: 'SQUAD',
   Packs: 'PACK STORE',
   Scout: 'BUILD YOUR SHORTLIST',
-  Inbox: 'INBOX',
+  Inbox: 'NEWSROOM',
   Profile: 'MANAGER LEVEL',
 }
 

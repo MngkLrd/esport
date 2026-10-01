@@ -331,7 +331,7 @@ function PlayerCard({
         <span className={expiring ? 'warning' : ''}>
           {expired ? 'КОНТРАКТ ИСТЁК' : 'Контракт: ' + player.contractWeeks + ' нед.'} · {player.salary} кр./нед.
         </span>
-        <button className="text-button" onClick={onRenew} disabled={state.credits < livePlayer.salary * 4}>
+        <button className="text-button" onClick={onRenew} disabled={state.credits < player.salary * 4}>
           Extend {player.salary * 4}
         </button>
       </div>
@@ -340,7 +340,7 @@ function PlayerCard({
         <button className={isStarter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>
           {isStarter ? 'В запас' : state.startingFive.length >= 5 ? 'Сначала освободи место' : 'В стартовую пятёрку'}
         </button>
-        <button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < livePlayer.salary}>
+        <button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < player.salary}>
           Release · {player.salary}
         </button>
       </div>
@@ -483,7 +483,7 @@ function HqStarterRow({ player, index, onOpen }: { player: Player; index: number
   return (
     <button type="button" className="hq-starter-row" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
       <span className="hq-starter-number">0{index + 1}</span>
-      <span className="hq-starter-portrait"><PlayerPortrait alias={livePlayer.alias} playerId={livePlayer.profileId} alt={livePlayer.alias} loading="lazy" /></span>
+      <span className="hq-starter-portrait"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
       <span className="hq-starter-copy"><strong>{player.alias}</strong><small>{countryFlag(player.country)} {player.country} · {role} · {player.team}</small></span>
       <span className="hq-starter-form"><b>{overall(player)}</b><i style={{ width: player.form + '%' }} /><small>{player.form} F / {player.fatigue} T</small></span>
       <span className="hq-starter-arrow">↗</span>
@@ -509,14 +509,14 @@ function RosterRow({ player, starter, state, onOpen, onTrain, onRest, onRenew, o
     <article className={'roster-player-row ' + (starter ? 'is-starter' : 'is-bench')}>
       <button className="roster-player-main" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
         <span className="roster-player-state"><b>{starter ? 'START' : 'BENCH'}</b><i /></span>
-        <span className="roster-player-photo"><PlayerPortrait alias={livePlayer.alias} playerId={livePlayer.profileId} alt={livePlayer.alias} loading="lazy" /></span>
+        <span className="roster-player-photo"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
         <span className="roster-player-identity"><strong>{player.alias}</strong><small>{player.realName} · {countryFlag(player.country)} {player.country} · {player.team}</small></span>
         <span className="roster-player-role"><b>{ROLE_LABELS[player.role]}</b><small>{player.traits.slice(0, 2).join(' · ')}</small></span>
         <span className="roster-player-ovr"><b>{overall(player)}</b><small>OVR · POT {player.potential}</small></span>
         <span className="roster-player-bars"><label>Форма <i><em style={{ width: player.form + '%' }} /></i><b>{player.form}</b></label><label>Мораль <i><em style={{ width: player.morale + '%' }} /></i><b>{player.morale}</b></label><label>Усталость <i className="danger"><em style={{ width: player.fatigue + '%' }} /></i><b>{player.fatigue}</b></label></span>
         <span className="roster-player-contract"><b className={expiring ? 'warning' : ''}>{expired ? 'ИСТЁК' : player.contractWeeks + ' нед.'}</b><small>{player.salary} кр./нед.</small></span>
       </button>
-      <div className="roster-row-actions"><button className={starter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>{starter ? 'В запас' : 'В старт'}</button><button onClick={onRenew} disabled={state.credits < livePlayer.salary * 4}>Продлить · {player.salary * 4}</button><button onClick={onTrain} disabled={state.staffEnergy < 1 || state.credits < 120}>Тренировка</button><button onClick={onRest} disabled={state.staffEnergy < 1}>Отдых</button><button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < livePlayer.salary}>Убрать</button></div>
+      <div className="roster-row-actions"><button className={starter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>{starter ? 'В запас' : 'В старт'}</button><button onClick={onRenew} disabled={state.credits < player.salary * 4}>Продлить · {player.salary * 4}</button><button onClick={onTrain} disabled={state.staffEnergy < 1 || state.credits < 120}>Тренировка</button><button onClick={onRest} disabled={state.staffEnergy < 1}>Отдых</button><button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < player.salary}>Убрать</button></div>
     </article>
   )
 }

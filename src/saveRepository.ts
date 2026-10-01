@@ -9,7 +9,7 @@ export const LEGACY_SAVE_KEY = 'esport-ai-manager-v1'
 
 export interface SaveRepository {
   load(): GameState
-  save(state: GameState): void
+  save(state: GameState): boolean
   reset(): GameState
   snapshot(): GameState
 }
@@ -59,8 +59,10 @@ export const createBrowserSaveRepository = (): SaveRepository => ({
       const current = localStorage.getItem(SAVE_KEY)
       if (current) localStorage.setItem(BACKUP_SAVE_KEY, current)
       localStorage.setItem(SAVE_KEY, JSON.stringify(state))
+      return true
     } catch {
       // The current in-memory state remains playable even if browser storage is unavailable.
+      return false
     }
   },
 

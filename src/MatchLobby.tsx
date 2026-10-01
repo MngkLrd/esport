@@ -4,6 +4,7 @@ import {
   opponentRosterMapStyleFit,
   overall,
   tacticInfo,
+  type MatchFixture,
   type MatchNarrativeTag,
   type MatchResult,
   type Player,
@@ -207,7 +208,7 @@ export function MatchLobby({
   onStart,
   onContinue,
 }: {
-  result: MatchResult
+  result: MatchFixture | MatchResult
   starters: Player[]
   phase: 'prematch' | 'result'
   initialVeto?: LobbyVetoAction[]
@@ -232,8 +233,9 @@ export function MatchLobby({
   const nextStep = VETO_SEQUENCE[veto.length]
   const vetoComplete = selectedMaps.length === 3
   const focused = MAPS.find((map) => map.name === focusedMap) ?? MAPS[0]
-  const ourMapScore = result.maps.filter((map) => map.us > map.them).length
-  const theirMapScore = result.maps.filter((map) => map.them > map.us).length
+  const resolvedResult = 'maps' in result ? result : null
+  const ourMapScore = resolvedResult?.maps.filter((map) => map.us > map.them).length ?? 0
+  const theirMapScore = resolvedResult?.maps.filter((map) => map.them > map.us).length ?? 0
   const homeRating = average(starters.map(overall))
   const awayRating = average(rivals.map((player) => player.rating))
 
@@ -292,7 +294,7 @@ export function MatchLobby({
   }
 
   const mapSummary = phase === 'result'
-    ? result.maps.map((map) => `${map.map} ${map.us}:${map.them}`)
+    ? (resolvedResult?.maps ?? []).map((map) => `${map.map} ${map.us}:${map.them}`)
     : selectedMaps.map((map) => `${map} —:—`)
 
   return (
@@ -333,7 +335,7 @@ export function MatchLobby({
             {starters.slice(0, 5).map((player) => <HomePlayerCard key={player.id} player={player} />)}
           </aside>
 
-          <main className={'match-lobby-center' + (phase === 'result' && result.story ? ' is-story' : '')}>
+          <main className={'match-lobby-center' + (phase === 'result' && resolvedResult?.story ? ' is-story' : '')}>
             <div className="match-lobby-veto-head">
               <div>
                 <span>MAP VETO & PICKS</span>
@@ -355,8 +357,8 @@ export function MatchLobby({
               })}
             </div>
 
-            {phase === 'result' && result.story ? (
-              <MatchStoryPanel result={result} />
+            {phase === 'result' && resolvedResult?.story ? (
+              <MatchStoryPanel result={resolvedResult} />
             ) : (
               <>
               <div className="match-lobby-map-grid">

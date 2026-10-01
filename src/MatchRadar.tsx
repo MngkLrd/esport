@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MatchResult, Player } from './game'
+import { TeamBadge } from './TeamBadge'
 import {
   radarAssetUrl,
   simulationFrameAt,
@@ -605,9 +606,17 @@ export function MatchRadar({
             <strong>{activeRound?.map ?? 'TACTICAL MAP'} · {activeRound?.scenarioLabel}</strong>
           </div>
           <div className="match-radar-score">
-            <b>{activeRound?.scoreUs ?? ourMaps}</b>
-            <span>{activeRound?.scoreUs != null ? 'ROUND SCORE' : 'BO3'}</span>
-            <b>{activeRound?.scoreThem ?? theirMaps}</b>
+            <div className="match-radar-score-team home">
+              <TeamBadge name="YOUR CLUB" size="sm" />
+              <span>YOUR CLUB</span>
+              <b>{activeRound?.scoreUs ?? ourMaps}</b>
+            </div>
+            <i>{activeRound?.scoreUs != null ? 'ROUND SCORE' : 'BO3'}</i>
+            <div className="match-radar-score-team away">
+              <b>{activeRound?.scoreThem ?? theirMaps}</b>
+              <span>{result.opponent}</span>
+              <TeamBadge name={result.opponent} size="sm" />
+            </div>
           </div>
           <div className="match-radar-clock">
             <span>{plant && !defuse ? 'BOMB PLANTED · ' + round.site : 'ROUND CLOCK'}</span>
@@ -668,6 +677,7 @@ export function MatchRadar({
 
           <aside className="match-radar-roster match-radar-roster-v2">
             <div className="radar-side-heading home">
+              <TeamBadge name="YOUR CLUB" size="sm" />
               <span>YOUR FIVE · {activeRound?.homeSide}</span>
               <b>{homePlayers.filter((player) => player.alive).length}/5</b>
             </div>
@@ -684,6 +694,7 @@ export function MatchRadar({
             ))}
 
             <div className="radar-side-heading away">
+              <TeamBadge name={result.opponent} size="sm" />
               <span>{result.opponent.toUpperCase()} · {activeRound?.homeSide === 'CT' ? 'T' : 'CT'}</span>
               <b>{awayPlayers.filter((player) => player.alive).length}/5</b>
             </div>

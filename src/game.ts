@@ -344,12 +344,27 @@ const recordClubEvent = (
   event: ClubEvent,
   projectNews = true,
 ): GameState => {
-  const clubEvents = appendClubEvent(state.clubEvents ?? [], event)
-  if (!projectNews) return { ...state, clubEvents }
+  const currentEvents = state.clubEvents ?? []
+  const alreadyRecorded = currentEvents.some((candidate) => candidate.id === event.id)
+  const clubEvents = appendClubEvent(currentEvents, event)
+  if (alreadyRecorded) return { ...state, clubEvents }
+
+  const vrsDelta = typeof event.data?.vrsDelta === 'number' ? event.data.vrsDelta : 0
+  const matchSnapshot = event.kind === 'match' && event.data?.matchSnapshot
+    ? event.data.matchSnapshot as MatchResult
+    : null
+  const history = matchSnapshot
+    ? [matchSnapshot, ...state.history.filter((match) => match.id !== matchSnapshot.id)].slice(0, 80)
+    : state.history
+  const clubVrsPoints = Math.max(0, state.clubVrsPoints + vrsDelta)
+
+  if (!projectNews) return { ...state, clubEvents, history, clubVrsPoints }
   const newsItem = projectEventToNews(event)
   return {
     ...state,
     clubEvents,
+    history,
+    clubVrsPoints,
     news: [newsItem, ...state.news.filter((item) => item.id !== newsItem.id)].slice(0, 100),
   }
 }
@@ -2115,7 +2130,6 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
 
   let next: GameState = {
     ...state,
-    clubVrsPoints: state.clubVrsPoints + vrs,
     activeEventId: null,
     activeTournament: null,
     tournamentHistory: [settledRun, ...state.tournamentHistory].slice(0, 30),
@@ -2858,7 +2872,6 @@ export const playMatch = (
     losses: state.losses + (!isPractice && !won ? 1 : 0),
     streak: isPractice ? state.streak : won ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1),
     seasonPoints: state.seasonPoints + (!isPractice && won ? (effectiveMode === 'cup' ? 5 : effectiveMode === 'showmatch' ? 3 : 1) : 0),
-    clubVrsPoints: state.clubVrsPoints + (isPractice ? 0 : matchVrs + tournamentVrs),
     roster,
     lineupContinuity: clamp(state.lineupContinuity + (isPractice ? 1 : won ? 3 : 1), 0, 100),
     training: isPractice
@@ -2868,7 +2881,6 @@ export const playMatch = (
           readiness: clamp((state.training?.readiness ?? 56) - 7),
           sharpness: clamp((state.training?.sharpness ?? 55) - 3),
         },
-    history: [result, ...state.history].slice(0, 80),
     managerXp: state.managerXp + (isPractice ? 15 : (effectiveMode === 'cup' ? 100 : effectiveMode === 'showmatch' ? 75 : 55) + (won ? 35 : 10)),
     packTokens: state.packTokens + (isPractice ? 0 : won ? (effectiveMode === 'cup' ? 55 : effectiveMode === 'showmatch' ? 40 : 25) : 10),
     activeEventId: nextActiveTournament?.eventId ?? null,

@@ -131,7 +131,22 @@ export function TeamProfile({
                       trailing={<span className="team-profile-player-ovr"><b>{player.currentRating}</b><small>OVR</small></span>}
                     />
                   </article>
-                ))}               </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="team-profile-section">
+              <div className="team-profile-section-head"><span>RECENT MATCHES</span><b>{isClub ? recentClubMatches.length : recentWorldMatches.length}</b></div>
+              {isClub && recentClubMatches.length ? (
+                <div className="team-profile-matches">
+                  {recentClubMatches.map((match) => (
+                    <div key={match.id}>
+                      <span>{match.playedAt ? formatGameDate(match.playedAt) : 'WEEK ' + match.week}</span>
+                      <strong>YOUR CLUB <i>{match.maps.reduce((sum, map) => sum + (map.us > map.them ? 1 : 0), 0)}:{match.maps.reduce((sum, map) => sum + (map.them > map.us ? 1 : 0), 0)}</i> {match.opponent}</strong>
+                      <small>{match.mode.toUpperCase()}</small>
+                    </div>
+                  ))}
+                </div>
               ) : !isClub && recentWorldMatches.length ? (
                 <div className="team-profile-matches">
                   {recentWorldMatches.map((match) => (

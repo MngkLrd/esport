@@ -331,7 +331,7 @@ function PlayerCard({
         <span className={expiring ? 'warning' : ''}>
           {expired ? 'КОНТРАКТ ИСТЁК' : 'Контракт: ' + player.contractWeeks + ' нед.'} · {player.salary} кр./нед.
         </span>
-        <button className="text-button" onClick={onRenew} disabled={state.credits < player.salary * 4}>
+        <button className="text-button" onClick={onRenew} disabled={state.credits < livePlayer.salary * 4}>
           Extend {player.salary * 4}
         </button>
       </div>
@@ -340,7 +340,7 @@ function PlayerCard({
         <button className={isStarter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>
           {isStarter ? 'В запас' : state.startingFive.length >= 5 ? 'Сначала освободи место' : 'В стартовую пятёрку'}
         </button>
-        <button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < player.salary}>
+        <button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < livePlayer.salary}>
           Release · {player.salary}
         </button>
       </div>
@@ -370,19 +370,20 @@ function PlayerProfileModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const rating = overall(player)
-  const expiring = player.contractWeeks <= 4
+  const livePlayer = state.roster.find((candidate) => candidate.id === player.id) ?? player
+  const rating = overall(livePlayer)
+  const expiring = livePlayer.contractWeeks <= 4
   const statRows = [
-    ['AIM', player.aim],
-    ['GAME SENSE', player.gameSense],
-    ['UTILITY', player.utility],
-    ['CLUTCH', player.clutch],
-    ['LEADERSHIP', player.leadership],
-    ['POTENTIAL', player.potential],
+    ['AIM', livePlayer.aim],
+    ['GAME SENSE', livePlayer.gameSense],
+    ['UTILITY', livePlayer.utility],
+    ['CLUTCH', livePlayer.clutch],
+    ['LEADERSHIP', livePlayer.leadership],
+    ['POTENTIAL', livePlayer.potential],
   ] as const
   const recentPerformances = state.history
     .flatMap((match) => match.performances
-      .filter((performance) => performance.playerId === player.id || performance.alias.toLocaleLowerCase('en-US') === player.alias.toLocaleLowerCase('en-US'))
+      .filter((performance) => performance.playerId === livePlayer.id || performance.alias.toLocaleLowerCase('en-US') === livePlayer.alias.toLocaleLowerCase('en-US'))
       .map((performance) => ({
         id: match.id,
         opponent: match.opponent,
@@ -396,35 +397,35 @@ function PlayerProfileModal({
 
   return (
     <div className="player-profile-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="player-profile-v2" role="dialog" aria-modal="true" aria-label={'Профиль ' + player.alias} onMouseDown={(event) => event.stopPropagation()}>
+      <section className="player-profile-v2" role="dialog" aria-modal="true" aria-label={'Профиль ' + livePlayer.alias} onMouseDown={(event) => event.stopPropagation()}>
         <button className="player-profile-close" onClick={onClose} aria-label="Закрыть">×</button>
 
         <header className="player-profile-head">
           <div className="player-profile-portrait">
-            <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="eager" />
+            <PlayerPortrait alias={livePlayer.alias} playerId={livePlayer.profileId} alt={livePlayer.alias} loading="eager" />
           </div>
           <div className="player-profile-identity">
-            <span>{countryFlag(player.country)} {player.country} · {ROLE_LABELS[player.role]}</span>
-            <h2>{player.alias}</h2>
-            <p>{player.realName}</p>
+            <span>{countryFlag(livePlayer.country)} {livePlayer.country} · {ROLE_LABELS[livePlayer.role]}</span>
+            <h2>{livePlayer.alias}</h2>
+            <p>{livePlayer.realName}</p>
             <div className="player-profile-team">
-              <TeamBadge name={player.team} size="sm" />
-              <span><small>TEAM</small><b>{player.team}</b></span>
+              <TeamBadge name={livePlayer.team} size="sm" />
+              <span><small>TEAM</small><b>{livePlayer.team}</b></span>
             </div>
           </div>
           <div className="player-profile-rating">
             <span>OVERALL</span>
             <strong>{rating}</strong>
-            <small>POT {player.potential}</small>
+            <small>POT {livePlayer.potential}</small>
           </div>
         </header>
 
         <div className="player-profile-body">
           <main>
             <section className="player-profile-state">
-              <div><small>FORM</small><b>{player.form}</b><i><em style={{ width: player.form + '%' }} /></i></div>
-              <div><small>MORALE</small><b>{player.morale}</b><i><em style={{ width: player.morale + '%' }} /></i></div>
-              <div className={player.fatigue >= 65 ? 'risk' : ''}><small>FATIGUE</small><b>{player.fatigue}</b><i><em style={{ width: player.fatigue + '%' }} /></i></div>
+              <div><small>FORM</small><b>{livePlayer.form}</b><i><em style={{ width: livePlayer.form + '%' }} /></i></div>
+              <div><small>MORALE</small><b>{livePlayer.morale}</b><i><em style={{ width: livePlayer.morale + '%' }} /></i></div>
+              <div className={livePlayer.fatigue >= 65 ? 'risk' : ''}><small>FATIGUE</small><b>{livePlayer.fatigue}</b><i><em style={{ width: livePlayer.fatigue + '%' }} /></i></div>
             </section>
 
             <section className="player-profile-stats">
@@ -437,8 +438,8 @@ function PlayerProfileModal({
             </section>
 
             <section className="player-profile-traits">
-              <div className="player-profile-section-head"><span>ROLE & TRAITS</span><b>{ROLE_LABELS[player.role]}</b></div>
-              <div>{player.traits.length ? player.traits.map((trait) => <span key={trait}>{trait}</span>) : <small>Нет выраженных traits.</small>}</div>
+              <div className="player-profile-section-head"><span>ROLE & TRAITS</span><b>{ROLE_LABELS[livePlayer.role]}</b></div>
+              <div>{livePlayer.traits.length ? livePlayer.traits.map((trait) => <span key={trait}>{trait}</span>) : <small>Нет выраженных traits.</small>}</div>
             </section>
 
             <section className="player-profile-form">
@@ -459,16 +460,16 @@ function PlayerProfileModal({
           <aside>
             <section className="player-profile-contract">
               <div className="player-profile-section-head"><span>CONTRACT</span><b className={expiring ? 'risk' : ''}>{expiring ? 'ATTENTION' : 'ACTIVE'}</b></div>
-              <div><small>REMAINING</small><strong className={expiring ? 'risk' : ''}>{player.contractWeeks} weeks</strong></div>
-              <div><small>SALARY</small><strong>{player.salary.toLocaleString('ru-RU')} cr./week</strong></div>
+              <div><small>REMAINING</small><strong className={expiring ? 'risk' : ''}>{livePlayer.contractWeeks} weeks</strong></div>
+              <div><small>SALARY</small><strong>{livePlayer.salary.toLocaleString('ru-RU')} cr./week</strong></div>
             </section>
 
             <section className="player-profile-actions">
               <div className="player-profile-section-head"><span>CLUB ACTIONS</span><b>MANAGE</b></div>
-              <button onClick={() => setState((current) => renewContract(current, player.id))} disabled={state.credits < player.salary * 4}>RENEW CONTRACT <span>→</span></button>
-              <button onClick={() => setState((current) => restPlayer(current, player.id))} disabled={state.staffEnergy < 1}>RECOVERY</button>
-              <button onClick={() => setState((current) => trainPlayer(current, player.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>DEVELOPMENT FOCUS</button>
-              <button className="danger" onClick={() => { setState((current) => releasePlayer(current, player.id)); onClose() }} disabled={state.roster.length <= 5 || state.credits < player.salary}>RELEASE PLAYER</button>
+              <button onClick={() => setState((current) => renewContract(current, livePlayer.id))} disabled={state.credits < livePlayer.salary * 4}>RENEW CONTRACT <span>→</span></button>
+              <button onClick={() => setState((current) => restPlayer(current, livePlayer.id))} disabled={state.staffEnergy < 1}>RECOVERY</button>
+              <button onClick={() => setState((current) => trainPlayer(current, livePlayer.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>DEVELOPMENT FOCUS</button>
+              <button className="danger" onClick={() => { setState((current) => releasePlayer(current, livePlayer.id)); onClose() }} disabled={state.roster.length <= 5 || state.credits < livePlayer.salary}>RELEASE PLAYER</button>
             </section>
           </aside>
         </div>
@@ -482,7 +483,7 @@ function HqStarterRow({ player, index, onOpen }: { player: Player; index: number
   return (
     <button type="button" className="hq-starter-row" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
       <span className="hq-starter-number">0{index + 1}</span>
-      <span className="hq-starter-portrait"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
+      <span className="hq-starter-portrait"><PlayerPortrait alias={livePlayer.alias} playerId={livePlayer.profileId} alt={livePlayer.alias} loading="lazy" /></span>
       <span className="hq-starter-copy"><strong>{player.alias}</strong><small>{countryFlag(player.country)} {player.country} · {role} · {player.team}</small></span>
       <span className="hq-starter-form"><b>{overall(player)}</b><i style={{ width: player.form + '%' }} /><small>{player.form} F / {player.fatigue} T</small></span>
       <span className="hq-starter-arrow">↗</span>
@@ -508,14 +509,14 @@ function RosterRow({ player, starter, state, onOpen, onTrain, onRest, onRenew, o
     <article className={'roster-player-row ' + (starter ? 'is-starter' : 'is-bench')}>
       <button className="roster-player-main" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
         <span className="roster-player-state"><b>{starter ? 'START' : 'BENCH'}</b><i /></span>
-        <span className="roster-player-photo"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
+        <span className="roster-player-photo"><PlayerPortrait alias={livePlayer.alias} playerId={livePlayer.profileId} alt={livePlayer.alias} loading="lazy" /></span>
         <span className="roster-player-identity"><strong>{player.alias}</strong><small>{player.realName} · {countryFlag(player.country)} {player.country} · {player.team}</small></span>
         <span className="roster-player-role"><b>{ROLE_LABELS[player.role]}</b><small>{player.traits.slice(0, 2).join(' · ')}</small></span>
         <span className="roster-player-ovr"><b>{overall(player)}</b><small>OVR · POT {player.potential}</small></span>
         <span className="roster-player-bars"><label>Форма <i><em style={{ width: player.form + '%' }} /></i><b>{player.form}</b></label><label>Мораль <i><em style={{ width: player.morale + '%' }} /></i><b>{player.morale}</b></label><label>Усталость <i className="danger"><em style={{ width: player.fatigue + '%' }} /></i><b>{player.fatigue}</b></label></span>
         <span className="roster-player-contract"><b className={expiring ? 'warning' : ''}>{expired ? 'ИСТЁК' : player.contractWeeks + ' нед.'}</b><small>{player.salary} кр./нед.</small></span>
       </button>
-      <div className="roster-row-actions"><button className={starter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>{starter ? 'В запас' : 'В старт'}</button><button onClick={onRenew} disabled={state.credits < player.salary * 4}>Продлить · {player.salary * 4}</button><button onClick={onTrain} disabled={state.staffEnergy < 1 || state.credits < 120}>Тренировка</button><button onClick={onRest} disabled={state.staffEnergy < 1}>Отдых</button><button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < player.salary}>Убрать</button></div>
+      <div className="roster-row-actions"><button className={starter ? 'secondary' : 'primary'} onClick={onToggleStarter} disabled={!canStart}>{starter ? 'В запас' : 'В старт'}</button><button onClick={onRenew} disabled={state.credits < livePlayer.salary * 4}>Продлить · {player.salary * 4}</button><button onClick={onTrain} disabled={state.staffEnergy < 1 || state.credits < 120}>Тренировка</button><button onClick={onRest} disabled={state.staffEnergy < 1}>Отдых</button><button className="text-button release" onClick={onRelease} disabled={state.roster.length <= 5 || state.credits < livePlayer.salary}>Убрать</button></div>
     </article>
   )
 }

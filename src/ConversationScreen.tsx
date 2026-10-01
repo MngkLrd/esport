@@ -34,6 +34,7 @@ interface ConversationScreenProps {
   context?: ConversationContextItem[]
   choices: ConversationChoice[]
   onChoose?: (choice: ConversationChoice) => void
+  onComplete?: (choice: ConversationChoice) => void
   onClose: () => void
 }
 
@@ -54,6 +55,7 @@ export function ConversationScreen({
   context = [],
   choices,
   onChoose,
+  onComplete,
   onClose,
 }: ConversationScreenProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -76,6 +78,14 @@ export function ConversationScreen({
     onChoose?.(choice)
   }
 
+  const finish = () => {
+    if (selected && onComplete) {
+      onComplete(selected)
+      return
+    }
+    onClose()
+  }
+
   return (
     <div className="conversation-screen" role="dialog" aria-modal="true" aria-label={title}>
       <header className="conversation-topbar">
@@ -85,7 +95,7 @@ export function ConversationScreen({
           <strong>{title}</strong>
           {subtitle && <small>{subtitle}</small>}
         </div>
-        <button className="conversation-done" type="button" onClick={onClose}>
+        <button className="conversation-done" type="button" onClick={selected ? finish : onClose}>
           {selected ? 'Завершить' : 'Закрыть'} <span>→</span>
         </button>
       </header>
@@ -169,7 +179,7 @@ export function ConversationScreen({
                 <span>ИТОГ ВСТРЕЧИ</span>
                 <strong>{selected.label}</strong>
                 <p>{selected.response}</p>
-                <button type="button" onClick={onClose}>Вернуться <span>→</span></button>
+                <button type="button" onClick={finish}>{onComplete ? 'Подтвердить' : 'Вернуться'} <span>→</span></button>
               </div>
             )}
           </section>

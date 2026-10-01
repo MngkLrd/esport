@@ -1015,7 +1015,7 @@ const finishCompetition = (
   const rng = rngFor(seed, 'finish:' + competition.id)
   const entrants = competition.participantTeamIds
     .map((id) => world.teams.find((team) => team.id === id))
-    .filter((team): team is WorldTeam => Boolean(team) && team.active !== false)
+    .filter((team): team is WorldTeam => team != null && team.active !== false)
   if (entrants.length < 2) {
     competition.status = 'cancelled'
     if (operator) {

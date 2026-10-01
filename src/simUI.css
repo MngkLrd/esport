@@ -3961,8 +3961,8 @@ body{
   min-width:0;
   min-height:0;
   display:grid;
-  grid-template-rows:50px minmax(0,1fr);
-  gap:10px;
+  grid-template-rows:50px 42px minmax(0,1fr);
+  gap:8px;
   overflow:hidden;
 }
 .sim-planner-toolbar{
@@ -4040,6 +4040,86 @@ body{
   box-shadow:inset 0 -2px 0 var(--ui-accent);
 }
 
+.sim-planner-toolbar-actions{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-left:auto;
+}
+.sim-planner-toolbar-actions button{
+  min-height:34px;
+  padding:0 10px;
+  border:0;
+  background:rgba(255,255,255,.025);
+  color:#8f8880;
+  cursor:pointer;
+  font:900 8px/1 Arial,sans-serif;
+  letter-spacing:.04em;
+}
+.sim-planner-toolbar-actions button:hover:not(:disabled){
+  background:rgba(255,255,255,.05);
+  color:#e1dbd2;
+}
+.sim-planner-toolbar-actions button:disabled{
+  opacity:.28;
+  cursor:default;
+}
+.sim-planner-save-state{
+  min-width:78px;
+  color:#6f6962;
+  font:900 8px/1 Arial,sans-serif;
+  letter-spacing:.05em;
+}
+.sim-planner-save-state.saving{color:var(--planner-watch)}
+.sim-planner-save-state.saved{color:var(--planner-good)}
+
+.sim-planner-mobile-roles{display:none}
+
+.sim-planner-next-action{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:0 10px 0 13px;
+  background:
+    linear-gradient(90deg,rgb(var(--ui-accent-rgb) / .07),transparent 58%),
+    #111314;
+  box-shadow:inset 2px 0 0 var(--ui-accent);
+}
+.sim-planner-next-action>div{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.sim-planner-next-action span{
+  color:#716b64;
+  font:900 8px/1 Arial,sans-serif;
+  letter-spacing:.07em;
+}
+.sim-planner-next-action b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#d8d2c9;
+  font:1000 10px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-next-action>button{
+  min-height:30px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:0 8px;
+  border:0;
+  background:transparent;
+  color:var(--ui-accent);
+  cursor:pointer;
+  font:1000 8px/1 Arial,sans-serif;
+}
+.sim-planner-next-action>button:hover{color:#f1c27f}
+
 .sim-planner-workspace{
   min-width:0;
   min-height:0;
@@ -4053,10 +4133,7 @@ body{
   display:grid;
   grid-template-rows:48px minmax(0,1fr);
   overflow:hidden;
-  border:1px solid rgb(var(--ui-line-rgb) / .18);
-  background:
-    radial-gradient(ellipse at 50% 112%,rgb(var(--ui-accent-rgb) / .045),transparent 52%),
-    #0d0f10;
+  background:#0d0f10;
   box-shadow:var(--sim-shadow);
 }
 .sim-planner-board-head{
@@ -4114,10 +4191,10 @@ body{
   display:grid;
   grid-template-rows:54px minmax(0,1fr);
   overflow:hidden;
-  border:1px solid rgb(var(--ui-line-rgb) / .13);
+  border:0;
   border-top:2px solid var(--lane-status);
   background:#101213;
-  transition:flex .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease;
+  transition:flex .18s ease,background .18s ease,opacity .18s ease,box-shadow .18s ease;
   cursor:pointer;
   outline:none;
 }
@@ -4126,16 +4203,15 @@ body{
 .sim-planner-lane.status-risk{--lane-status:var(--planner-risk)}
 .sim-planner-lane:hover,
 .sim-planner-lane:focus-visible{
-  border-color:color-mix(in srgb,var(--lane-status) 48%,rgb(var(--ui-line-rgb) / .15));
   background:#141617;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lane-status) 24%,transparent);
 }
 .sim-planner-lane.active{
   flex:1.42 1 0;
-  border-color:color-mix(in srgb,var(--lane-status) 62%,rgb(var(--ui-line-rgb) / .16));
   background:
     linear-gradient(180deg,color-mix(in srgb,var(--lane-status) 5%,transparent),transparent 24%),
     #121415;
-  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lane-status) 13%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lane-status) 34%,transparent);
 }
 .sim-planner-lane.is-muted:not(.active){
   opacity:.28;
@@ -4184,6 +4260,26 @@ body{
   color:#eee8df;
   font:1000 21px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
+
+.sim-planner-lane-head-meta{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.sim-planner-lane-head-meta>b{
+  color:#eee8df;
+  font:1000 21px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-diff-chip{
+  min-height:22px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 5px;
+  background:rgba(255,255,255,.025);
+  color:#827b73!important;
+  font:900 8px/1 Arial,sans-serif!important;
+}
 .sim-planner-depth{
   min-width:0;
   min-height:0;
@@ -4200,13 +4296,13 @@ body{
   grid-template-columns:54px minmax(0,1fr);
   grid-template-rows:minmax(0,1fr) auto;
   overflow:hidden;
-  border:1px solid rgb(var(--ui-line-rgb) / .13);
+  border:0;
   background:#141617;
   transition:border-color .14s ease,background .14s ease,transform .14s ease;
 }
 .sim-planner-player:hover{
-  border-color:rgb(var(--ui-line-rgb) / .24);
-  background:#17191a;
+  background:#181a1b;
+  box-shadow:inset 0 0 0 1px rgb(var(--ui-line-rgb) / .13);
 }
 .sim-planner-player.rank-1{
   grid-template-columns:62px minmax(0,1fr);
@@ -4395,6 +4491,37 @@ body{
   color:#8f7773;
   font-size:15px;
 }
+
+.sim-planner-slot-preview{
+  position:absolute;
+  inset:auto 6px 5px 62px;
+  z-index:2;
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+  min-height:30px;
+  padding:0 8px;
+  background:rgba(13,15,16,.96);
+  box-shadow:inset 2px 0 0 var(--ui-accent),0 8px 20px rgba(0,0,0,.25);
+  pointer-events:none;
+}
+.sim-planner-slot-preview span{
+  color:var(--ui-accent);
+  font:900 7px/1 Arial,sans-serif;
+}
+.sim-planner-slot-preview b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#e6e0d8;
+  font:1000 9px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-slot-preview small{
+  color:#8c857d;
+  font:800 8px/1 Arial,sans-serif;
+}
 .sim-planner-empty-slot{
   min-width:0;
   min-height:0;
@@ -4444,10 +4571,12 @@ body{
   min-height:0;
   display:flex;
   flex-direction:column;
-  overflow:hidden;
-  border:1px solid rgb(var(--ui-line-rgb) / .16);
+  overflow-x:hidden;
+  overflow-y:auto;
+  border:0;
   border-top:2px solid var(--analysis-status);
   background:#0d0f10;
+  scrollbar-width:thin;
 }
 .sim-planner-analysis.status-good{--analysis-status:var(--planner-good)}
 .sim-planner-analysis.status-watch{--analysis-status:var(--planner-watch)}
@@ -4503,6 +4632,91 @@ body{
   border-radius:50%;
   font-style:normal;
 }
+
+.sim-planner-inspector{
+  margin:9px 10px 0;
+  background:#121415;
+  box-shadow:inset 0 0 0 1px rgb(var(--ui-line-rgb) / .08);
+}
+.sim-planner-inspector-main{
+  min-width:0;
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:8px 9px;
+}
+.sim-planner-inspector-portrait{
+  width:58px;
+  height:64px;
+  overflow:hidden;
+  display:grid;
+  place-items:end center;
+  background:linear-gradient(180deg,#1b1d1e,#0f1112);
+}
+.sim-planner-inspector-portrait img,
+.sim-planner-inspector-portrait .player-portrait-fallback{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center bottom;
+}
+.sim-planner-inspector-main>div:nth-child(2){
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.sim-planner-inspector-main small{
+  color:#6e6861;
+  font:900 8px/1 Arial,sans-serif;
+  letter-spacing:.06em;
+}
+.sim-planner-inspector-main h3{
+  margin:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#ece6de;
+  font:1000 17px/.95 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-inspector-main span{
+  color:#8e877f;
+  font:800 9px/1.2 Arial,sans-serif;
+}
+.sim-planner-inspector-main>button{
+  min-height:32px;
+  padding:0 8px;
+  border:0;
+  background:rgba(255,255,255,.035);
+  color:#a49d94;
+  cursor:pointer;
+  font:900 8px/1 Arial,sans-serif;
+}
+.sim-planner-inspector-main>button:hover{color:#fff;background:rgba(255,255,255,.06)}
+.sim-planner-inspector-stats{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  background:#0f1112;
+}
+.sim-planner-inspector-stats span{
+  min-width:0;
+  display:grid;
+  gap:4px;
+  padding:7px 6px;
+  border-right:1px solid rgb(var(--ui-line-rgb) / .07);
+}
+.sim-planner-inspector-stats span:last-child{border-right:0}
+.sim-planner-inspector-stats small{
+  color:#5f5953;
+  font:900 7px/1 Arial,sans-serif;
+}
+.sim-planner-inspector-stats b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#cbc4bb;
+  font:1000 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
 .sim-planner-analysis-metrics{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -4528,6 +4742,35 @@ body{
   color:#e0dad1;
   font:1000 17px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
+
+.sim-planner-finance{
+  display:grid;
+  grid-template-columns:1.4fr 1fr 1fr;
+  margin:0 10px;
+  background:#111314;
+}
+.sim-planner-finance span{
+  min-width:0;
+  display:grid;
+  gap:5px;
+  padding:8px 9px;
+  border-right:1px solid rgb(var(--ui-line-rgb) / .07);
+}
+.sim-planner-finance span:last-child{border-right:0}
+.sim-planner-finance small{
+  color:#625d57;
+  font:900 7px/1 Arial,sans-serif;
+  letter-spacing:.04em;
+}
+.sim-planner-finance b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#cfc8bf;
+  font:1000 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.sim-planner-finance .up b{color:var(--planner-good)}
+.sim-planner-finance .down b{color:var(--planner-risk)}
 .sim-planner-diagnostics{
   padding:10px 12px;
   border-bottom:1px solid rgb(var(--ui-line-rgb) / .10);
@@ -4704,20 +4947,19 @@ body{
   gap:9px;
   align-items:center;
   padding:5px 6px;
-  border:1px solid rgb(var(--ui-line-rgb) / .10);
-  background:rgba(255,255,255,.012);
+  border:0;
+  background:rgba(255,255,255,.018);
   outline:none;
   cursor:pointer;
 }
 .sim-planner-candidate-list article:hover,
 .sim-planner-candidate-list article:focus-visible{
-  border-color:rgb(var(--ui-line-rgb) / .22);
-  background:rgba(255,255,255,.023);
+  background:rgba(255,255,255,.04);
+  box-shadow:inset 0 0 0 1px rgb(var(--ui-line-rgb) / .12);
 }
 .sim-planner-candidate-list article.selected{
-  border-color:rgb(var(--ui-accent-rgb) / .38);
   background:rgb(var(--ui-accent-rgb) / .045);
-  box-shadow:inset 3px 0 0 var(--ui-accent);
+  box-shadow:inset 3px 0 0 var(--ui-accent),inset 0 0 0 1px rgb(var(--ui-accent-rgb) / .16);
 }
 .sim-planner-candidate-portrait{
   width:48px;
@@ -4827,6 +5069,9 @@ body{
 .sim-planner-scout-action span{color:var(--ui-accent);font-size:14px}
 
 @media (min-width:901px) and (max-width:1249px){
+  .sim-planner-toolbar-actions .sim-planner-save-state{display:none}
+  .sim-planner-toolbar-actions button{padding-inline:7px}
+
   .sim-planner-workspace{
     grid-template-columns:minmax(0,1fr) 340px;
   }
@@ -4859,7 +5104,7 @@ body{
 
 @media (min-width:901px) and (max-height:820px){
   .sim-roster-v2{grid-template-rows:48px 40px minmax(0,1fr)}
-  .sim-squad-planner{grid-template-rows:44px minmax(0,1fr);gap:7px}
+  .sim-squad-planner{grid-template-rows:44px 38px minmax(0,1fr);gap:6px}
   .sim-planner-toolbar{gap:8px}
   .sim-planner-horizons,
   .sim-planner-summary button{height:34px;min-height:34px}
@@ -4868,6 +5113,8 @@ body{
   .sim-planner-player-meta{padding-bottom:4px}
   .sim-planner-diagnostics li:nth-child(n+3){display:none}
   .sim-planner-analysis-head p{display:none}
+  .sim-planner-inspector{display:none}
+  .sim-planner-finance{margin-top:4px}
   .sim-planner-candidate-list article{min-height:52px}
   .sim-planner-candidate-list article:nth-child(n+5){display:none}
   .sim-planner-more{display:none}
@@ -4890,6 +5137,35 @@ body{
   .sim-planner-horizons{flex:1}
   .sim-planner-horizons button{min-width:0;flex:1}
   .sim-planner-summary{display:none}
+  .sim-planner-toolbar-actions{
+    margin-left:0;
+  }
+  .sim-planner-toolbar-actions .sim-planner-save-state{display:none}
+  .sim-planner-toolbar-actions button:first-child{display:none}
+  .sim-planner-mobile-roles{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:4px;
+    margin:7px 0;
+  }
+  .sim-planner-mobile-roles button{
+    min-width:0;
+    min-height:38px;
+    padding:0 4px;
+    border:0;
+    border-top:2px solid #6f6962;
+    background:#111314;
+    color:#888178;
+    font:900 8px/1 Arial,sans-serif;
+  }
+  .sim-planner-mobile-roles button.status-good{border-top-color:var(--planner-good)}
+  .sim-planner-mobile-roles button.status-watch{border-top-color:var(--planner-watch)}
+  .sim-planner-mobile-roles button.status-risk{border-top-color:var(--planner-risk)}
+  .sim-planner-mobile-roles button.active{
+    background:rgb(var(--ui-accent-rgb) / .07);
+    color:#fff;
+  }
+  .sim-planner-next-action{min-height:44px;margin-bottom:7px}
   .sim-planner-workspace{display:block}
   .sim-planner-board{margin-top:4px;display:block;overflow:visible}
   .sim-planner-board-head{min-height:48px}
@@ -4908,5 +5184,9 @@ body{
     min-height:560px;
     overflow:visible;
   }
+  .sim-planner-inspector-stats{grid-template-columns:repeat(3,1fr)}
+  .sim-planner-finance{grid-template-columns:1fr 1fr}
+  .sim-planner-finance span:last-child{grid-column:1/-1}
+  .sim-planner-slot-preview{inset:auto 5px 4px 54px}
   .sim-planner-candidate-list{max-height:340px}
 }

@@ -2527,7 +2527,7 @@ export const prepareMatchFixture = (
   if (!gate.ok) return null
   const context = prepareMatchContext(state, mode)
   return {
-    id: resultId,
+    id: 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, ''),
     mode: context.effectiveMode,
     tactic,
     opponent: context.opponent.name,

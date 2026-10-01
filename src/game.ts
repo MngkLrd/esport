@@ -5,7 +5,7 @@ import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEv
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
-import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
+import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPreparationModifier, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -970,26 +970,6 @@ const tacticalModifier = (active: Player[], tactic: TacticalPlan) => {
   return 0
 }
 
-const trainingMatchModifier = (
-  state: GameState,
-  map: string,
-  opponentTeamId: string | null,
-) => {
-  const training = state.training ?? createTrainingState()
-  const mapPrep = TRAINING_MAPS.includes(map as TrainingMap)
-    ? training.mapPreparation[map as TrainingMap]
-    : 50
-  const knowledge = opponentTeamId ? training.opponentKnowledge[opponentTeamId] ?? 0 : 0
-  const raw =
-    (training.readiness - 55) * 0.035 +
-    (training.tacticalCohesion - 50) * 0.022 +
-    (training.sharpness - 55) * 0.018 +
-    (mapPrep - 50) * 0.028 +
-    (knowledge - 30) * 0.012
-
-  return Math.max(-3.2, Math.min(3.2, raw))
-}
-
 const mapScore = (won: boolean, winProbability: number, rng: () => number): [number, number] => {
   // A rating gap should be visible in the actual scoreline, not only in a hidden
   // probability. Expected wins can become dominant; major upsets stay close.
@@ -1483,7 +1463,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   while (ourMaps < 2 && theirMaps < 2) {
     const map = pick(mapPool.filter((name) => !maps.some((current) => current.map === name)), rng)
     const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
-    const preparationMod = isPractice ? 0 : trainingMatchModifier(state, map, opponent.teamId)
+    const preparationMod = isPractice ? 0 : trainingPreparationModifier(state.training ?? createTrainingState(), map, opponent.teamId)
     const effectiveRating = baseRating + tacticMod + preparationMod + momentum - rolePenalty - mapFatigue
     // OVR difference is the primary competitive signal. Keep some upset room,
     // but make even a 5-10 point gap materially change the series.

@@ -143,6 +143,8 @@ export interface MapStory {
     communication: number
     clutch: number
     individual: number
+    mapFit?: number
+    adaptation?: number
   }
   opponentFactors?: {
     tactics: number
@@ -151,6 +153,8 @@ export interface MapStory {
     communication: number
     clutch: number
     individual: number
+    mapFit?: number
+    adaptation?: number
   }
 }
 
@@ -1068,6 +1072,37 @@ const averagePlayerStat = (
   key: keyof Pick<Player, 'aim' | 'gameSense' | 'utility' | 'clutch' | 'leadership' | 'form' | 'morale' | 'fatigue'>,
 ) => active.length ? active.reduce((sum, player) => sum + player[key], 0) / active.length : 50
 
+type MatchSkillProfile = {
+  aim: number
+  gameSense: number
+  utility: number
+  clutch: number
+  leadership: number
+}
+
+const MAP_STYLE_WEIGHTS: Record<(typeof mapPool)[number], MatchSkillProfile> = {
+  'Dust II': { aim: .42, gameSense: .18, utility: .10, clutch: .22, leadership: .08 },
+  Mirage: { aim: .30, gameSense: .25, utility: .18, clutch: .17, leadership: .10 },
+  Inferno: { aim: .18, gameSense: .28, utility: .32, clutch: .10, leadership: .12 },
+  Nuke: { aim: .16, gameSense: .32, utility: .25, clutch: .10, leadership: .17 },
+  Ancient: { aim: .24, gameSense: .24, utility: .27, clutch: .13, leadership: .12 },
+  Anubis: { aim: .30, gameSense: .20, utility: .25, clutch: .15, leadership: .10 },
+}
+
+export const mapStyleFit = (skills: MatchSkillProfile, map: string) => {
+  const weights = MAP_STYLE_WEIGHTS[map as (typeof mapPool)[number]]
+  if (!weights) return (
+    skills.aim + skills.gameSense + skills.utility + skills.clutch + skills.leadership
+  ) / 5
+  return (
+    skills.aim * weights.aim +
+    skills.gameSense * weights.gameSense +
+    skills.utility * weights.utility +
+    skills.clutch * weights.clutch +
+    skills.leadership * weights.leadership
+  )
+}
+
 const roundCauseLabel: Record<MatchRoundCause, string> = {
   AIM: 'чистая реализация дуэлей',
   TACTICAL_EDGE: 'тактическое преимущество',
@@ -1151,6 +1186,7 @@ const buildOpponentMatchProfile = (
   roster: TournamentRosterPlayer[] | undefined,
   teamRatingValue: number,
   mapIndex: number,
+  adaptation: number,
   rng: () => number,
 ): OpponentMatchProfile => {
   const players = (roster ?? []).slice(0, 5)
@@ -1180,10 +1216,10 @@ const buildOpponentMatchProfile = (
   const morale = clamp(62 + (averageRating - 65) * .18 + (rng() - .5) * 18)
   const fatigue = clamp(18 + mapIndex * 7 + rng() * 30)
   const communication = clamp(
-    38 + gameSense * .18 + leadership * .24 + morale * .17 - Math.max(0, fatigue - 50) * .28,
+    38 + gameSense * .18 + leadership * .24 + morale * .17 - Math.max(0, fatigue - 50) * .28 + adaptation * 1.5,
   )
-  const tactical = clamp(45 + (gameSense - 60) * .42 + (utility - 60) * .3 + (leadership - 60) * .22)
-  const preparation = clamp(47 + (gameSense - 65) * .22 + (rng() - .5) * 18)
+  const tactical = clamp(45 + (gameSense - 60) * .42 + (utility - 60) * .3 + (leadership - 60) * .22 + adaptation * 4)
+  const preparation = clamp(47 + (gameSense - 65) * .22 + (rng() - .5) * 18 + adaptation * 6)
   const vulnerable = [...players].sort((a, b) => a.rating - b.rating)[0]
   const clutchPlayer = [...players].sort((a, b) => {
     const aBoost = roleBoost(a.role, 'clutch')
@@ -1260,6 +1296,7 @@ const simulateStoryMap = (
   tacticMod: number,
   preparationMod: number,
   continuity: number,
+  opponentAdaptation: number,
   rng: () => number,
 ): MapResult => {
   const avgAim = averagePlayerStat(active, 'aim')
@@ -1267,8 +1304,10 @@ const simulateStoryMap = (
   const avgUtility = averagePlayerStat(active, 'utility')
   const avgLeadership = averagePlayerStat(active, 'leadership')
   const avgMorale = averagePlayerStat(active, 'morale')
-  const avgFatigue = averagePlayerStat(active, 'fatigue')
+  const baseFatigue = averagePlayerStat(active, 'fatigue')
   const avgClutch = averagePlayerStat(active, 'clutch')
+  const seriesFatigueGain = mapIndex * (tactic === 'aggressive' ? 8 : tactic === 'structured' ? 4 : 6)
+  const avgFatigue = clamp(baseFatigue + seriesFatigueGain)
   const communication = clamp(
     continuity * .42 + avgLeadership * .25 + avgMorale * .23 - Math.max(0, avgFatigue - 50) * .28 + 10,
   )
@@ -1281,7 +1320,16 @@ const simulateStoryMap = (
     (a.form - a.fatigue * .72 + a.gameSense * .16) - (b.form - b.fatigue * .72 + b.gameSense * .16),
   )[0] ?? active[0]
   const clutchPlayer = [...active].sort((a, b) => b.clutch - a.clutch || b.form - a.form)[0] ?? active[0]
-  const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, mapIndex, rng)
+  const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, mapIndex, opponentAdaptation, rng)
+  const ourMapFit = mapStyleFit({
+    aim: avgAim,
+    gameSense: avgGameSense,
+    utility: avgUtility,
+    clutch: avgClutch,
+    leadership: avgLeadership,
+  }, map)
+  const opponentMapFit = mapStyleFit(opponent, map)
+  const mapEdge = clamp((ourMapFit - opponentMapFit) * .0035, -.075, .075)
 
   const rounds: MatchRoundStory[] = []
   let us = 0
@@ -1350,14 +1398,19 @@ const simulateStoryMap = (
       ? clamp((avgClutch - opponent.clutch) * .0014, -.055, .055)
       : 0
 
-    let roundProbability = clamp(probability + momentum + tacticalEdge + clutchEdge, .10, .90)
+    let roundProbability = clamp(probability + mapEdge + momentum + tacticalEdge + clutchEdge, .10, .90)
     const ourAntiStrat = preparation >= 62 && rng() < clamp((preparation - 55) * .012, .05, .27)
     const theirAntiStrat = opponent.preparation >= 62 && rng() < clamp((opponent.preparation - 55) * .012, .05, .27)
     const ourCommunicationBreak = communication < 60 && lateRound && rng() < clamp((64 - communication) * .012, .04, .24)
     const theirCommunicationBreak = opponent.communication < 60 && lateRound && rng() < clamp((64 - opponent.communication) * .012, .04, .24)
     const ourFatigueBreak = avgFatigue >= 56 && lateRound && rng() < clamp((avgFatigue - 48) * .01, .05, .28)
     const theirFatigueBreak = opponent.fatigue >= 56 && lateRound && rng() < clamp((opponent.fatigue - 48) * .01, .05, .28)
-    const ourMistakeChance = clamp((55 - (vulnerable?.form ?? 55)) * .005 + ((vulnerable?.fatigue ?? 45) - 55) * .0035, .025, .22)
+    const ourMistakeChance = clamp(
+      (55 - (vulnerable?.form ?? 55)) * .005 +
+      (((vulnerable?.fatigue ?? 45) + seriesFatigueGain) - 55) * .0035,
+      .025,
+      .24,
+    )
     const theirMistakeChance = clamp((55 - opponent.form) * .0045 + (opponent.fatigue - 55) * .003, .025, .20)
     const ourPlayerMistake = Boolean(vulnerable && rng() < ourMistakeChance)
     const theirPlayerMistake = Boolean(opponent.vulnerableAlias && rng() < theirMistakeChance)
@@ -1450,6 +1503,8 @@ const simulateStoryMap = (
     communication: Math.round(communication),
     clutch: Math.round(clutchFactor),
     individual: Math.round(individual),
+    mapFit: Math.round(ourMapFit),
+    adaptation: 0,
   }
   const opponentFactors: NonNullable<MapStory['opponentFactors']> = {
     tactics: Math.round(opponent.tactical),
@@ -1458,6 +1513,8 @@ const simulateStoryMap = (
     communication: Math.round(opponent.communication),
     clutch: Math.round(opponent.clutch),
     individual: Math.round(opponent.aim * .58 + opponent.form * .42),
+    mapFit: Math.round(opponentMapFit),
+    adaptation: Math.round(opponentAdaptation * 10) / 10,
   }
   const tags = deriveMapNarrativeTags(rounds, factors)
   const turningPoint = findTurningPoint(rounds)
@@ -1475,6 +1532,14 @@ const simulateStoryMap = (
   if (tags.includes('COMMUNICATION_BREAKDOWN')) explanationParts.push('В концовках возникли повторяющиеся ошибки коммуникации.')
   if (tags.includes('WEAK_MAP')) explanationParts.push('Подготовка к карте не дала достаточной опоры, и карта стала слабым местом серии.')
   if (tags.includes('PLAYER_COLLAPSE') && collapse) explanationParts.push(collapse[0] + ' допустил ' + collapse[1] + ' ключевые ошибки.')
+  if (ourMapFit - opponentMapFit >= 7 && usWon) {
+    explanationParts.push('Профиль состава лучше соответствовал требованиям этой карты.')
+  } else if (opponentMapFit - ourMapFit >= 7 && !usWon) {
+    explanationParts.push('Профиль соперника лучше соответствовал требованиям этой карты.')
+  }
+  if (opponentAdaptation >= 1.1 && !usWon) {
+    explanationParts.push('По ходу серии соперник адаптировался к повторяющемуся плану и усилил чтение раундов.')
+  }
   if (!explanationParts.length) {
     const opponentCollapse = rounds.filter((round) =>
       round.winner === 'US' &&
@@ -1502,7 +1567,7 @@ const simulateStoryMap = (
     map,
     us,
     them,
-    winChance: Math.round(probability * 100),
+    winChance: Math.round(clamp(probability + mapEdge + ((tacticalQuality + preparation * .28) - (opponent.tactical + opponent.preparation * .28)) * .00115, .05, .95) * 100),
     topPerformer: topPerformer?.alias ?? '—',
     story: {
       map,
@@ -1985,7 +2050,7 @@ export const playMatch = (
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null
 
-  const rng = mulberry32(hashSeed([
+  const matchSeed = hashSeed([
     state.seed,
     state.season,
     state.now,
@@ -1994,7 +2059,8 @@ export const playMatch = (
     tactic,
     tournamentMatch?.id ?? state.activeEventId ?? 'open',
     state.startingFive.join(','),
-  ].join(':')))
+  ].join(':'))
+  const rng = mulberry32(matchSeed)
 
   const opponent = tournamentOpponent
     ? {
@@ -2013,6 +2079,7 @@ export const playMatch = (
   let ourMaps = 0
   let theirMaps = 0
   let momentum = 0
+  let opponentAdaptation = 0
 
   while (ourMaps < 2 && theirMaps < 2) {
     const availableMaps = mapPool.filter((name) => !maps.some((current) => current.map === name))
@@ -2027,6 +2094,7 @@ export const playMatch = (
     const volatility = tactic === 'aggressive' ? 9.6 : tactic === 'structured' ? 9.0 : 9.3
     const rawProbability = 1 / (1 + Math.exp(-ratingGap / volatility))
     const probability = clamp(rawProbability, .08, .92)
+    const mapRng = mulberry32(hashSeed(matchSeed + ':map:' + map + ':' + maps.length))
     const mapResult = simulateStoryMap(
       active,
       opponent.roster,
@@ -2038,7 +2106,8 @@ export const playMatch = (
       tacticMod,
       preparationMod,
       state.lineupContinuity,
-      rng,
+      opponentAdaptation,
+      mapRng,
     )
     maps.push(mapResult)
     if (mapResult.us > mapResult.them) {
@@ -2048,6 +2117,17 @@ export const playMatch = (
       theirMaps += 1
       momentum = Math.max(-2.5, momentum - 1.2)
     }
+
+    const systemRoundsLostByOpponent = (mapResult.story?.rounds ?? []).filter((round) =>
+      round.winner === 'US' &&
+      (round.cause === 'ANTI_STRAT' || round.cause === 'TACTICAL_EDGE' || round.cause === 'MOMENTUM'),
+    ).length
+    opponentAdaptation = Math.min(
+      3,
+      opponentAdaptation +
+      (mapResult.us > mapResult.them ? .65 : .25) +
+      Math.min(.55, systemRoundsLostByOpponent * .045),
+    )
   }
 
   const won = ourMaps > theirMaps

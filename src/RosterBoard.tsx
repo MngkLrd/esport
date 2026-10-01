@@ -89,9 +89,17 @@ function SquadPlanner({
   }, [selectedRole, horizon])
 
   useEffect(() => {
-    if (saveIndicator !== 'saving') return
     setSaveIndicator(saveSignal.status)
-  }, [saveSignal.revision, saveSignal.status, saveIndicator])
+  }, [saveSignal.revision, saveSignal.status])
+
+  useEffect(() => {
+    if (!copyPrompt) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCopyPrompt(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [copyPrompt])
 
   useEffect(() => {
     if (!undoNotice) return

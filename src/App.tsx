@@ -1326,7 +1326,6 @@ function App() {
         {tab === 'Inbox' && (
           <WorldPortal
             state={state}
-            onResolveDecision={resolveDecision}
             onOpenDecision={() => setBoardConversation(true)}
             onNavigate={(target) => openTab(target)}
             onOpenPlayer={setSelectedPlayer}

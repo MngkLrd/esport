@@ -1049,11 +1049,21 @@ const generateOpponent = (state: GameState, mode: MatchMode, rng: () => number) 
     }
   }
 
+  const name = pick(opponentNames, rng)
+  const fallbackRoles: TournamentRosterPlayer['role'][] = ['Entry', 'AWP', 'Rifler', 'Support', 'IGL']
+  const stem = name.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase() || 'RIVAL'
   return {
-    name: pick(opponentNames, rng),
+    name,
     rating: targetRating,
     teamId: null,
-    roster: [] as TournamentRosterPlayer[],
+    roster: fallbackRoles.map((role, index) => ({
+      playerKey: 'sim:' + stem.toLocaleLowerCase('en-US') + ':' + index,
+      alias: stem + '-' + (index + 1),
+      role,
+      rating: Math.round(clamp(targetRating + [-1, 2, 1, -2, 0][index], 40, 99)),
+      profileId: null,
+      country: null,
+    })),
   }
 }
 
@@ -2099,11 +2109,10 @@ export const playMatch = (
     const availableMaps = mapPool.filter((name) => !maps.some((current) => current.map === name))
     const forcedMap = selectedMaps[maps.length] as (typeof mapPool)[number] | undefined
     const map = forcedMap && availableMaps.includes(forcedMap) ? forcedMap : pick(availableMaps, rng)
-    const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
     const preparationMod = isPractice ? 0 : trainingPreparationModifier(state.training ?? createTrainingState(), map, opponent.teamId)
-    // Rating is the baseline. Tactics, preparation, communication, fatigue incidents,
-    // anti-strat and clutch are applied inside the round model exactly once.
-    const effectiveRating = baseRating + momentum - rolePenalty - mapFatigue
+    // Rating is the baseline. Series fatigue is modelled inside causal rounds,
+    // so it must not also be subtracted here as a second hidden penalty.
+    const effectiveRating = baseRating + momentum - rolePenalty
     const ratingGap = effectiveRating - opponent.rating
     // This is round-level probability, so the scale must be much wider than a
     // map-level Elo/logistic model. Otherwise a small rating gap compounds into
@@ -2178,6 +2187,8 @@ export const playMatch = (
   const payroll = 0
   const net = reward
   const fansDelta = isPractice ? 0 : Math.round(tune.fans * (won ? 1 : .25))
+  const totalRoundsPlayed = maps.reduce((sum, map) => sum + map.us + map.them, 0)
+  const roundLoad = Math.max(1, Math.round(totalRoundsPlayed / 14))
 
   const storyErrors = new Map<string, number>()
   const storyClutches = new Map<string, number>()
@@ -2231,8 +2242,10 @@ export const playMatch = (
         ? (won ? 4 : -4)
         : (won ? 1 : 0)
     const fatigueGain = isPractice
-      ? 4
-      : (tactic === 'aggressive' ? 12 : tactic === 'structured' ? 8 : 10) + (event ? Math.round(event.fatigue * .35) : 0)
+      ? 2 + Math.max(1, Math.round(roundLoad * .65))
+      : (tactic === 'aggressive' ? 8 : tactic === 'structured' ? 5 : 6)
+        + roundLoad
+        + (event ? Math.round(event.fatigue * .35) : 0)
     return {
       ...player,
       form: clamp(player.form + formDelta),

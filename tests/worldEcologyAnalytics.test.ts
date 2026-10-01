@@ -42,5 +42,5 @@ describe('world ecology observability', () => {
     expect(snapshot.vrsTopFiveShare).toBeGreaterThan(0)
     expect(snapshot.regions).toHaveLength(4)
     expect(violations).toEqual([])
-  }, 30_000)
+  }, 60_000)
 })

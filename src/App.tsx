@@ -58,11 +58,12 @@ import { TrainingGround } from './TrainingGround'
 import { TeamBadge } from './TeamBadge'
 import { WorldPortal } from './WorldPortal'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
+import { FinanceView } from './FinanceView'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
 const saveRepository = createBrowserSaveRepository()
-type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Training' | 'Roster' | 'Packs' | 'Scout' | 'Inbox' | 'Profile'
+type Tab = 'HQ' | 'World' | 'Calendar' | 'Play' | 'Training' | 'Roster' | 'Packs' | 'Scout' | 'Finance' | 'Inbox' | 'Profile'
 type PendingMatch =
   | {
       sourceState: GameState
@@ -93,6 +94,7 @@ const TAB_LABELS: Record<Tab, string> = {
   Roster: 'SQUAD',
   Packs: 'PACKS',
   Scout: 'TRANSFERS',
+  Finance: 'FINANCES',
   Inbox: 'NEWS',
   Profile: 'PROFILE',
 }
@@ -106,6 +108,7 @@ const SCREEN_TITLES: Record<Tab, string> = {
   Roster: 'SQUAD',
   Packs: 'PACK STORE',
   Scout: 'BUILD YOUR SHORTLIST',
+  Finance: 'CLUB FINANCES',
   Inbox: 'NEWSROOM',
   Profile: 'MANAGER LEVEL',
 }
@@ -959,7 +962,7 @@ function App() {
         <div className="fifa-wallets">
           <button onClick={() => openTab('Inbox')} className={unread > 0 ? 'has-unread' : ''}><span>INBOX</span><b>{unread > 0 ? unread + ' NEW' : 'CLEAR'}</b></button>
           <button onClick={() => openTab('Profile')}><span>MANAGER LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
-          <div><span>CLUB CASH</span><b>{format.format(state.credits)}</b></div>
+          <button onClick={() => openTab('Finance')}><span>CLUB CASH</span><b>{format.format(state.credits)}</b></button>
           <div><span>PACK TOKENS</span><b>{format.format(state.packTokens)}</b></div>
         </div>
       </header>
@@ -1104,6 +1107,8 @@ function App() {
         )}
 
         {tab === 'Profile' && <ManagerProfile state={state} />}
+
+        {tab === 'Finance' && <FinanceView state={state} />}
 
         {tab === 'Inbox' && (
           <WorldPortal

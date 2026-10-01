@@ -3482,6 +3482,16 @@ export const negotiateProspect = (
     working.now,
     working.seed + working.scoutCycle * 97,
   )
+  if (sourceTeam && normalizedTerms.fee > 0) {
+    nextWorld = {
+      ...nextWorld,
+      teams: nextWorld.teams.map((team) =>
+        team.id === sourceTeam.id
+          ? { ...team, cash: Math.max(0, Math.round((team.cash ?? 0) + normalizedTerms.fee)) }
+          : team,
+      ),
+    }
+  }
   nextWorld = repairWorldIntegrity(nextWorld, clubWorldRosterProjection(nextRoster))
   const clubKeys = new Set(
     nextRoster

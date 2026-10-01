@@ -149,16 +149,13 @@ const detectTimeProgressionStop = (before: GameState, after: GameState): TimePro
     const action =
       actionableNews.kind === 'contract' || actionableNews.kind === 'lineup'
         ? 'Roster' as const
-        : actionableNews.kind === 'scout'
-          ? 'Scout' as const
-          : actionableNews.kind === 'match'
-            ? 'World' as const
-            : 'Inbox' as const
+        : actionableNews.kind === 'match'
+          ? 'World' as const
+          : 'Inbox' as const
     const actionLabel =
       action === 'Roster' ? 'ОТКРЫТЬ СОСТАВ'
-        : action === 'Scout' ? 'ОТКРЫТЬ СКАУТИНГ'
-          : action === 'World' ? 'ОТКРЫТЬ WORLD'
-            : 'ОТКРЫТЬ INBOX'
+        : action === 'World' ? 'ОТКРЫТЬ WORLD'
+          : 'ОТКРЫТЬ INBOX'
 
     return {
       kind: actionableNews.kind === 'contract' ? 'contract' : actionableNews.kind === 'match' ? 'tournament' : 'message',

@@ -19,6 +19,7 @@ const packs = read('src/PacksView.tsx')
 const scout = read('src/ScoutMarket.tsx')
 const scoutCss = read('src/ScoutMarket.css')
 const roster = read('src/RosterBoard.tsx')
+const conversation = read('src/ConversationScreen.tsx')
 
 describe('2026 UI quality pass', () => {
   it('locks collectible cards to the intended portrait ratio', () => {
@@ -154,6 +155,28 @@ describe('2026 UI quality pass', () => {
     expect(app).toContain('renewContract(current, livePlayer.id)')
     expect(app).toContain('restPlayer(current, livePlayer.id)')
     expect(app).toContain('trainPlayer(current, livePlayer.id)')
+  })
+
+  it('adds a manager-style circuit hub before event selection without replacing the palette', () => {
+    expect(world).toContain("useState<'hub' | 'map' | 'vrs'>('hub')")
+    expect(world).toContain('className="world-hub"')
+    expect(world).toContain('SELECT EVENT')
+    expect(world).toContain('CLUB INBOX')
+    expect(world).toContain('VRS STANDINGS')
+    expect(visual).toContain('/* CIRCUIT HUB')
+    expect(visual).toContain('.sim-world-hub .sim-world-filters')
+    expect(visual).toContain('background:linear-gradient(180deg,rgb(var(--ui-panel-raised-rgb)')
+  })
+
+  it('provides a reusable full-screen conversation system from player profiles', () => {
+    expect(app).toContain('TALK TO PLAYER')
+    expect(app).toContain('<ConversationScreen')
+    expect(app).toContain('conversationChoicesForPlayer')
+    expect(conversation).toContain('export interface ConversationParticipant')
+    expect(conversation).toContain('conversation-choice-grid')
+    expect(conversation).toContain('Выберите тон и позицию')
+    expect(visual).toContain('/* FM-STYLE CONVERSATION SYSTEM')
+    expect(visual).toContain('.conversation-workspace')
   })
 
 })

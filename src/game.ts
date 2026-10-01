@@ -4,7 +4,7 @@ import { collectPackCards, createPackState, type PackCard, type PackRarity, type
 import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEvent } from './events'
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
-import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, repairWorldIntegrity, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
 import { advanceWorldEcology, ensureWorldEcology, worldEventsSince, type WorldHistoryEvent } from './worldEcology'
 import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPreparationModifier, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
 import { cardStatsForAlias } from './cardStats'
@@ -324,6 +324,44 @@ export const managerLevelProgress = (xp: number) => {
   const next = level * 500
   return { level, current: Math.max(0, xp - floor), required: next - floor, percent: Math.max(0, Math.min(100, Math.round((xp - floor) / Math.max(1, next - floor) * 100))) }
 }
+
+const financeStateFor = (state: Pick<GameState, 'finance' | 'credits'>) =>
+  state.finance?.version === 1 ? state.finance : createFinanceState(state.credits)
+
+const postClubFinance = (
+  state: GameState,
+  entry: Omit<FinanceLedgerEntry, 'direction'>,
+): GameState => {
+  const finance = postFinanceEntry(financeStateFor(state), {
+    ...entry,
+    direction: entry.amount >= 0 ? 'income' : 'expense',
+  })
+  return { ...state, finance, credits: finance.cash }
+}
+
+const recordClubEvent = (
+  state: GameState,
+  event: ClubEvent,
+  projectNews = true,
+): GameState => {
+  const clubEvents = appendClubEvent(state.clubEvents ?? [], event)
+  if (!projectNews) return { ...state, clubEvents }
+  const newsItem = projectEventToNews(event)
+  return {
+    ...state,
+    clubEvents,
+    news: [newsItem, ...state.news.filter((item) => item.id !== newsItem.id)].slice(0, 100),
+  }
+}
+
+const clubWorldRosterProjection = (roster: Player[]) =>
+  roster.map((player) => ({
+    playerKey: player.playerKey,
+    alias: player.alias,
+    contractWeeks: player.contractWeeks,
+    salary: player.salary,
+    rating: overall(player),
+  }))
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 
@@ -775,7 +813,7 @@ const normalizedWorld = (
     : createWorldState()
   const refreshed = refreshWorldIdentityMetadata(source)
   const ecological = ensureWorldEcology(refreshed, seed, now)
-  return reconcileWorldWithClubRoster(ecological, roster, now, seed)
+  return reconcileWorldWithClubRoster(ecological, clubWorldRosterProjection(roster), now, seed)
 }
 
 export const migrateState = (raw: unknown): GameState => {

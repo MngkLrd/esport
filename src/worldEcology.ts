@@ -1023,24 +1023,49 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
   }
 
   recalcMetrics(world, ecology)
-  const activeTeamCount = activeTeams(world).length
+  let activeTeamCount = activeTeams(world).length
   const sustainableTeamCapacity = ecology.carryingCapacityTeams + Math.max(0, Math.floor((ecology.metrics.audienceDemand - 55) / 8))
   for (const region of REGIONS) {
     if (activeTeamCount >= sustainableTeamCapacity) break
-    const regionalFree = Object.values(world.players).filter((player) =>
-      !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
-    )
+
     const regionalTeams = activeTeams(world).filter((team) => (team.region ?? teamRegion(world, team)) === region)
     const tournamentAccess = activeCompetitions(ecology).filter((event) => event.region === region).length
     const regionalShare = regionalTeams.length / Math.max(1, activeTeams(world).length)
     const underRepresentation = Math.max(0, .18 - regionalShare) * 80
-    const entryUtility =
-      Math.min(28, regionalFree.length * 1.4) +
+    const organizationGap = sustainableTeamCapacity - activeTeamCount
+    let regionalFree = Object.values(world.players).filter((player) =>
+      !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
+    )
+    const opportunityWithoutSupply =
       tournamentAccess * 4 +
       ecology.metrics.sponsorLiquidity * .18 +
-      underRepresentation -
+      ecology.metrics.audienceDemand * .12 +
+      underRepresentation +
+      Math.min(24, organizationGap * .8) -
       regionalTeams.length * .28
-    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 50) foundTeam(world, ecology, region, at, seed)
+
+    if (
+      regionalFree.length < 7 &&
+      organizationGap > 0 &&
+      ecology.metrics.sponsorLiquidity >= 42 &&
+      ecology.metrics.audienceDemand >= 45 &&
+      opportunityWithoutSupply + rng() * 10 > 42
+    ) {
+      const intake = Math.min(7 - regionalFree.length, Math.max(1, Math.ceil(organizationGap / 18)))
+      for (let index = 0; index < intake; index += 1) {
+        createGeneratedPlayer(world, ecology, region, at, seed + activeTeamCount * 131, ecology.metrics.generatedPlayers + 1)
+      }
+      regionalFree = Object.values(world.players).filter((player) =>
+        !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
+      )
+    }
+
+    const entryUtility = opportunityWithoutSupply + Math.min(28, regionalFree.length * 1.4)
+    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 50) {
+      const before = activeTeams(world).length
+      foundTeam(world, ecology, region, at, seed)
+      if (activeTeams(world).length > before) activeTeamCount += 1
+    }
   }
 
   maybeFoundOperator(world, ecology, at, seed)

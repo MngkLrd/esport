@@ -3,9 +3,11 @@ import {
   lineupMapStyleFit,
   opponentRosterMapStyleFit,
   overall,
+  tacticInfo,
   type MatchNarrativeTag,
   type MatchResult,
   type Player,
+  type TacticalPlan,
 } from './game'
 import type { TournamentRosterPlayer } from './tournamentEngine'
 import { metadataForAlias } from './playerMetadata'
@@ -25,6 +27,8 @@ type LobbyMap = {
   key: string
   description: string
 }
+
+const TACTICAL_PLANS: TacticalPlan[] = ['balanced', 'aggressive', 'structured']
 
 const MAPS: LobbyMap[] = [
   { name: 'Ancient', key: 'de_ancient', description: 'Плотная карта с быстрыми ротациями и сильной ценностью utility.' },
@@ -207,11 +211,12 @@ export function MatchLobby({
   starters: Player[]
   phase: 'prematch' | 'result'
   initialVeto?: LobbyVetoAction[]
-  onStart?: (maps: string[], veto: LobbyVetoAction[]) => void
+  onStart?: (maps: string[], veto: LobbyVetoAction[], tactic: TacticalPlan) => void
   onContinue?: () => void
 }) {
   const rivals = useMemo(() => opponentPlayers(result), [result])
   const [veto, setVeto] = useState<LobbyVetoAction[]>(initialVeto)
+  const [selectedTactic, setSelectedTactic] = useState<TacticalPlan>(result.tactic)
   const [focusedMap, setFocusedMap] = useState(
     initialVeto.find((action) => action.type === 'PICK')?.map ?? MAPS[2].name,
   )
@@ -389,6 +394,19 @@ export function MatchLobby({
                   <span>TACTICAL OVERVIEW</span>
                   <h2>{focused.name}</h2>
                   <p>{focused.description}</p>
+                  <div className="match-lobby-tactics" aria-label="План на матч">
+                    {TACTICAL_PLANS.map((plan) => (
+                      <button
+                        type="button"
+                        key={plan}
+                        className={selectedTactic === plan ? 'is-active' : ''}
+                        title={tacticInfo[plan].description}
+                        onClick={() => setSelectedTactic(plan)}
+                      >
+                        {tacticInfo[plan].name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="match-lobby-map-facts">
                   <span><small>YOUR OVR</small><b>{homeRating}</b></span>
@@ -406,7 +424,7 @@ export function MatchLobby({
                   type="button"
                   className="match-lobby-primary"
                   disabled={!vetoComplete}
-                  onClick={() => onStart?.(selectedMaps, veto)}
+                  onClick={() => onStart?.(selectedMaps, veto, selectedTactic)}
                 >
                   {vetoComplete ? 'START SERIES' : nextStep?.label ?? 'COMPLETE VETO'}
                 </button>

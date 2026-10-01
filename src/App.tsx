@@ -380,6 +380,19 @@ function PlayerProfileModal({
     ['LEADERSHIP', player.leadership],
     ['POTENTIAL', player.potential],
   ] as const
+  const recentPerformances = state.history
+    .flatMap((match) => match.performances
+      .filter((performance) => performance.playerId === player.id || performance.alias.toLocaleLowerCase('en-US') === player.alias.toLocaleLowerCase('en-US'))
+      .map((performance) => ({
+        id: match.id,
+        opponent: match.opponent,
+        rating: performance.rating,
+        won: match.won,
+      })))
+    .slice(0, 5)
+  const recentAverage = recentPerformances.length
+    ? recentPerformances.reduce((sum, performance) => sum + performance.rating, 0) / recentPerformances.length
+    : null
 
   return (
     <div className="player-profile-backdrop" role="presentation" onMouseDown={onClose}>
@@ -426,6 +439,20 @@ function PlayerProfileModal({
             <section className="player-profile-traits">
               <div className="player-profile-section-head"><span>ROLE & TRAITS</span><b>{ROLE_LABELS[player.role]}</b></div>
               <div>{player.traits.length ? player.traits.map((trait) => <span key={trait}>{trait}</span>) : <small>Нет выраженных traits.</small>}</div>
+            </section>
+
+            <section className="player-profile-form">
+              <div className="player-profile-section-head"><span>RECENT FORM</span><b>{recentAverage != null ? recentAverage.toFixed(2) + ' AVG' : 'NO DATA'}</b></div>
+              <div className="player-profile-form-list">
+                {recentPerformances.map((performance) => (
+                  <div key={performance.id}>
+                    <span className={performance.won ? 'win' : 'loss'}>{performance.won ? 'W' : 'L'}</span>
+                    <strong>{performance.opponent}</strong>
+                    <b>{performance.rating.toFixed(2)}</b>
+                  </div>
+                ))}
+                {!recentPerformances.length && <small>Матчей с индивидуальным рейтингом пока нет.</small>}
+              </div>
             </section>
           </main>
 
@@ -914,7 +941,14 @@ function App() {
         </div>
       )}
       {selectedCard && <Suspense fallback={null}><CardDetails card={selectedCard} onClose={() => setSelectedCard(null)} /></Suspense>}
-      {selectedPlayer && <PlayerProfileModal player={selectedPlayer} state={state} setState={setState} onClose={() => setSelectedPlayer(null)} />}
+      {selectedPlayer && (
+        <PlayerProfileModal
+          player={state.roster.find((player) => player.id === selectedPlayer.id) ?? selectedPlayer}
+          state={state}
+          setState={setState}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
       {transition && (
         <div className="fifa-title-transition" aria-hidden="true">
           <div><span>ESPORT AI MANAGER</span><strong>{transition.title}</strong><i /></div>

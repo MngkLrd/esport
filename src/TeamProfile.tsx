@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { formatGameDate } from './calendar'
-import { overall, type GameState, type Player } from './game'
+import { managerLevelProgress, overall, type GameState, type Player } from './game'
 import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 import { TeamBadge } from './TeamBadge'
@@ -109,7 +109,7 @@ export function TeamProfile({
                 <div className="team-profile-matches">
                   {recentClubMatches.map((match) => (
                     <div key={match.id}>
-                      <span>{formatGameDate(match.date)}</span>
+                      <span>{match.playedAt ? formatGameDate(match.playedAt) : 'WEEK ' + match.week}</span>
                       <strong>YOUR CLUB <i>{match.maps.reduce((sum, map) => sum + (map.us > map.them ? 1 : 0), 0)}:{match.maps.reduce((sum, map) => sum + (map.them > map.us ? 1 : 0), 0)}</i> {match.opponent}</strong>
                       <small>{match.mode.toUpperCase()}</small>
                     </div>
@@ -147,7 +147,7 @@ export function TeamProfile({
                 <div className="team-profile-manager-slot">
                   <span>MANAGER</span>
                   <strong>YOU</strong>
-                  <small>LVL {state.managerLevel} · {state.managerXp} XP</small>
+                  <small>LVL {managerLevelProgress(state.managerXp).level} · {state.managerXp} XP</small>
                 </div>
               )}
             </section>

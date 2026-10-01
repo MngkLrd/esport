@@ -205,10 +205,10 @@ export function TimeProgressionOverlay({
 
   const timelineStart = timeline[0] ?? startOfGameDay(session.from)
   const position = Math.max(0, hoursBetween(timelineStart, state.now) / 24)
-  const trackStyle = { '--tp-position': position } as CSSProperties
+  const trackStyle = { transform: 'translateX(calc(50% - ' + (position * 174 + 84) + 'px))' } as CSSProperties
 
   return (
-    <div className={'time-progression-overlay status-' + session.status} role="dialog" aria-modal="true" aria-label="Промотка игрового времени">
+    <div className={'time-progression-overlay status-' + session.status + ' speed-' + session.speed} role="dialog" aria-modal="true" aria-label="Промотка игрового времени">
       <section className="time-progression-shell">
         <header className="time-progression-head">
           <div className="time-progression-brand">

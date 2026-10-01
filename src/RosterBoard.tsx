@@ -21,6 +21,7 @@ import { PlayerPortrait } from './PlayerPortrait'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
 import { buildAutoPlannerAll, buildAutoPlannerRole } from './squadPlannerAuto'
+import { SquadWorkspace } from './SquadWorkspace'
 
 const ROLE_LABELS: Record<LineupSlot, string> = {
   Entry: 'ENTRY',
@@ -1231,7 +1232,7 @@ export function RosterBoard({
   const expiringContracts = state.roster.filter((player) => player.contractWeeks > 0 && player.contractWeeks <= 2).length
 
   return (
-    <section className="sim-screen sim-roster sim-roster-v2">
+    <section className={'sim-screen sim-roster sim-roster-v2 view-' + rosterView}>
       <div className="sim-screen-head sim-roster-head">
         <div>
           <span className="eyebrow">{rosterView === 'planner' ? 'CLUB OPERATIONS · SQUAD PLANNING' : 'CLUB OPERATIONS · ACTIVE LINEUP'}</span>
@@ -1248,233 +1249,12 @@ export function RosterBoard({
       {rosterView === 'planner' ? (
         <SquadPlanner state={state} setState={setState} saveSignal={saveSignal} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
       ) : (
-        <div className="sim-squad-mode-body">
-      <div className="sim-squad-kpis">
-        <div><span>TEAM RATING</span><strong>{rating}</strong><small>{rating >= 70 ? 'CONTENDER' : rating >= 60 ? 'COMPETITIVE' : 'DEVELOPING'}</small></div>
-        <div className="chemistry">
-          <span>CHEMISTRY</span>
-          <strong>{chem}</strong>
-          <i><em style={{ width: Math.min(100, chem) + '%' }} /></i>
-        </div>
-        <div><span>CONTINUITY</span><strong>{state.lineupContinuity}</strong><small>LINEUP STABILITY</small></div>
-        <div><span>WEEKLY PAYROLL</span><strong>{payroll.toLocaleString('ru-RU')}</strong><small>CLUB CREDITS</small></div>
-        <div className={fatigueWarnings > 0 ? 'warning' : ''}><span>FATIGUE</span><strong>{fatigueWarnings}</strong><small>{fatigueWarnings ? 'PLAYERS AT RISK' : 'NO WARNINGS'}</small></div>
-      </div>
-
-      <section className="sim-squad-stage">
-        <div className="sim-squad-stage-head">
-          <div>
-            <span>STARTING FIVE</span>
-            <small>Drag club players into roles or use REPLACE.</small>
-          </div>
-          <div className="sim-squad-stage-summary">
-            <span><b>{state.startingFive.length}/5</b> ACTIVE</span>
-            <span><b>{expiringContracts}</b> EXPIRING</span>
-          </div>
-        </div>
-
-        <div className="sim-squad-lineup-row">
-          {LINEUP_SLOTS.map((slot) => {
-            const player = slotPlayer(slot)
-            return (
-              <article
-                key={slot}
-                className={'sim-squad-slot ' + (player ? 'is-filled ' : 'is-empty ') + (dragOverSlot === slot ? 'is-drop-target' : '')}
-                onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move' }}
-                onDragEnter={() => setDragOverSlot(slot)}
-                onDragLeave={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverSlot(null)
-                }}
-                onDrop={(event) => dropIntoSlot(event, slot)}
-              >
-                <div className="sim-squad-role">
-                  <span>{ROLE_LABELS[slot]}</span>
-                  <small>{player ? (player.role === slot ? 'ROLE MATCH' : 'OFF-ROLE') : 'VACANT'}</small>
-                </div>
-
-                {player ? (
-                  <>
-                    <GameCard
-                      player={player}
-                      starter
-                      draggable
-                      onOpen={() => setSelectedPoolKey('roster:' + player.id)}
-                      onDragStart={(event) => startDrag(event, player.id)}
-                      onDragEnd={() => setDragOverSlot(null)}
-                    />
-                    <button className="sim-squad-replace" type="button" onClick={() => setPickerSlot(slot)}>REPLACE</button>
-                  </>
-                ) : (
-                  <button type="button" className="sim-squad-empty" onClick={() => setPickerSlot(slot)}>
-                    <span>+</span>
-                    <b>ADD PLAYER</b>
-                    <small>{ROLE_LABELS[slot]}</small>
-                  </button>
-                )}
-              </article>
-            )
-          })}
-
-          <article className="sim-staff-slot">
-            <div className="sim-squad-role"><span>COACH</span><small>STAFF SLOT</small></div>
-            <div className="sim-staff-card">
-              <span>◎</span>
-              <b>NO COACH</b>
-              <small>Staff system will use this slot.</small>
-            </div>
-            <button type="button" disabled>LOCKED</button>
-          </article>
-        </div>
-      </section>
-
-      <section className="sim-player-pool">
-        <div className="sim-player-pool-head">
-          <div>
-            <span>PLAYER POOL</span>
-            <b>{poolEntries.length}</b>
-            <small>{state.roster.length} club · {poolEntries.filter((entry) => entry.source === 'collection').length} collection</small>
-          </div>
-
-          <div className="sim-pool-filters">
-            <input value={poolQuery} onChange={(event) => setPoolQuery(event.target.value)} placeholder="Search player, team…" />
-            <select value={poolRole} onChange={(event) => setPoolRole(event.target.value as PoolRole)}>
-              <option value="all">ALL ROLES</option>
-              {LINEUP_SLOTS.map((slot) => <option key={slot} value={slot}>{ROLE_LABELS[slot]}</option>)}
-            </select>
-            <select value={poolSource} onChange={(event) => setPoolSource(event.target.value as PoolSource)}>
-              <option value="all">ALL SOURCES</option>
-              <option value="roster">CLUB</option>
-              <option value="collection">COLLECTION</option>
-            </select>
-            <select value={poolSort} onChange={(event) => setPoolSort(event.target.value as PoolSort)}>
-              <option value="ovr">SORT: OVR</option>
-              <option value="form">SORT: FORM</option>
-              <option value="contract">SORT: CONTRACT</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="sim-player-pool-body">
-          <div className="sim-player-pool-grid">
-            {filteredPool.length > 0 ? filteredPool.map((entry) => (
-              <PoolCard
-                key={entry.key}
-                entry={entry}
-                starter={starterIds.has(entry.player.id)}
-                selected={selectedPoolEntry?.key === entry.key}
-                onSelect={() => setSelectedPoolKey(entry.key)}
-                onDragStart={entry.source === 'roster' ? (event) => startDrag(event, entry.player.id) : undefined}
-                onDragEnd={() => setDragOverSlot(null)}
-              />
-            )) : (
-              <div className="sim-pool-empty">
-                <strong>NO PLAYERS FOUND</strong>
-                <span>Change filters or search query.</span>
-              </div>
-            )}
-          </div>
-
-          <aside className="sim-player-inspector">
-            {selectedPoolEntry && selectedPlayer ? (
-              <>
-                <div className={'sim-inspector-hero tier-' + cardTier(overall(selectedPlayer))}>
-                  <div>
-                    <span>{selectedPoolEntry.source === 'collection' ? 'COLLECTION CARD' : selectedIsStarter ? 'STARTING FIVE' : 'CLUB PLAYER'}</span>
-                    <strong>{overall(selectedPlayer)}</strong>
-                  </div>
-                  <PlayerPortrait
-                    alias={selectedPlayer.alias}
-                    playerId={selectedPlayer.profileId}
-                    alt={selectedPlayer.alias}
-                    draggable={false}
-                  />
-                </div>
-
-                <div className="sim-inspector-name">
-                  <span>{countryFlag(selectedPlayer.country)} {selectedPlayer.country} · {ROLE_LABELS[selectedPlayer.role]}</span>
-                  <h2>{selectedPlayer.alias}</h2>
-                  <p>{selectedPlayer.realName} · {selectedPlayer.team}</p>
-                </div>
-
-                <div className="sim-inspector-stats">
-                  <span><b>{selectedPlayer.aim}</b>AIM</span>
-                  <span><b>{selectedPlayer.utility}</b>UTL</span>
-                  <span><b>{selectedPlayer.gameSense}</b>POS</span>
-                  <span><b>{selectedPlayer.clutch}</b>CLU</span>
-                </div>
-
-                <div className="sim-inspector-state">
-                  <span><b>{selectedPlayer.form}</b>FORM</span>
-                  <span><b>{selectedPlayer.morale}</b>MORALE</span>
-                  <span className={selectedPlayer.fatigue >= 65 ? 'danger' : ''}><b>{selectedPlayer.fatigue}</b>FATIGUE</span>
-                  <span><b>{selectedPlayer.contractWeeks}</b>WEEKS</span>
-                </div>
-
-                {selectedPoolEntry.source === 'roster' ? (
-                  <>
-                    <div className="sim-inspector-primary-actions">
-                      {selectedIsStarter && selectedAssignedSlot ? (
-                        <button onClick={() => setState((current) => clearLineupSlot(current, selectedAssignedSlot))}>MOVE TO BENCH</button>
-                      ) : (
-                        <button onClick={() => fieldEntry(selectedPoolEntry)}>FIELD AS {ROLE_LABELS[selectedPlayer.role]}</button>
-                      )}
-                      <button onClick={() => onOpenPlayer(selectedPlayer)}>PROFILE</button>
-                    </div>
-                    <div className="sim-inspector-club-actions">
-                      <button onClick={() => setState((current) => restPlayer(current, selectedPlayer.id))} disabled={state.staffEnergy < 1}>REST</button>
-                      <button onClick={() => setState((current) => trainPlayer(current, selectedPlayer.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>TRAIN</button>
-                      <button onClick={() => setState((current) => renewContract(current, selectedPlayer.id))} disabled={state.credits < selectedPlayer.salary * 4}>RENEW</button>
-                      <button className="danger" onClick={() => setState((current) => releasePlayer(current, selectedPlayer.id))} disabled={state.roster.length <= 5 || state.credits < selectedPlayer.salary}>RELEASE</button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="sim-inspector-primary-actions collection">
-                    <button disabled={!selectedCanJoinRoster || selectedPlayer.contractWeeks <= 0} onClick={() => fieldEntry(selectedPoolEntry)}>
-                      {selectedCanJoinRoster ? 'ADD & FIELD AS ' + ROLE_LABELS[selectedPlayer.role] : 'ROSTER 8/8'}
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="sim-inspector-empty">SELECT A PLAYER</div>
-            )}
-          </aside>
-        </div>
-      </section>
-
-      {pickerSlot && (
-        <div className="lineup-picker-backdrop" role="presentation" onMouseDown={() => setPickerSlot(null)}>
-          <section className="lineup-picker" role="dialog" aria-modal="true" aria-labelledby="lineup-picker-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="lineup-picker-head">
-              <div>
-                <span className="eyebrow">SLOT PICKER · {ROLE_LABELS[pickerSlot]}</span>
-                <h2 id="lineup-picker-title">Choose a player for this role.</h2>
-              </div>
-              <button type="button" className="lineup-picker-close" onClick={() => setPickerSlot(null)} aria-label="Close">×</button>
-            </div>
-
-            <div className="lineup-picker-grid">
-              {candidates.map((candidate, index) => {
-                const disabled = candidate.source === 'collection' && state.roster.length >= 8
-                return (
-                  <article className="lineup-picker-card" key={candidate.key}>
-                    <div className="lineup-picker-rank"><b>#{index + 1}</b><span className={'fit-' + fitLabel(candidate, pickerSlot).toLowerCase().replace(' ', '-')}>{fitLabel(candidate, pickerSlot)}</span></div>
-                    <GameCard player={candidate.player} starter={starterIds.has(candidate.player.id)} onOpen={() => setSelectedPoolKey(candidate.key)} />
-                    <div className="lineup-picker-info">
-                      <span><b>{candidate.fit}</b> FIT</span>
-                      <span>{candidate.source === 'roster' ? (starterIds.has(candidate.player.id) ? 'START' : 'CLUB') : 'COLLECTION'}</span>
-                    </div>
-                    <button type="button" className="primary lineup-picker-place" onClick={() => placeCandidate(candidate)} disabled={disabled || candidate.player.contractWeeks <= 0}>
-                      {disabled ? 'ROSTER 8/8' : 'PLACE AS ' + ROLE_LABELS[pickerSlot]}
-                    </button>
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-        </div>
-      )}
-        </div>
+        <SquadWorkspace
+          state={state}
+          setState={setState}
+          onOpenPlayer={onOpenPlayer}
+          onOpenScout={onOpenScout}
+        />
       )}
     </section>
   )

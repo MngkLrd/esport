@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 const css = readFileSync(new URL('../src/simUI.css', import.meta.url), 'utf8')
+const roster = readFileSync(new URL('../src/RosterBoard.tsx', import.meta.url), 'utf8')
 
 describe('sim UI viewport contract', () => {
   it('forces redesigned desktop pages out of legacy two-row app grids', () => {
@@ -19,5 +20,21 @@ describe('sim UI viewport contract', () => {
 
   it('keeps the back button out of document flow', () => {
     expect(css).toMatch(/\.app-main\.app-main-world\s*>\s*\.screen-back-button[\s\S]*?position:absolute !important;/)
+  })
+
+
+  it('stretches the desktop squad planner through the available game viewport', () => {
+    expect(css).toMatch(/\.sim-roster-v2\s*\{[\s\S]*?height:100%;[\s\S]*?grid-template-rows:54px 44px minmax\(0,1fr\);/)
+    expect(css).toMatch(/\.sim-squad-planner\s*\{[\s\S]*?height:100%;[\s\S]*?grid-template-rows:48px 42px minmax\(0,1fr\);/)
+    expect(css).toMatch(/\.sim-planner-workspace\s*\{[\s\S]*?height:100%;[\s\S]*?overflow:hidden;/)
+    expect(css).toMatch(/\.sim-planner-lanes\s*\{[\s\S]*?height:100%;[\s\S]*?align-items:stretch;/)
+  })
+
+  it('exposes global and per-role auto selection controls', () => {
+    expect(roster).toContain('className="sim-planner-auto-all"')
+    expect(roster).toContain('className="sim-planner-board-auto"')
+    expect(roster).toContain('className="sim-planner-role-auto"')
+    expect(roster).toContain('autoFillAllRoles')
+    expect(roster).toContain('autoFillRole(role)')
   })
 })

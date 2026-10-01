@@ -326,6 +326,48 @@ describe('P0 career flow', () => {
     expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
   })
 
+  it('remaps plant/defuse actors when navigation-corrected combat killed them earlier', () => {
+    const cols = 12
+    const rows = 12
+    const walkable = new Uint8Array(cols * rows)
+    walkable.fill(1)
+    const grid: RadarNavigationGrid = { cols, rows, cellSize: 8, walkable }
+
+    const round: SimRound = {
+      id: 'objective-reconcile-test',
+      map: 'Test',
+      mapKey: 'test',
+      homeSide: 'T',
+      scenario: 'default',
+      scenarioLabel: 'DEFAULT',
+      site: 'A',
+      duration: 1000,
+      winner: 'HOME',
+      events: [
+        { id: 'kill-0', time: 200, type: 'kill', actorId: 'ct-1', targetId: 't-1', actorName: 'CT1', targetName: 'T1', side: 'CT', weapon: 'M4A1-S' },
+        { id: 'plant', time: 500, type: 'plant', actorId: 't-1', actorName: 'T1', side: 'T', site: 'A' },
+        { id: 'kill-1', time: 650, type: 'kill', actorId: 't-2', targetId: 'ct-1', actorName: 'T2', targetName: 'CT1', side: 'T', weapon: 'AK-47' },
+        { id: 'defuse', time: 800, type: 'defuse', actorId: 'ct-1', actorName: 'CT1', side: 'CT', site: 'A' },
+      ],
+      frames: Array.from({ length: 11 }, (_, index) => ({
+        time: index * 100,
+        players: [
+          { id: 't-1', name: 'T1', side: 'T' as const, x: 20, y: 20, yaw: 0, hp: 100, alive: true, weapon: 'AK-47', hasBomb: true },
+          { id: 't-2', name: 'T2', side: 'T' as const, x: 28, y: 20, yaw: 0, hp: 100, alive: true, weapon: 'AK-47', hasBomb: false },
+          { id: 'ct-1', name: 'CT1', side: 'CT' as const, x: 36, y: 20, yaw: 180, hp: 100, alive: true, weapon: 'M4A1-S', hasBomb: false },
+          { id: 'ct-2', name: 'CT2', side: 'CT' as const, x: 44, y: 20, yaw: 180, hp: 100, alive: true, weapon: 'M4A1-S', hasBomb: false },
+        ],
+      })),
+    }
+
+    const constrained = constrainRoundToNavigation(round, grid)
+    const plant = constrained.events.find((event) => event.type === 'plant')
+    const defuse = constrained.events.find((event) => event.type === 'defuse')
+
+    expect(plant?.actorId).toBe('t-2')
+    expect(defuse?.actorId).toBe('ct-2')
+  })
+
   it('makes long series consume more game-clock time than short series', () => {
     expect(matchDurationHoursForRounds(26, 2)).toBeLessThan(matchDurationHoursForRounds(70, 3))
     expect(matchDurationHoursForRounds(26, 2)).toBeGreaterThanOrEqual(1)
@@ -484,6 +526,7 @@ describe('P0 career flow', () => {
     expect(second.opponentFactors?.adaptation ?? 0).toBeGreaterThan(first.opponentFactors?.adaptation ?? 0)
     expect(second.factors.adaptation ?? 0).toBeGreaterThan(first.factors.adaptation ?? 0)
     expect(second.factors.fatigue).toBeLessThan(first.factors.fatigue)
+    expect(second.opponentFactors?.fatigue ?? 100).toBeLessThan(first.opponentFactors?.fatigue ?? 100)
   })
 
   it('never resolves an overtime map as a tie', () => {

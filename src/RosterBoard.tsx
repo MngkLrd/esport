@@ -69,10 +69,12 @@ const loadPlannerOrder = (saveId: string): PlannerOrder => {
 
 function SquadPlanner({
   state,
+  setState,
   onOpenPlayer,
   onOpenScout,
 }: {
   state: GameState
+  setState: Dispatch<SetStateAction<GameState>>
   onOpenPlayer: (player: Player) => void
   onOpenScout: () => void
 }) {
@@ -221,6 +223,14 @@ function SquadPlanner({
   const horizonLabel = horizon === 0 ? 'СЕЙЧАС' : 'СЕЗОН ' + (state.season + horizon)
   const statusLabel = (status: 'good' | 'watch' | 'risk') => status === 'good' ? 'ГОТОВО' : status === 'watch' ? 'ВНИМАНИЕ' : 'РИСК'
 
+  const openScoutForRole = () => {
+    setState((current) => ({
+      ...current,
+      scoutBrief: { ...current.scoutBrief, role: selectedRole },
+    }))
+    onOpenScout()
+  }
+
   return (
     <section className="sim-squad-planner">
       <div className="sim-planner-toolbar">
@@ -359,7 +369,7 @@ function SquadPlanner({
               <span>КАНДИДАТЫ</span>
               <small>Лучшие варианты для {ROLE_LABELS[selectedRole]}</small>
             </div>
-            <button onClick={onOpenScout}>ТРАНСФЕРЫ →</button>
+            <button onClick={openScoutForRole}>ТРАНСФЕРЫ →</button>
           </div>
 
           <div className="sim-planner-candidate-list">
@@ -384,7 +394,7 @@ function SquadPlanner({
             {available.length === 0 && <div className="sim-planner-no-candidates">НЕТ ДОПОЛНИТЕЛЬНЫХ КАНДИДАТОВ</div>}
           </div>
 
-          <button className="sim-planner-scout-action" onClick={onOpenScout}>
+          <button className="sim-planner-scout-action" onClick={openScoutForRole}>
             НАЙТИ УСИЛЕНИЕ ПОД {ROLE_LABELS[selectedRole]} <span>→</span>
           </button>
         </aside>
@@ -688,7 +698,7 @@ export function RosterBoard({
       </div>
 
       {rosterView === 'planner' ? (
-        <SquadPlanner state={state} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
+        <SquadPlanner state={state} setState={setState} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
       ) : (
         <div className="sim-squad-mode-body">
       <div className="sim-squad-kpis">

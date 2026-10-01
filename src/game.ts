@@ -152,7 +152,7 @@ export interface ClubDecision {
 }
 
 export interface GameState {
-  version: 13
+  version: 12
   saveId: string
   seed: number
   season: number
@@ -479,7 +479,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 13,
+  version: 12,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -645,7 +645,7 @@ const normalizedWorld = (
 export const migrateState = (raw: unknown): GameState => {
   if (!raw || typeof raw !== 'object') return createInitialState()
   const parsed = raw as { version?: number; roster?: Player[]; prospects?: Player[]; packs?: PackState; saveId?: string; [key: string]: unknown }
-  if ((parsed.version === 13 || parsed.version === 12 || parsed.version === 11 || parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
+  if ((parsed.version === 12 || parsed.version === 11 || parsed.version === 10 || parsed.version === 9) && Array.isArray(parsed.roster)) {
     const packs = parsed.packs?.version === 2 ? parsed.packs : createPackState()
     const roster = normalizePlayers(parsed.roster, packs)
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
@@ -663,7 +663,7 @@ export const migrateState = (raw: unknown): GameState => {
       typeof parsed.lineupContinuity === 'number' ? parsed.lineupContinuity : 50,
     )
     const clubKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
-    const activeTournament = (parsed.version === 13 || parsed.version === 12 || parsed.version === 11) && parsed.activeTournament && typeof parsed.activeTournament === 'object'
+    const activeTournament = (parsed.version === 12 || parsed.version === 11) && parsed.activeTournament && typeof parsed.activeTournament === 'object'
       ? refreshTournamentTeamsFromWorld(parsed.activeTournament as TournamentRun, world, clubKeys)
       : legacyEvent
         ? createTournamentRun(
@@ -677,7 +677,7 @@ export const migrateState = (raw: unknown): GameState => {
         : null
     return {
       ...(parsed as unknown as GameState),
-      version: 13,
+      version: 12,
       seasonStart,
       now,
       world,
@@ -686,7 +686,7 @@ export const migrateState = (raw: unknown): GameState => {
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
-      seasonLength: (parsed.version === 13 || parsed.version === 12 || parsed.version === 11) && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
+      seasonLength: (parsed.version === 12 || parsed.version === 11) && typeof parsed.seasonLength === 'number' ? parsed.seasonLength : 16,
       seasonEnded: Boolean(parsed.seasonEnded),
       seasonSummary: (parsed.seasonSummary as SeasonSummary | null | undefined) ?? null,
       packTokens: typeof parsed.packTokens === 'number' ? parsed.packTokens : 2600,
@@ -709,7 +709,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'packTokens' | 'managerXp'>),
-      version: 13,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -739,7 +739,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 13,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: Boolean(parsed.welcomeComplete),
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -768,7 +768,7 @@ export const migrateState = (raw: unknown): GameState => {
     const startingFive = Array.isArray(parsed.startingFive) ? parsed.startingFive as string[] : []
     return {
       ...(parsed as unknown as Omit<GameState, 'version' | 'welcomeComplete' | 'lineupSlots' | 'scoutBrief' | 'packTokens' | 'managerXp'>),
-      version: 13,
+      version: 12,
       saveId: typeof parsed.saveId === 'string' && parsed.saveId ? parsed.saveId : createSaveId(),
       welcomeComplete: parsed.version === 6 ? Boolean(parsed.welcomeComplete) : true,
       season: typeof parsed.season === 'number' ? parsed.season : 1,
@@ -825,7 +825,7 @@ export const migrateState = (raw: unknown): GameState => {
     return {
       ...base,
       ...(parsed as object),
-      version: 13,
+      version: 12,
       saveId: createSaveId(),
       squadPlanner: createSquadPlannerState(),
       welcomeComplete: true,

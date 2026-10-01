@@ -399,37 +399,39 @@ export const inspectWorldIntegrity = (world: WorldState): WorldIntegrityReport =
 
 export const repairWorldIntegrity = (
   source: WorldState,
-  clubRoster: ReadonlyArray<{
+  clubRoster?: ReadonlyArray<{
     playerKey?: string
     alias: string
     contractWeeks?: number
     salary?: number
     rating?: number
-  }> = [],
+  }>,
 ): WorldState => {
   const players: Record<string, WorldPlayer> = Object.fromEntries(
     Object.entries(source.players).map(([key, player]) => [key, { ...player }]),
   )
 
   const desiredClubKeys = new Set<string>()
-  for (const member of clubRoster) {
-    const key = member.playerKey && players[member.playerKey]
-      ? member.playerKey
-      : worldPlayerByAlias(source, member.alias)?.key
-    if (!key || !players[key]) continue
-    desiredClubKeys.add(key)
-    players[key] = {
-      ...players[key],
-      teamId: PLAYER_CLUB_WORLD_ID,
-      contractWeeks: member.contractWeeks ?? players[key].contractWeeks,
-      salary: member.salary ?? players[key].salary,
-      currentRating: member.rating ?? players[key].currentRating,
+  if (clubRoster) {
+    for (const member of clubRoster) {
+      const key = member.playerKey && players[member.playerKey]
+        ? member.playerKey
+        : worldPlayerByAlias(source, member.alias)?.key
+      if (!key || !players[key]) continue
+      desiredClubKeys.add(key)
+      players[key] = {
+        ...players[key],
+        teamId: PLAYER_CLUB_WORLD_ID,
+        contractWeeks: member.contractWeeks ?? players[key].contractWeeks,
+        salary: member.salary ?? players[key].salary,
+        currentRating: member.rating ?? players[key].currentRating,
+      }
     }
-  }
 
-  for (const player of Object.values(players)) {
-    if (player.teamId === PLAYER_CLUB_WORLD_ID && !desiredClubKeys.has(player.key)) {
-      players[player.key] = { ...player, teamId: null }
+    for (const player of Object.values(players)) {
+      if (player.teamId === PLAYER_CLUB_WORLD_ID && !desiredClubKeys.has(player.key)) {
+        players[player.key] = { ...player, teamId: null }
+      }
     }
   }
 

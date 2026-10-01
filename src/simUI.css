@@ -3943,6 +3943,19 @@ body{
   .squad-opt-pool-tools{grid-template-columns:minmax(130px,1fr) 86px 94px 72px}
 }
 
+/* Keep the 5:7 starter portrait fully inside the stage on shorter desktop viewports. */
+@media (min-width:901px) and (max-height:999px){
+  .squad-opt-starter-card .visual-player-card{width:min(100%,150px)!important;max-width:150px!important}
+}
+
+@media (min-width:901px) and (max-height:960px){
+  .squad-opt-starter-card .visual-player-card{width:min(100%,140px)!important;max-width:140px!important}
+}
+
+@media (min-width:901px) and (max-height:900px){
+  .squad-opt-starter-card .visual-player-card{width:min(100%,130px)!important;max-width:130px!important}
+}
+
 @media (min-width:901px) and (max-height:820px){
   .sim-roster-v2.view-squad{grid-template-rows:40px 36px minmax(0,1fr);gap:5px}
   .squad-opt{grid-template-rows:36px minmax(0,1fr);gap:6px}
@@ -3951,7 +3964,7 @@ body{
   .squad-opt-stage-grid{padding:6px}
   .squad-opt-slot{grid-template-rows:34px auto 28px;gap:4px;padding:4px}
   .squad-opt-role{min-height:34px}
-  .squad-opt-starter-card .visual-player-card{width:min(100%,138px)!important;max-width:138px!important}
+  .squad-opt-starter-card .visual-player-card{width:min(100%,130px)!important;max-width:130px!important}
   .squad-opt-pool{grid-template-rows:46px minmax(0,1fr)}
   .squad-opt-pool-grid{padding:6px;gap:6px}
   .squad-opt-inspector-hero{flex-basis:108px}

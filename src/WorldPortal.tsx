@@ -8,6 +8,9 @@ import {
   type NewsStory,
 } from './newsProjection'
 import { snapshotWorldEcology } from './worldEcologyAnalytics'
+import { TeamBadge } from './TeamBadge'
+import { TeamProfile } from './TeamProfile'
+import { PLAYER_CLUB_WORLD_ID } from './world'
 
 export type WorldPortalTarget = 'World' | 'Roster' | 'Scout' | 'Profile'
 
@@ -18,7 +21,7 @@ interface WorldPortalProps {
   onReset: () => void
 }
 
-type PortalView = 'inbox' | 'feed' | 'news'
+type PortalView = 'inbox' | 'feed' | 'news' | 'article'
 type FeedFilter = NewsCategory | 'all'
 type InboxFilter = 'all' | 'new' | 'tasks' | 'unread'
 
@@ -136,7 +139,7 @@ function StoryArt({ story, hero = false }: { story: NewsStory; hero?: boolean })
   )
 }
 
-function WorldContext({ state }: { state: GameState }) {
+function WorldContext({ state, onOpenTeam }: { state: GameState; onOpenTeam: (teamId: string) => void }) {
   const ecology = state.world.ecology
   const snapshot = useMemo(() => snapshotWorldEcology(state.world, state.now), [state.world, state.now])
   const upcoming = useMemo(
@@ -174,11 +177,12 @@ function WorldContext({ state }: { state: GameState }) {
         <div className="newsroom-section-title"><span>VRS</span><b>TOP 7</b></div>
         <div className="newsroom-standings">
           {standings.map((team) => (
-            <div key={team.id}>
+            <button key={team.id} type="button" onClick={() => onOpenTeam(team.id)}>
               <b>{team.vrsRank}</b>
+              <TeamBadge name={team.name} size="sm" />
               <span>{team.name}</span>
               <strong>{Math.round(team.vrsPoints)}</strong>
-            </div>
+            </button>
           ))}
         </div>
       </section>
@@ -196,6 +200,9 @@ function WorldContext({ state }: { state: GameState }) {
 
 export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: WorldPortalProps) {
   const [view, setView] = useState<PortalView>('news')
+  const [selectedStory, setSelectedStory] = useState<NewsStory | null>(null)
+  const [selectedClubItem, setSelectedClubItem] = useState<NewsItem | null>(null)
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('all')
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all')
   const [followedOnly, setFollowedOnly] = useState(false)
@@ -284,13 +291,27 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
 
   const openClubItem = (item: NewsItem) => {
     clubRead.add(item.id)
-    const target = newsTarget(item)
-    if (target) onNavigate(target)
+    if (item.attention === 'action') {
+      const target = newsTarget(item)
+      if (target) onNavigate(target)
+      return
+    }
+    setSelectedStory(null)
+    setSelectedClubItem(item)
+    setView('article')
   }
 
   const openStory = (story: NewsStory) => {
     storyRead.add(story.id)
-    onNavigate(storyTarget(story))
+    setSelectedClubItem(null)
+    setSelectedStory(story)
+    setView('article')
+  }
+
+  const closeArticle = () => {
+    setSelectedStory(null)
+    setSelectedClubItem(null)
+    setView('news')
   }
 
   return (
@@ -300,6 +321,10 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
           <span>WORLD MEDIA · {formatDate(state.now)}</span>
           <h1>НОВОСТИ</h1>
         </div>
+        <button className="newsroom-club-profile" type="button" onClick={() => setSelectedTeamId(PLAYER_CLUB_WORLD_ID)}>
+          <TeamBadge name="YOUR CLUB" size="sm" />
+          <span><small>CLUB</small><b>YOUR CLUB PROFILE</b></span>
+        </button>
         <nav className="newsroom-tabs" aria-label="Разделы новостей">
           <button className={view === 'inbox' ? 'active' : ''} onClick={() => setView('inbox')}>
             ВХОДЯЩИЕ {unreadClubCount > 0 && <b>{unreadClubCount}</b>}
@@ -374,6 +399,35 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
         </div>
       )}
 
+      {view === 'article' && (selectedStory || selectedClubItem) && (
+        <article className="newsroom-article-page">
+          <header className="newsroom-article-head">
+            <button type="button" onClick={closeArticle}>← BACK TO NEWS</button>
+            <div>
+              <span>{selectedStory ? CATEGORY_LABEL[selectedStory.category] : selectedClubItem?.kind.toUpperCase()}</span>
+              <small>{selectedStory ? formatDate(selectedStory.at) : 'W' + selectedClubItem?.week}</small>
+            </div>
+          </header>
+          {selectedStory && <StoryArt story={selectedStory} hero />}
+          <div className="newsroom-article-copy">
+            <span className="newsroom-article-kicker">{selectedStory ? 'WORLD MEDIA REPORT' : 'CLUB BULLETIN'}</span>
+            <h2>{selectedStory?.title ?? selectedClubItem?.title}</h2>
+            <p className="lead">{selectedStory?.detail ?? selectedClubItem?.body}</p>
+            {selectedStory && selectedStory.causes.length > 0 && (
+              <section>
+                <span>WHY IT MATTERS</span>
+                {selectedStory.causes.map((cause) => <p key={cause}>{cause}</p>)}
+              </section>
+            )}
+            <section className="newsroom-article-context">
+              <div><small>IMPACT</small><b>{selectedStory?.importance ?? (selectedClubItem?.attention === 'action' ? 80 : 35)}</b></div>
+              <div><small>TYPE</small><b>{selectedStory?.category.toUpperCase() ?? selectedClubItem?.kind.toUpperCase()}</b></div>
+              <div><small>STATUS</small><b>{selectedClubItem?.attention === 'action' ? 'ACTION REQUIRED' : 'INFORMATION'}</b></div>
+            </section>
+          </div>
+        </article>
+      )}
+
       {view === 'news' && (
         <div className="newsroom-news-layout">
           <main className="newsroom-editorial">
@@ -417,7 +471,7 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
               ))}
             </div>
           </main>
-          <WorldContext state={state} />
+          <WorldContext state={state} onOpenTeam={setSelectedTeamId} />
         </div>
       )}
 
@@ -492,6 +546,13 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
             </section>
           </aside>
         </div>
+      )}
+      {selectedTeamId && (
+        <TeamProfile
+          state={state}
+          teamId={selectedTeamId}
+          onClose={() => setSelectedTeamId(null)}
+        />
       )}
     </section>
   )

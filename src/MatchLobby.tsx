@@ -65,7 +65,7 @@ const mapAsset = (key: string) => '/esport/maps/' + key + '.png'
 const average = (values: number[]) =>
   values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0
 
-const opponentPlayers = (result: MatchResult): TournamentRosterPlayer[] => {
+const opponentPlayers = (result: MatchFixture | MatchResult): TournamentRosterPlayer[] => {
   if (result.opponentRoster?.length) return result.opponentRoster.slice(0, 5)
   const stem = result.opponent.replace(/[^a-z0-9]/gi, '').slice(0, 7).toUpperCase() || 'RIVAL'
   return Array.from({ length: 5 }, (_, index) => ({

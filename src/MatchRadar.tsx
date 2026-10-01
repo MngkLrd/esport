@@ -25,6 +25,17 @@ const radarResourcePromises = new Map<string, Promise<RadarResource | null>>()
 const playbackElapsedCache = new Map<string, number>()
 
 const sideColor = (side: SimSide) => side === 'CT' ? CT_COLOR : T_COLOR
+const STORY_CAUSE_LABELS: Record<NonNullable<SimRound['cause']>, string> = {
+  AIM: 'DUEL EXECUTION',
+  TACTICAL_EDGE: 'TACTICAL EDGE',
+  ANTI_STRAT: 'ANTI-STRAT READ',
+  CLUTCH: 'CLUTCH ROUND',
+  PLAYER_ERROR: 'PLAYER ERROR',
+  FATIGUE: 'FATIGUE DROP',
+  COMMUNICATION: 'COMMS BREAKDOWN',
+  MOMENTUM: 'MOMENTUM',
+}
+
 
 const extractRadarMasks = (img: HTMLImageElement) => {
   const canvas = document.createElement('canvas')
@@ -582,11 +593,13 @@ export function MatchRadar({
       <div className="match-radar-shell match-radar-shell-canvas">
         <header className="match-radar-header">
           <div>
-            <span>{playback ? 'LIVE TACTICAL SIM · MAP ' + (currentRoundIndex + 1) + '/' + rounds.length : 'PREPARING MATCH SIMULATION'}</span>
+            <span>{playback ? 'LIVE TACTICAL SIM · ROUND ' + (currentRoundIndex + 1) + '/' + rounds.length : 'PREPARING MATCH SIMULATION'}</span>
             <strong>{activeRound?.map ?? 'TACTICAL MAP'} · {activeRound?.scenarioLabel}</strong>
           </div>
           <div className="match-radar-score">
-            <b>{ourMaps}</b><span>BO3</span><b>{theirMaps}</b>
+            <b>{activeRound?.scoreUs ?? ourMaps}</b>
+            <span>{activeRound?.scoreUs != null ? 'ROUND SCORE' : 'BO3'}</span>
+            <b>{activeRound?.scoreThem ?? theirMaps}</b>
           </div>
           <div className="match-radar-clock">
             <span>{plant && !defuse ? 'BOMB PLANTED · ' + round.site : 'ROUND CLOCK'}</span>
@@ -632,8 +645,8 @@ export function MatchRadar({
 
             <div className="match-radar-context">
               <span>{activeRound?.homeSide === 'CT' ? 'HOME CT' : 'HOME T'}</span>
-              <b>{activeRound?.scenarioLabel}</b>
-              <small>{recentUtility ? recentUtility.utility?.toUpperCase() + ' DEPLOYED' : plant && !defuse ? 'POST-PLANT ' + round.site : 'LIVE POSITIONING'}</small>
+              <b>{activeRound?.cause ? STORY_CAUSE_LABELS[activeRound.cause] : activeRound?.scenarioLabel}</b>
+              <small>{activeRound?.keyPlayer ? activeRound.keyPlayer + ' · ' : ''}{recentUtility ? recentUtility.utility?.toUpperCase() + ' DEPLOYED' : plant && !defuse ? 'POST-PLANT ' + round.site : activeRound?.scenarioLabel ?? 'LIVE POSITIONING'}</small>
             </div>
 
             {finalPhase && (

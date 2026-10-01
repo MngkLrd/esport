@@ -1187,3 +1187,43 @@
     scrollbar-width:thin;
   }
 }
+
+
+/* Matchday team identity anchors */
+.sim-match-team-identity{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.sim-match-team-identity>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.sim-match-team-identity.away{
+  justify-content:flex-end;
+}
+.sim-match-team-identity.away>div{
+  text-align:right;
+}
+.sim-match-team-identity h2{
+  margin:0;
+  color:var(--ui-text);
+}
+.sim-team-deck{
+  border-color:rgb(var(--ui-line-rgb) / .14)!important;
+  background:
+    linear-gradient(180deg,rgb(255 255 255 / .018),transparent 35%),
+    rgb(var(--ui-panel-rgb) / .78)!important;
+  box-shadow:none!important;
+}
+.sim-team-deck.sim-team-home{
+  border-top-color:rgb(var(--ui-accent-rgb) / .44)!important;
+}
+.sim-match-versus{
+  color:var(--ui-muted)!important;
+}
+.sim-match-versus strong{
+  color:var(--ui-accent)!important;
+}

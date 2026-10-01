@@ -13,11 +13,13 @@ export function FifaHome({
   starters,
   unread,
   onOpen,
+  onContinue,
 }: {
   state: GameState
   starters: Player[]
   unread: number
   onOpen: (mode: ModeKey) => void
+  onContinue: () => void
 }) {
   const level = managerLevelProgress(state.managerXp)
   const hero = starters[0]
@@ -83,7 +85,18 @@ export function FifaHome({
           <span>{formatGameDate(state.now)}</span>
           <strong>{formatGameTime(state.now)} · WEEK {String(state.week).padStart(2, '0')}</strong>
         </div>
-        <button className="fifa-level-strip fifa-level-button" type="button" onClick={() => onOpen('Profile')}>
+        <button
+          className="fifa-home-continue"
+          type="button"
+          disabled={Boolean(pendingDecision || matchDue || state.seasonEnded)}
+          onClick={onContinue}
+        >
+          <span>CONTINUE</span>
+          <strong>ПРОМОТАТЬ ВРЕМЯ</strong>
+          <b>→</b>
+        </button>
+
+                <button className="fifa-level-strip fifa-level-button" type="button" onClick={() => onOpen('Profile')}>
           <span>MANAGER LVL {level.level}</span>
           <i><em style={{ width: level.percent + '%' }} /></i>
           <b>{level.current}/{level.required} XP</b>

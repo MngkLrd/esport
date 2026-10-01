@@ -505,10 +505,10 @@
   width: min(920px, 100%);
   max-height: 92vh;
   overflow: auto;
-  border: 1px solid #3a4654;
+  border: 1px solid var(--ui-line-strong);
   background:
-    radial-gradient(circle at 12% 0%, rgba(104,216,202,.06), transparent 25%),
-    #0c1117;
+    radial-gradient(circle at 12% 0%, rgb(var(--ui-accent-rgb) / .07), transparent 25%),
+    var(--ui-bg-1);
   box-shadow: 0 30px 100px rgba(0,0,0,.7);
   padding: 24px;
 }
@@ -528,49 +528,63 @@
 }
 
 .market-negotiation-player {
-  display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
+  position: relative;
+  min-width: 0;
   padding-right: 54px;
 }
 
-.market-negotiation-photo {
-  position: relative;
-  width: 92px;
-  height: 106px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid #33404d;
-  background: #171e26;
-}
-
-.market-negotiation-photo > span {
-  color: rgba(255,255,255,.12);
-  font: 900 24px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
-}
-
-.market-negotiation-photo img,
-.market-negotiation-photo .player-portrait-fallback {
-  position: absolute;
-  inset: 0;
+.market-negotiation-identity {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
+  min-height: 78px;
+  grid-template-columns: 64px minmax(0,1fr) auto;
+  gap: 13px;
 }
 
-.market-negotiation-player h2 {
-  margin: 8px 0 4px;
-  font-size: 34px;
+.market-negotiation-identity .player-identity-photo {
+  --player-id-size: 64px;
+  border-color: rgb(var(--ui-line-rgb) / .28);
+  background: rgb(var(--ui-panel-raised-rgb) / .82);
+}
+
+.market-negotiation-identity .player-identity-copy > strong {
+  font-size: 20px;
   text-transform: uppercase;
 }
 
-.market-negotiation-player p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
+.market-negotiation-identity .player-identity-copy > small {
+  font-size: 10px;
+}
+
+.market-negotiation-identity .player-identity-copy > em {
+  font-size: 9px;
+}
+
+.market-negotiation-rating {
+  min-width: 78px;
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.market-negotiation-rating small,
+.market-negotiation-rating em {
+  color: var(--ui-muted);
+  font: 900 8px/1 Arial,sans-serif;
+  font-style: normal;
+}
+
+.market-negotiation-rating b {
+  color: var(--ui-text);
+  font: 1000 26px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+
+.market-negotiation-a11y-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .market-interest {
@@ -600,25 +614,25 @@
 
 .market-interest b.interest-ready { color: var(--green); }
 .market-interest b.interest-warm { color: #e5c16e; }
-.market-interest b.interest-open { color: #83c8f0; }
+.market-interest b.interest-open { color: var(--ui-accent); }
 .market-interest b.interest-cold { color: #d87f83; }
 
 .market-interest-track {
   height: 6px;
   margin: 10px 0 9px;
   overflow: hidden;
-  background: #242d37;
+  background: rgb(var(--ui-line-rgb) / .20);
 }
 
 .market-interest-track i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #617b91, var(--orange));
+  background: linear-gradient(90deg, var(--ui-accent-2), var(--ui-accent));
   transition: width .16s ease;
 }
 
 .market-interest small {
-  color: #8b96a3;
+  color: var(--ui-muted);
   font-size: 14px;
 }
 
@@ -748,18 +762,12 @@
     padding: 16px;
   }
 
-  .market-negotiation-player {
-    grid-template-columns: 72px minmax(0, 1fr);
+  .market-negotiation-identity {
+    grid-template-columns: 52px minmax(0,1fr) auto;
   }
-
-  .market-negotiation-photo {
-    width: 72px;
-    height: 84px;
-  }
-
-  .market-negotiation-player h2 {
-    font-size: 25px;
-  }
+  .market-negotiation-identity .player-identity-photo { --player-id-size: 52px; }
+  .market-negotiation-identity .player-identity-copy > strong { font-size: 16px; }
+  .market-negotiation-rating b { font-size: 21px; }
 
   .market-contract-options {
     grid-template-columns: repeat(3, 1fr);

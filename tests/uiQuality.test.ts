@@ -56,7 +56,7 @@ describe('2026 UI quality pass', () => {
     expect(app).toContain('DEVELOPMENT FOCUS')
     expect(app).toContain('RECENT FORM')
     expect(app).toContain('recentPerformances')
-    expect(app).toContain('<TeamBadge name={player.team}')
+    expect(app).toContain('<TeamBadge name={livePlayer.team}')
   })
 
   it('provides shared player and team identity primitives with fallbacks', () => {

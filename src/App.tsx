@@ -57,6 +57,7 @@ import { TimeProgressionOverlay, type TimeProgressionSession, type TimeProgressi
 import { TrainingGround } from './TrainingGround'
 import { TeamBadge } from './TeamBadge'
 import { WorldPortal } from './WorldPortal'
+import { ConversationScreen, type ConversationChoice } from './ConversationScreen'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
@@ -358,11 +359,13 @@ function PlayerProfileModal({
   state,
   setState,
   onClose,
+  onTalk,
 }: {
   player: Player
   state: GameState
   setState: Dispatch<SetStateAction<GameState>>
   onClose: () => void
+  onTalk: () => void
 }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
@@ -466,6 +469,7 @@ function PlayerProfileModal({
 
             <section className="player-profile-actions">
               <div className="player-profile-section-head"><span>CLUB ACTIONS</span><b>MANAGE</b></div>
+              <button className="player-profile-talk" onClick={onTalk}>TALK TO PLAYER <span>→</span></button>
               <button onClick={() => setState((current) => renewContract(current, livePlayer.id))} disabled={state.credits < livePlayer.salary * 4}>RENEW CONTRACT <span>→</span></button>
               <button onClick={() => setState((current) => restPlayer(current, livePlayer.id))} disabled={state.staffEnergy < 1}>RECOVERY</button>
               <button onClick={() => setState((current) => trainPlayer(current, livePlayer.id))} disabled={state.staffEnergy < 1 || state.credits < 120}>DEVELOPMENT FOCUS</button>
@@ -521,6 +525,66 @@ function RosterRow({ player, starter, state, onOpen, onTrain, onRest, onRenew, o
   )
 }
 
+const conversationChoicesForPlayer = (player: Player): ConversationChoice[] => [
+  {
+    id: 'support',
+    tone: 'supportive',
+    label: 'Мне нравится твоя работа. Продолжай в том же духе.',
+    detail: 'Поддержать игрока и подчеркнуть доверие.',
+    response: player.morale < 55
+      ? 'Спасибо. Мне как раз важно было услышать, что клуб всё ещё рассчитывает на меня.'
+      : 'Принял. Буду держать этот уровень и постараюсь дать команде ещё больше.',
+  },
+  {
+    id: 'standards',
+    tone: 'direct',
+    label: 'Мне нужна большая стабильность от матча к матчу.',
+    detail: 'Обозначить требования без публичного давления.',
+    response: 'Понимаю. Есть моменты, где я проседал. Разберу их и постараюсь стать стабильнее.',
+  },
+  {
+    id: 'load',
+    tone: 'calm',
+    label: 'Как ты себя чувствуешь? При необходимости скорректируем нагрузку.',
+    detail: 'Проверить состояние игрока и открыть тему восстановления.',
+    response: player.fatigue >= 65
+      ? 'Нагрузка действительно накопилась. Пара более спокойных дней помогла бы мне вернуться в норму.'
+      : 'Сейчас всё нормально. Я готов работать по текущему плану.',
+  },
+  {
+    id: 'responsibility',
+    tone: 'ambitious',
+    label: 'Хочу, чтобы ты брал больше ответственности в важных матчах.',
+    detail: 'Поднять планку и обозначить более крупную роль.',
+    response: 'Мне это подходит. Если вы готовы доверить мне больше, я хочу доказать, что справлюсь.',
+  },
+]
+
+const conversationOpeningForPlayer = (player: Player, starter: boolean) => {
+  if (player.fatigue >= 72) {
+    return [
+      'Последние недели получились тяжёлыми. Я чувствую нагрузку сильнее обычного.',
+      starter
+        ? 'Я всё равно готов выходить в старте, но хочу понимать, какой у нас план на ближайшие матчи.'
+        : 'Если появится шанс вернуться в основу, хочу быть к нему полностью готов.',
+    ]
+  }
+  if (player.morale < 48) {
+    return [
+      'Хотел понять, как вы сейчас видите моё место в команде.',
+      starter
+        ? 'Я играю в старте, но последнее время не чувствую прежней уверенности.'
+        : 'С лавки сложно сохранять тот же ритм, поэтому мне важно понимать ваши ожидания.',
+    ]
+  }
+  return [
+    starter
+      ? 'По составу всё понятно. Я готов продолжать работу в основе.'
+      : 'Я понимаю текущую конкуренцию за место и продолжаю работать.',
+    'Если есть конкретные ожидания по моей игре, лучше обсудить их сейчас.',
+  ]
+}
+
 function App() {
   const [state, setState] = useState<GameState>(() => saveRepository.load())
   const [tab, setTab] = useState<Tab>('HQ')
@@ -529,6 +593,7 @@ function App() {
   const [welcomeStep, setWelcomeStep] = useState<'intro' | 'reveal' | 'complete'>('intro')
   const [welcomeRevealed, setWelcomeRevealed] = useState(0)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
+  const [conversationPlayerId, setConversationPlayerId] = useState<string | null>(null)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
@@ -542,6 +607,9 @@ function App() {
   const completedObjectivesRef = useRef<Set<string> | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
+  const conversationPlayer = conversationPlayerId
+    ? state.roster.find((player) => player.id === conversationPlayerId) ?? null
+    : null
   const rating = useMemo(
     () => teamRating(state.roster, state.startingFive, state.lineupContinuity),
     [state.roster, state.startingFive, state.lineupContinuity],
@@ -948,6 +1016,36 @@ function App() {
           state={state}
           setState={setState}
           onClose={() => setSelectedPlayer(null)}
+          onTalk={() => setConversationPlayerId(selectedPlayer.id)}
+        />
+      )}
+      {conversationPlayer && (
+        <ConversationScreen
+          eyebrow="ONE-TO-ONE · SQUAD"
+          title={'Разговор с ' + conversationPlayer.alias}
+          subtitle={ROLE_LABELS[conversationPlayer.role] + ' · ' + conversationPlayer.team}
+          participant={{
+            name: conversationPlayer.alias,
+            role: ROLE_LABELS[conversationPlayer.role],
+            meta: conversationPlayer.realName + ' · ' + countryFlag(conversationPlayer.country) + ' ' + conversationPlayer.country,
+            portrait: <PlayerPortrait alias={conversationPlayer.alias} playerId={conversationPlayer.profileId} alt={conversationPlayer.alias} loading="eager" />,
+            badge: <TeamBadge name={conversationPlayer.team} size="md" />,
+          }}
+          openingLines={conversationOpeningForPlayer(conversationPlayer, state.startingFive.includes(conversationPlayer.id))}
+          objective={conversationPlayer.fatigue >= 65
+            ? 'Понять состояние игрока и не потерять его готовность к следующей серии.'
+            : conversationPlayer.morale < 50
+              ? 'Снять неопределённость и вернуть игроку рабочую уверенность.'
+              : 'Сверить ожидания и закрепить роль игрока внутри состава.'}
+          context={[
+            { label: 'МОРАЛЬ', value: String(conversationPlayer.morale), emphasis: conversationPlayer.morale < 50 ? 'warning' : 'positive' },
+            { label: 'ФОРМА', value: String(conversationPlayer.form), emphasis: conversationPlayer.form >= 65 ? 'positive' : 'neutral' },
+            { label: 'УСТАЛОСТЬ', value: String(conversationPlayer.fatigue), emphasis: conversationPlayer.fatigue >= 65 ? 'warning' : 'neutral' },
+            { label: 'СТАТУС', value: state.startingFive.includes(conversationPlayer.id) ? 'STARTER' : 'BENCH' },
+            { label: 'КОНТРАКТ', value: conversationPlayer.contractWeeks + ' НЕД.' },
+          ]}
+          choices={conversationChoicesForPlayer(conversationPlayer)}
+          onClose={() => setConversationPlayerId(null)}
         />
       )}
       {transition && (

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8')
 
 const visual = read('src/visualHierarchy.css')
+const styles = read('src/styles.css')
 const simCss = read('src/simUI.css')
 const app = read('src/App.tsx')
 const news = read('src/WorldPortal.tsx')
@@ -138,4 +139,21 @@ describe('2026 UI quality pass', () => {
     expect(app).toContain('className="sim-match-team-identity"')
     expect(app).toContain('className="sim-match-team-identity away"')
   })
+  it('reruns palette cleanup for the newly added radar, world and calendar states', () => {
+    expect(styles).not.toContain('#4ba7ff')
+    expect(styles).not.toContain('#a67cff')
+    expect(styles).not.toContain('#21dced')
+    expect(styles).toContain('match-radar-feed b.our { color: var(--ui-accent); }')
+    expect(styles).toContain('world-marker.tier-3 .world-marker-dot { fill: var(--ui-accent); }')
+    expect(styles).toContain('calendar-event.t3 { border-color: var(--ui-accent); }')
+  })
+
+  it('keeps Player Details live while management actions mutate the roster', () => {
+    expect(app).toContain('const livePlayer = state.roster.find')
+    expect(app).toContain('overall(livePlayer)')
+    expect(app).toContain('renewContract(current, livePlayer.id)')
+    expect(app).toContain('restPlayer(current, livePlayer.id)')
+    expect(app).toContain('trainPlayer(current, livePlayer.id)')
+  })
+
 })

@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react'
-import { overall, type MatchNarrativeTag, type MatchResult, type Player } from './game'
+import {
+  lineupMapStyleFit,
+  opponentRosterMapStyleFit,
+  overall,
+  tacticInfo,
+  type MatchNarrativeTag,
+  type MatchResult,
+  type Player,
+  type TacticalPlan,
+} from './game'
 import type { TournamentRosterPlayer } from './tournamentEngine'
 import { metadataForAlias } from './playerMetadata'
 import { cardStatsForAlias } from './cardStats'
@@ -18,6 +27,8 @@ type LobbyMap = {
   key: string
   description: string
 }
+
+const TACTICAL_PLANS: TacticalPlan[] = ['balanced', 'aggressive', 'structured']
 
 const MAPS: LobbyMap[] = [
   { name: 'Ancient', key: 'de_ancient', description: 'Плотная карта с быстрыми ротациями и сильной ценностью utility.' },
@@ -45,6 +56,8 @@ const hashSeed = (input: string) => {
   }
   return hash >>> 0
 }
+
+const candidateTieKey = (map: string) => map.toLocaleLowerCase('en-US').replace(/[^a-z0-9]/g, '')
 
 const mapAsset = (key: string) => '/esport/maps/' + key + '.png'
 
@@ -163,12 +176,20 @@ function MatchStoryPanel({ result }: { result: MatchResult }) {
                 {mapStory.tags.slice(0, 4).map((tag) => <span key={tag}>{STORY_TAG_LABELS[tag]}</span>)}
               </div>
               <p>{mapStory.explanation}</p>
-              <small>{mapStory.turningPoint}</small>
+              <small>
+                {mapStory.turningPoint}
+                {(mapStory.opponentFactors?.adaptation ?? 0) >= .5
+                  ? ' · OPP ADAPT ' + mapStory.opponentFactors!.adaptation
+                  : ''}
+              </small>
               <div className="match-story-factors">
-                <span><i style={{ width: mapStory.factors.tactics + '%' }} /><b>TACTICS</b><em>{mapStory.factors.tactics}</em></span>
-                <span><i style={{ width: mapStory.factors.preparation + '%' }} /><b>PREP</b><em>{mapStory.factors.preparation}</em></span>
-                <span><i style={{ width: mapStory.factors.communication + '%' }} /><b>COMMS</b><em>{mapStory.factors.communication}</em></span>
-                <span><i style={{ width: mapStory.factors.fatigue + '%' }} /><b>ENERGY</b><em>{mapStory.factors.fatigue}</em></span>
+                <span><i style={{ width: mapStory.factors.tactics + '%' }} /><b>TACTICS</b><em>{mapStory.factors.tactics}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.tactics : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.preparation + '%' }} /><b>PREP</b><em>{mapStory.factors.preparation}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.preparation : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.communication + '%' }} /><b>COMMS</b><em>{mapStory.factors.communication}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.communication : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.fatigue + '%' }} /><b>ENERGY</b><em>{mapStory.factors.fatigue}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.fatigue : ''}</em></span>
+                {mapStory.factors.mapFit != null && (
+                  <span><i style={{ width: mapStory.factors.mapFit + '%' }} /><b>MAP FIT</b><em>{mapStory.factors.mapFit}{mapStory.opponentFactors?.mapFit != null ? ' / ' + mapStory.opponentFactors.mapFit : ''}</em></span>
+                )}
               </div>
             </article>
           )
@@ -190,11 +211,12 @@ export function MatchLobby({
   starters: Player[]
   phase: 'prematch' | 'result'
   initialVeto?: LobbyVetoAction[]
-  onStart?: (maps: string[], veto: LobbyVetoAction[]) => void
+  onStart?: (maps: string[], veto: LobbyVetoAction[], tactic: TacticalPlan) => void
   onContinue?: () => void
 }) {
   const rivals = useMemo(() => opponentPlayers(result), [result])
   const [veto, setVeto] = useState<LobbyVetoAction[]>(initialVeto)
+  const [selectedTactic, setSelectedTactic] = useState<TacticalPlan>(result.tactic)
   const [focusedMap, setFocusedMap] = useState(
     initialVeto.find((action) => action.type === 'PICK')?.map ?? MAPS[2].name,
   )
@@ -227,7 +249,21 @@ export function MatchLobby({
 
       const map = expected.type === 'DECIDER'
         ? remaining[0]
-        : remaining[hashSeed(result.id + ':' + next.length + ':' + result.opponent) % remaining.length]
+        : expected.team === 'AWAY'
+          ? [...remaining].sort((a, b) => {
+              const score = (candidate: LobbyMap) =>
+                opponentRosterMapStyleFit(rivals, result.opponentRating, candidate.name) -
+                lineupMapStyleFit(starters, candidate.name)
+              const delta = score(a) - score(b)
+              if (Math.abs(delta) > .001) {
+                return expected.type === 'PICK' ? -delta : delta
+              }
+              return (
+                hashSeed(result.id + ':' + candidateTieKey(a.name) + ':' + next.length) -
+                hashSeed(result.id + ':' + candidateTieKey(b.name) + ':' + next.length)
+              )
+            })[0]
+          : remaining[hashSeed(result.id + ':' + next.length + ':' + result.opponent) % remaining.length]
 
       next.push({
         step: next.length,
@@ -358,6 +394,19 @@ export function MatchLobby({
                   <span>TACTICAL OVERVIEW</span>
                   <h2>{focused.name}</h2>
                   <p>{focused.description}</p>
+                  <div className="match-lobby-tactics" aria-label="План на матч">
+                    {TACTICAL_PLANS.map((plan) => (
+                      <button
+                        type="button"
+                        key={plan}
+                        className={selectedTactic === plan ? 'is-active' : ''}
+                        title={tacticInfo[plan].description}
+                        onClick={() => setSelectedTactic(plan)}
+                      >
+                        {tacticInfo[plan].name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="match-lobby-map-facts">
                   <span><small>YOUR OVR</small><b>{homeRating}</b></span>
@@ -375,7 +424,7 @@ export function MatchLobby({
                   type="button"
                   className="match-lobby-primary"
                   disabled={!vetoComplete}
-                  onClick={() => onStart?.(selectedMaps, veto)}
+                  onClick={() => onStart?.(selectedMaps, veto, selectedTactic)}
                 >
                   {vetoComplete ? 'START SERIES' : nextStep?.label ?? 'COMPLETE VETO'}
                 </button>

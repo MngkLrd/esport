@@ -674,7 +674,7 @@ function App() {
     })
   }, [])
 
-  const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[]) => {
+  const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[], selectedTactic: TacticalPlan) => {
     setPendingMatch((current) => {
       if (!current) return null
 
@@ -684,7 +684,7 @@ function App() {
       const resolvedState = playMatch(
         current.sourceState,
         current.mode,
-        current.result.tactic,
+        selectedTactic,
         maps,
       )
       const resolvedResult = resolvedState.history[0]

@@ -4357,6 +4357,28 @@ body{
 .match-lobby-map-copy>span{color:var(--sim-cyan);font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;letter-spacing:.13em}
 .match-lobby-map-copy h2{margin:5px 0 6px;font:1000 20px/.9 'Cyril UI','Noto Sans',system-ui,sans-serif;text-transform:uppercase}
 .match-lobby-map-copy p{margin:0;color:#918b82;font-size: 12px;line-height:1.45}
+.match-lobby-tactics{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:9px
+}
+.match-lobby-tactics button{
+  min-height:25px;
+  padding:0 8px;
+  border:1px solid rgb(var(--ui-line-rgb) / .24);
+  background:rgba(255,255,255,.025);
+  color:#8f8980;
+  cursor:pointer;
+  font:900 7px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+  text-transform:uppercase
+}
+.match-lobby-tactics button:hover,
+.match-lobby-tactics button.is-active{
+  border-color:rgb(var(--ui-accent-rgb) / .62);
+  background:rgb(var(--ui-accent-rgb) / .09);
+  color:var(--sim-cyan)
+}
 .match-lobby-map-facts{
   display:grid;
   align-content:center;

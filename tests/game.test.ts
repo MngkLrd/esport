@@ -14,6 +14,7 @@ import {
   evaluateNegotiation,
   findTurningPoint,
   lineupFitScore,
+  mapStyleFit,
   migrateState,
   negotiateProspect,
   playMatch,
@@ -273,6 +274,76 @@ describe('P0 career flow', () => {
     expect(combatEvents).toHaveLength(0)
   })
 
+  it('preserves a named causal failure when the original duel is blocked by radar geometry', () => {
+    const cols = 16
+    const rows = 16
+    const walkable = new Uint8Array(cols * rows)
+    walkable.fill(1)
+    for (let row = 0; row < rows; row += 1) walkable[row * cols + 8] = 0
+    const grid: RadarNavigationGrid = { cols, rows, cellSize: 8, walkable }
+
+    const round: SimRound = {
+      id: 'causal-navigation-fallback',
+      map: 'Test',
+      mapKey: 'test',
+      homeSide: 'T',
+      scenario: 'default',
+      scenarioLabel: 'DEFAULT',
+      site: 'A',
+      duration: 900,
+      winner: 'HOME',
+      cause: 'PLAYER_ERROR',
+      keyPlayer: 'B',
+      keyPlayerSide: 'THEM',
+      events: [
+        { id: 'shot-0', time: 160, type: 'shot', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47' },
+        { id: 'damage-0', time: 270, type: 'damage', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47', damage: 55 },
+        { id: 'kill-0', time: 400, type: 'kill', actorId: 'a', targetId: 'b', actorName: 'A', targetName: 'B', side: 'T', weapon: 'AK-47' },
+      ],
+      frames: Array.from({ length: 10 }, (_, index) => ({
+        time: index * 100,
+        players: [
+          { id: 'a', name: 'A', side: 'T' as const, x: 20, y: 28, yaw: 0, hp: 100, alive: true, weapon: 'AK-47', hasBomb: false },
+          { id: 'c', name: 'C', side: 'T' as const, x: 92, y: 44, yaw: 0, hp: 100, alive: true, weapon: 'AK-47', hasBomb: false },
+          { id: 'b', name: 'B', side: 'CT' as const, x: 108, y: 44, yaw: 180, hp: index >= 4 ? 0 : 100, alive: index < 4, weapon: 'M4A1-S', hasBomb: false },
+        ],
+      })),
+    }
+
+    const constrained = constrainRoundToNavigation(round, grid)
+    const kill = constrained.events.find((event) => event.type === 'kill')
+    expect(kill).toBeTruthy()
+    expect(kill?.targetName).toBe('B')
+    expect(kill?.actorName).toBe('C')
+
+    const frame = constrained.frames.reduce((best, current) =>
+      Math.abs(current.time - (kill?.time ?? 0)) < Math.abs(best.time - (kill?.time ?? 0)) ? current : best,
+    )
+    const actor = frame.players.find((player) => player.id === kill?.actorId)!
+    const target = frame.players.find((player) => player.id === kill?.targetId)!
+    expect(isNavigationSegmentClear(grid, actor, target)).toBe(true)
+  })
+
+  it('gives maps different skill demands instead of treating veto as a label swap', () => {
+    const mechanical = {
+      aim: 90,
+      gameSense: 66,
+      utility: 42,
+      clutch: 80,
+      leadership: 52,
+    }
+    const structural = {
+      aim: 62,
+      gameSense: 84,
+      utility: 88,
+      clutch: 66,
+      leadership: 82,
+    }
+
+    expect(mapStyleFit(mechanical, 'Dust II')).toBeGreaterThan(mapStyleFit(mechanical, 'Inferno'))
+    expect(mapStyleFit(structural, 'Nuke')).toBeGreaterThan(mapStyleFit(structural, 'Dust II'))
+  })
+
   it('derives map score from a causal round history and persists the explanation', () => {
     const initial = createInitialState()
     const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
@@ -373,6 +444,18 @@ describe('P0 career flow', () => {
       expect(map.story?.map).toBe(map.map)
       expect(map.story?.opponentFactors).toBeTruthy()
     })
+  })
+
+  it('carries opponent adaptation and real series fatigue into later maps', () => {
+    const initial = createInitialState()
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+    const result = playMatch(ready, 'practice', 'balanced', ['Dust II', 'Inferno', 'Nuke']).history[0]
+
+    expect(result.maps.length).toBeGreaterThanOrEqual(2)
+    const first = result.maps[0].story!
+    const second = result.maps[1].story!
+    expect(second.opponentFactors?.adaptation ?? 0).toBeGreaterThan(first.opponentFactors?.adaptation ?? 0)
+    expect(second.factors.fatigue).toBeLessThan(first.factors.fatigue)
   })
 
   it('never resolves an overtime map as a tie', () => {
@@ -497,6 +580,16 @@ describe('P0 career flow', () => {
     expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'kill'))).toBe(true)
     expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'utility'))).toBe(true)
 
+    for (const round of playbackA.rounds) {
+      const dead = new Set<string>()
+      const kills = round.events.filter((event) => event.type === 'kill').sort((a, b) => a.time - b.time)
+      for (const kill of kills) {
+        expect(dead.has(kill.actorId)).toBe(false)
+        expect(kill.targetId ? dead.has(kill.targetId) : false).toBe(false)
+        if (kill.targetId) dead.add(kill.targetId)
+      }
+    }
+
     const frame = simulationFrameAt(playbackA.rounds[0], 4500)
     expect(frame?.players).toHaveLength(10)
     expect(frame?.players.every((player) => Number.isFinite(player.x) && Number.isFinite(player.y))).toBe(true)
@@ -532,6 +625,22 @@ describe('P0 career flow', () => {
     expect(homeDeaths(dominantRound)).toBeLessThan(homeDeaths(closeRound))
     expect(homeDeaths(dominantRound)).toBe(0)
     expect(homeDeaths(closeRound)).toBe(3)
+  })
+
+  it('keeps the fixture stable when the manager changes tactical plan', () => {
+    const initial = { ...createInitialState(), saveId: 'tactic-fixture-regression' }
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+
+    const balanced = playMatch(ready, 'practice', 'balanced', ['Mirage', 'Nuke', 'Ancient']).history[0]
+    const aggressive = playMatch(ready, 'practice', 'aggressive', ['Mirage', 'Nuke', 'Ancient']).history[0]
+    const structured = playMatch(ready, 'practice', 'structured', ['Mirage', 'Nuke', 'Ancient']).history[0]
+
+    expect(aggressive.opponent).toBe(balanced.opponent)
+    expect(structured.opponent).toBe(balanced.opponent)
+    expect(aggressive.opponentTeamId).toBe(balanced.opponentTeamId)
+    expect(structured.opponentTeamId).toBe(balanced.opponentTeamId)
+    expect(aggressive.tactic).toBe('aggressive')
+    expect(structured.tactic).toBe('structured')
   })
 
   it('makes lineup rating gaps materially change map win chance', () => {

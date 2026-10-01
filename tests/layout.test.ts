@@ -46,6 +46,11 @@ describe('sim UI viewport contract', () => {
     expect(css).toMatch(/\.training-week-grid\s*\{[\s\S]*?grid-template-columns:repeat\(7,minmax\(0,1fr\)\);/)
   })
 
+  it('pins Training Ground inside the desktop game viewport and clears the back button', () => {
+    expect(css).toMatch(/\.app-main\.app-main-training\s*>\s*\.training-ground\s*\{[\s\S]*?position:absolute;[\s\S]*?inset:0;[\s\S]*?height:100%;/)
+    expect(css).toMatch(/\.app-main\.app-main-training\s*>\s*\.training-ground \.training-ground-head\s*\{[\s\S]*?padding-left:118px;/)
+  })
+
   it('exposes the core training workflows without restoring instant card farming', () => {
     expect(training).toContain('AUTO PLAN')
     expect(training).toContain('SESSION BUILDER')

@@ -627,6 +627,22 @@ describe('P0 career flow', () => {
     expect(homeDeaths(closeRound)).toBe(3)
   })
 
+  it('keeps the fixture stable when the manager changes tactical plan', () => {
+    const initial = { ...createInitialState(), saveId: 'tactic-fixture-regression' }
+    const ready = applyWelcomePack(initial, rollWelcomePack(initial.saveId))
+
+    const balanced = playMatch(ready, 'practice', 'balanced', ['Mirage', 'Nuke', 'Ancient']).history[0]
+    const aggressive = playMatch(ready, 'practice', 'aggressive', ['Mirage', 'Nuke', 'Ancient']).history[0]
+    const structured = playMatch(ready, 'practice', 'structured', ['Mirage', 'Nuke', 'Ancient']).history[0]
+
+    expect(aggressive.opponent).toBe(balanced.opponent)
+    expect(structured.opponent).toBe(balanced.opponent)
+    expect(aggressive.opponentTeamId).toBe(balanced.opponentTeamId)
+    expect(structured.opponentTeamId).toBe(balanced.opponentTeamId)
+    expect(aggressive.tactic).toBe('aggressive')
+    expect(structured.tactic).toBe('structured')
+  })
+
   it('makes lineup rating gaps materially change map win chance', () => {
     const seeded = { ...createInitialState(), saveId: 'rating-gap-regression' }
     const ready = {

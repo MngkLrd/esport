@@ -50,6 +50,7 @@ import { metadataForAlias } from './playerMetadata'
 import { careerObjectives, completedCareerObjectiveIds, onboardingStep } from './progression'
 import { TimeProgressionOverlay, type TimeProgressionSession, type TimeProgressionSpeed, type TimeProgressionStop } from './TimeProgression'
 import { TrainingGround } from './TrainingGround'
+import { WorldPortal } from './WorldPortal'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
@@ -990,52 +991,14 @@ function App() {
         {tab === 'Profile' && <ManagerProfile state={state} />}
 
         {tab === 'Inbox' && (
-          <section className="sim-screen sim-inbox">
-            <div className="sim-screen-head">
-              <div>
-                <span>CLUB FEED · WEEK {state.week}</span>
-                <h1>INBOX</h1>
-              </div>
-              <div className="sim-head-stat"><small>EVENTS</small><b>{state.news.length + (state.pendingDecision ? 1 : 0)}</b></div>
-            </div>
-            {state.pendingDecision && (
-              <article className={'sim-decision-card decision-' + state.pendingDecision.kind}>
-                <span>DECISION REQUIRED</span>
-                <h2>{state.pendingDecision.title}</h2>
-                <p>{state.pendingDecision.body}</p>
-                <div>
-                  <button onClick={() => resolveDecision('a')}>{state.pendingDecision.optionA}</button>
-                  <button onClick={() => resolveDecision('b')}>{state.pendingDecision.optionB}</button>
-                </div>
-              </article>
-            )}
-            <div className="sim-inbox-body">
-              <div className="sim-inbox-season"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
-              <div className="sim-feed">
-                {state.news.map((item) => {
-                  const target: Tab | null =
-                    item.kind === 'contract' || item.kind === 'lineup' ? 'Roster' :
-                    item.kind === 'scout' ? 'Scout' :
-                    item.kind === 'match' ? 'World' :
-                    item.kind === 'media' ? 'World' :
-                    item.kind === 'finance' ? 'Profile' : null
-                  return (
-                    <article key={item.id}>
-                      <div className="sim-feed-marker">{NEWS_KIND_LABELS[item.kind].slice(0, 1).toUpperCase()}</div>
-                      <div>
-                        <span>Неделя {item.week} · {NEWS_KIND_LABELS[item.kind]}</span>
-                        <h2>{item.title}</h2>
-                        <p>{item.body}</p>
-                        {target && <button className="sim-feed-action" onClick={() => openTab(target)}>ОТКРЫТЬ <b>→</b></button>}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            </div>
-            <button className="sim-danger-action sim-reset" onClick={reset}>Сбросить сохранение</button>
-          </section>
+          <WorldPortal
+            state={state}
+            onResolveDecision={resolveDecision}
+            onNavigate={(target) => openTab(target)}
+            onReset={reset}
+          />
         )}
+
       </main>
 
       {pendingMatch?.stage === 'lobby' && (

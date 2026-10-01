@@ -821,6 +821,28 @@ const stabilizeRosters = (
           break
         }
       }
+
+      if (!signed && ecology.metrics.sponsorLiquidity >= 30 && clubBudget(team) > 600) {
+        const serial = ecology.metrics.generatedPlayers + 1
+        createGeneratedPlayer(world, ecology, region, at, seed + attempts * 97, serial)
+        const rookie = Object.values(world.players)
+          .filter((player) => !player.teamId && !player.retiredAt && player.generated && regionForCountry(player.country) === region)
+          .sort((a, b) => (b.careerStartedAt ?? '').localeCompare(a.careerStartedAt ?? ''))[0]
+        if (rookie) {
+          createTransferOffer(world, ecology, team, rookie, at, seed + attempts * 193)
+          const offer = ecology.offers.find((entry) =>
+            entry.status === 'open' &&
+            entry.playerKey === rookie.key &&
+            entry.buyerTeamId === team.id,
+          )
+          if (offer) {
+            const before = team.rosterKeys.length
+            executeTransfer(world, ecology, offer, at)
+            signed = team.rosterKeys.length > before
+          }
+        }
+      }
+
       if (!signed) break
     }
 

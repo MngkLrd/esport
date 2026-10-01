@@ -2072,23 +2072,46 @@ const settleFinishedTournament = (state: GameState, run: TournamentRun): GameSta
     vrsPaid: true,
   }
 
-  return {
+  let next: GameState = {
     ...state,
-    credits: state.credits + prize,
     clubVrsPoints: state.clubVrsPoints + vrs,
     activeEventId: null,
     activeTournament: null,
     tournamentHistory: [settledRun, ...state.tournamentHistory].slice(0, 30),
-    news: event ? [{
-      id: 'tournament-finish-' + settledRun.id,
-      week: state.week,
-      kind: 'match' as const,
-      title: event.name + ' · ' + (settledRun.placement ?? settledRun.status).toUpperCase(),
-      body: (prize > 0
-        ? 'Турнир завершён. Призовые: ' + prize + ' кр.'
-        : 'Турнир завершён без призовых.') + (vrs > 0 ? ' · VRS +' + vrs : ''),
-    }, ...state.news].slice(0, 50) : state.news,
   }
+
+  if (prize > 0) {
+    next = postClubFinance(next, {
+      id: 'prize-' + settledRun.id,
+      at: state.now,
+      week: state.week,
+      amount: prize,
+      account: 'prize',
+      title: (event?.name ?? 'Tournament') + ' prize money',
+      description: 'Турнирные призовые за итоговое место.',
+      sourceType: 'tournament',
+      sourceId: settledRun.id,
+      eventId: 'tournament-finish-' + settledRun.id,
+    })
+  }
+
+  if (!event) return next
+  return recordClubEvent(next, {
+    id: 'tournament-finish-' + settledRun.id,
+    at: state.now,
+    week: state.week,
+    kind: 'tournament',
+    title: event.name + ' · ' + (settledRun.placement ?? settledRun.status).toUpperCase(),
+    detail: (prize > 0
+      ? 'Турнир завершён. Призовые: ' + prize + ' кр.'
+      : 'Турнир завершён без призовых.') + (vrs > 0 ? ' · VRS +' + vrs : ''),
+    importance: event.circuitTier === 1 ? 95 : event.circuitTier === 2 ? 75 : 55,
+    actorIds: state.roster.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    sourceId: settledRun.id,
+    financeEntryIds: prize > 0 ? ['prize-' + settledRun.id] : [],
+    data: { eventId: event.id, placement: settledRun.placement, vrsDelta: vrs, prize },
+  })
 }
 
 export const advanceCareerTo = (state: GameState, target: string): GameState => {

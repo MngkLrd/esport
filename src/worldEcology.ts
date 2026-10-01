@@ -550,6 +550,15 @@ const executeTransfer = (
   player.salary = offer.salary
   player.contractWeeks = 24 + (hashSeed(offer.id) % 54)
   player.morale = clamp(player.morale + 5)
+  world.transferHistory = [{
+    id: 'eco-transfer-' + offer.id,
+    date: at,
+    playerKey: player.key,
+    alias: player.alias,
+    fromTeamId: seller?.id ?? null,
+    toTeamId: buyer.id,
+    kind: 'ai-transfer' as const,
+  }, ...world.transferHistory].slice(0, 240)
   offer.status = 'accepted'
   for (const rival of competing.slice(1)) rival.status = 'rejected'
 
@@ -1032,7 +1041,7 @@ const finishCompetition = (
 
   if (operator) {
     const profit = competition.revenue - competition.cost
-    operator.capital += competition.revenue
+    operator.capital += competition.revenue - Math.round(competition.cost * .78)
     operator.audience = clamp(operator.audience * .82 + Math.min(100, competition.audience / 1200) * .18)
     operator.reputation = clamp(operator.reputation + (profit >= 0 ? 1.5 : -.8) + (competition.tier === 1 ? .8 : 0))
     operator.consecutiveLosses = profit < 0 ? operator.consecutiveLosses + 1 : 0

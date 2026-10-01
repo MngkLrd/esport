@@ -16,6 +16,7 @@ import {
   lineupFitScore,
   mapStyleFit,
   matchDurationHoursForRounds,
+  mapWinProbabilityFromRoundChance,
   migrateState,
   negotiateProspect,
   playMatch,
@@ -366,6 +367,16 @@ describe('P0 career flow', () => {
 
     expect(plant?.actorId).toBe('t-2')
     expect(defuse?.actorId).toBe('ct-2')
+  })
+
+  it('converts round edge into an MR12 map probability with overtime symmetry', () => {
+    expect(mapWinProbabilityFromRoundChance(.5)).toBeCloseTo(.5, 8)
+    expect(mapWinProbabilityFromRoundChance(.55)).toBeGreaterThan(.5)
+    expect(mapWinProbabilityFromRoundChance(.45)).toBeLessThan(.5)
+    expect(
+      mapWinProbabilityFromRoundChance(.55) +
+      mapWinProbabilityFromRoundChance(.45),
+    ).toBeCloseTo(1, 8)
   })
 
   it('makes long series consume more game-clock time than short series', () => {

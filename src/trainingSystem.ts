@@ -10,6 +10,7 @@ import { opponentForPlayerMatch } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID } from './world'
 import {
   TRAINING_MAPS,
+  trainingPreparationModifier,
   type TrainingFocus,
   type TrainingIntensity,
   type TrainingMap,
@@ -461,17 +462,4 @@ export const trainingMatchModifier = (
   state: GameState,
   map: string,
   opponentTeamId: string | null,
-) => {
-  const mapPrep = TRAINING_MAPS.includes(map as TrainingMap)
-    ? state.training.mapPreparation[map as TrainingMap]
-    : 50
-  const knowledge = opponentTeamId ? state.training.opponentKnowledge[opponentTeamId] ?? 0 : 0
-  const raw =
-    (state.training.readiness - 55) * 0.035 +
-    (state.training.tacticalCohesion - 50) * 0.022 +
-    (state.training.sharpness - 55) * 0.018 +
-    (mapPrep - 50) * 0.028 +
-    (knowledge - 30) * 0.012
-
-  return Math.max(-3.2, Math.min(3.2, raw))
-}
+) => trainingPreparationModifier(state.training, map, opponentTeamId)

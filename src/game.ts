@@ -10,7 +10,7 @@ import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPre
 import { cardStatsForAlias } from './cardStats'
 import { appendRatingEvidence, buildPlayerRatingV2, type PlayerRatingV2, type RatingEvidence } from './ratingEngine'
 import { createFinanceState, normalizeFinanceState, postFinanceEntry, type FinanceAccount, type FinanceLedgerEntry, type FinanceState } from './finance'
-import { appendClubEvent, normalizeClubEvents, projectEventToNews, type ClubEvent } from './clubEvents'
+import { appendClubEvent, matchHistoryFromEvents, normalizeClubEvents, projectEventToNews, type ClubEvent } from './clubEvents'
 import { activeTransferCaseForPlayer, createTransferCase, normalizeTransferCases, transitionTransferCase, type TransferCase } from './transferLifecycle'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
@@ -362,6 +362,11 @@ const clubWorldRosterProjection = (roster: Player[]) =>
     salary: player.salary,
     rating: overall(player),
   }))
+
+export const canonicalMatchHistory = (state: Pick<GameState, 'clubEvents' | 'history'>) => {
+  const fromEvents = matchHistoryFromEvents<MatchResult>(state.clubEvents ?? [])
+  return fromEvents.length ? fromEvents : state.history
+}
 
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 
@@ -2237,7 +2242,7 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
 
   const seasonExpired = nextWeekRaw > state.seasonLength
   if (seasonExpired && !next.activeTournament) {
-    const bestPlayer = [...next.history]
+    const bestPlayer = [...canonicalMatchHistory(next)]
       .filter((match) => match.season === next.season)
       .flatMap((match) => match.performances)
       .sort((a, b) => b.rating - a.rating)[0]?.alias ?? null
@@ -2864,7 +2869,7 @@ export const playMatch = (
       matchSnapshot: result,
       opponent: opponent.name,
       opponentRating: opponent.rating,
-      vrsDelta: result.vrsDelta ?? 0,
+      vrsDelta: isPractice ? 0 : matchVrs,
       tournamentId: event?.id ?? null,
       tier: ratingTier,
       environment: ratingEnvironment,

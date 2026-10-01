@@ -690,7 +690,7 @@ export function RosterBoard({
       {rosterView === 'planner' ? (
         <SquadPlanner state={state} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
       ) : (
-        <>
+        <div className="sim-squad-mode-body">
       <div className="sim-squad-kpis">
         <div><span>TEAM RATING</span><strong>{rating}</strong><small>{rating >= 70 ? 'CONTENDER' : rating >= 60 ? 'COMPETITIVE' : 'DEVELOPING'}</small></div>
         <div className="chemistry">
@@ -916,7 +916,7 @@ export function RosterBoard({
           </section>
         </div>
       )}
-        </>
+        </div>
       )}
     </section>
   )

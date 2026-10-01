@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 
 const css = readFileSync(new URL('../src/simUI.css', import.meta.url), 'utf8')
 const roster = readFileSync(new URL('../src/RosterBoard.tsx', import.meta.url), 'utf8')
+const training = readFileSync(new URL('../src/TrainingGround.tsx', import.meta.url), 'utf8')
 
 describe('sim UI viewport contract', () => {
   it('forces redesigned desktop pages out of legacy two-row app grids', () => {
@@ -36,5 +37,22 @@ describe('sim UI viewport contract', () => {
     expect(roster).toContain('className="sim-planner-role-auto"')
     expect(roster).toContain('autoFillAllRoles')
     expect(roster).toContain('autoFillRole(role)')
+  })
+
+
+  it('keeps the training ground as a full-height manager workspace', () => {
+    expect(css).toMatch(/\.training-ground\s*\{[\s\S]*?height:100%;[\s\S]*?grid-template-rows:70px minmax\(0,1fr\);/)
+    expect(css).toMatch(/\.training-ground-body\s*\{[\s\S]*?grid-template-columns:minmax\(0,1fr\) 372px;/)
+    expect(css).toMatch(/\.training-week-grid\s*\{[\s\S]*?grid-template-columns:repeat\(7,minmax\(0,1fr\)\);/)
+  })
+
+  it('exposes the core training workflows without restoring instant card farming', () => {
+    expect(training).toContain('AUTO PLAN')
+    expect(training).toContain('SESSION BUILDER')
+    expect(training).toContain('MATCH PREPARATION')
+    expect(training).toContain('PLAYER DEVELOPMENT')
+    expect(training).toContain('LAST SCRIM REPORT')
+    expect(training).toContain('OVR GAIN')
+    expect(training).toContain('<b>0</b>')
   })
 })

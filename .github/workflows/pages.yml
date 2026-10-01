@@ -2,7 +2,7 @@ name: Deploy Pages
 
 on:
   push:
-    branches: [main, gameplay-fixes]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

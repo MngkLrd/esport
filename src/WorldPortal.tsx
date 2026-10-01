@@ -361,7 +361,6 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer
             <div className="newsroom-inbox-list">
               {filteredInbox.map((item) => {
                 const unread = !clubRead.values.has(item.id)
-                const target = newsTarget(item)
                 return (
                   <article key={item.id} className={unread ? 'is-unread' : ''}>
                     <div className="newsroom-inbox-icon">{item.attention === 'action' ? '!' : '•'}</div>

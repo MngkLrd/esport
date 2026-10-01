@@ -134,13 +134,24 @@ export interface SeasonSummary {
   objective: { label: string; target: number; value: number; completed: boolean }
 }
 
+export type NewsScope = 'club' | 'world'
+export type NewsAttention = 'info' | 'action'
+
 export interface NewsItem {
   id: string
   week: number
   kind: 'match' | 'media' | 'contract' | 'scout' | 'finance' | 'lineup'
   title: string
   body: string
+  scope?: NewsScope
+  attention?: NewsAttention
 }
+
+export const newsBelongsInInbox = (item: NewsItem) =>
+  item.scope === 'club' || (item.scope == null && !item.id.startsWith('ecology-'))
+
+export const newsRequiresAction = (item: NewsItem) =>
+  newsBelongsInInbox(item) && item.attention === 'action'
 
 export type ClubDecisionKind = 'recovery' | 'sponsor' | 'media'
 
@@ -1189,7 +1200,7 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   if (payrollCycles > 0) {
     advancedWorld = advanceWorldWeeks(advancedWorld, payrollCycles, ecologySeed, effectiveTarget)
   }
-  const worldEvents = worldEventsSince(advancedWorld, state.now, 28).slice(0, 8)
+  const worldEvents = worldEventsSince(advancedWorld, state.now, 28).slice(0, 24)
 
   let next: GameState = {
     ...state,
@@ -1223,21 +1234,32 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   }
 
   const worldNewsKind = (event: WorldHistoryEvent): NewsItem['kind'] =>
-    event.kind === 'transfer-completed' || event.kind === 'contract-expired'
+    event.kind === 'transfer-completed' || event.kind === 'transfer-offer' || event.kind === 'contract-expired'
       ? 'contract'
-      : event.kind === 'tournament-completed'
+      : event.kind === 'tournament-completed' || event.kind === 'tournament-created'
         ? 'match'
-        : event.kind === 'team-founded' || event.kind === 'team-dissolved' || event.kind === 'operator-founded' || event.kind === 'operator-dissolved'
-          ? 'media'
-          : 'media'
+        : 'media'
 
-  const ecologyNews: NewsItem[] = worldEvents.map((event) => ({
-    id: 'ecology-' + event.id,
-    week: next.week,
-    kind: worldNewsKind(event),
-    title: event.title,
-    body: event.detail,
-  }))
+  const playerClubActorIds = new Set<string>([
+    PLAYER_CLUB_WORLD_ID,
+    ...state.roster.flatMap((player) => [player.id, player.playerKey].filter((value): value is string => Boolean(value))),
+  ])
+  const worldEventTouchesClub = (event: WorldHistoryEvent) =>
+    event.actorIds.some((actorId) => playerClubActorIds.has(actorId))
+
+  const ecologyNews: NewsItem[] = worldEvents
+    .filter(worldEventTouchesClub)
+    .map((event) => ({
+      id: 'ecology-' + event.id,
+      week: next.week,
+      kind: worldNewsKind(event),
+      title: event.title,
+      body: event.detail,
+      scope: 'club' as const,
+      // Ecology currently has no player-facing resolver for offers/invitations.
+      // Keep these informative until a real decision flow exists.
+      attention: 'info' as const,
+    }))
 
   if (payrollCycles > 0 || ecologyNews.length > 0) {
     next = {

@@ -1226,7 +1226,7 @@ export const findTurningPoint = (rounds: MatchRoundStory[]) => {
   })
 
   if (lowestWinnerLead < 0) {
-    const comebackStart = rounds.find((round, index) => index > lowestIndex && round.winner === winner)
+    const comebackStart = rounds.find((round, index) => index >= lowestIndex && round.winner === winner)
     if (comebackStart) return comebackStart
   }
 

@@ -3251,20 +3251,37 @@ export const scout = (state: GameState, rawBrief: ScoutBrief = state.scoutBrief 
     )
     .slice(0, shortlistSize)
 
-  return {
+  let next: GameState = {
     ...state,
-    credits: state.credits - SCOUT_REPORT_COST,
     scoutCycle: state.scoutCycle + 1,
     scoutBrief: brief,
     prospects: ranked,
-    news: [{
-      id: 'scout-' + state.scoutCycle,
-      week: state.week,
-      kind: 'scout' as const,
-      title: 'Скаутский shortlist готов',
-      body: 'Запрос: ' + (brief.role === 'Any' ? 'любая роль' : brief.role) + ', зарплата до ' + brief.maxSalary + ' кр./нед. Штаб вернул ' + ranked.length + ' кандидатов.',
-    }, ...state.news].slice(0, 50),
   }
+  const eventId = 'scout-event-' + state.scoutCycle + '-' + state.now
+  next = postClubFinance(next, {
+    id: 'scout-cost-' + state.scoutCycle + '-' + state.now,
+    at: state.now,
+    week: state.week,
+    amount: -SCOUT_REPORT_COST,
+    account: 'operating',
+    title: 'Scout report',
+    description: 'Поиск кандидатов по заданному профилю.',
+    sourceType: 'scouting',
+    sourceId: String(state.scoutCycle),
+    eventId,
+  })
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'scouting',
+    title: 'Скаутский shortlist готов',
+    detail: 'Запрос: ' + (brief.role === 'Any' ? 'любая роль' : brief.role) + ', зарплата до ' + brief.maxSalary + ' кр./нед. Штаб вернул ' + ranked.length + ' кандидатов.',
+    importance: 35,
+    actorIds: ranked.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    financeEntryIds: ['scout-cost-' + state.scoutCycle + '-' + state.now],
+  })
 }
 
 export const prospectAskingFee = (player: Player) =>

@@ -49,6 +49,8 @@ import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCar
 import { metadataForAlias } from './playerMetadata'
 import { careerObjectives, completedCareerObjectiveIds, onboardingStep } from './progression'
 import { TimeProgressionOverlay, type TimeProgressionSession, type TimeProgressionSpeed, type TimeProgressionStop } from './TimeProgression'
+import { TrainingGround } from './TrainingGround'
+import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -60,7 +62,7 @@ const TAB_LABELS: Record<Tab, string> = {
   World: 'WORLD MAP',
   Calendar: 'CALENDAR',
   Play: 'MATCHDAY',
-  Training: 'PRACTICE',
+  Training: 'TRAINING',
   Roster: 'SQUAD',
   Packs: 'PACKS',
   Scout: 'TRANSFERS',
@@ -73,7 +75,7 @@ const SCREEN_TITLES: Record<Tab, string> = {
   World: 'WORLD CIRCUIT',
   Calendar: 'CALENDAR',
   Play: 'MATCHDAY',
-  Training: 'PRACTICE',
+  Training: 'TRAINING GROUND',
   Roster: 'SQUAD',
   Packs: 'PACK STORE',
   Scout: 'BUILD YOUR SHORTLIST',
@@ -436,7 +438,6 @@ function App() {
   const currentPlayGate = activeEventMode
     ? canPlayMatch(state, activeEventMode)
     : { ok: false, reason: 'Нет текущего официального матча.' }
-  const practiceGate = canPlayMatch(state, 'practice')
   const canAdvanceTournamentClock = Boolean(
     state.activeTournament &&
     (!bracketMatch || compareGameTime(state.now, bracketMatch.scheduledAt) < 0) &&
@@ -505,8 +506,19 @@ function App() {
         return
       }
 
+      const alreadyProcessed = processTrainingSessionsThrough(state, state.now)
+      if (alreadyProcessed !== state) {
+        setState(alreadyProcessed)
+        return
+      }
+
       const nextDay = addGameDays(state.now, 1, 9)
-      const stepTarget = compareGameTime(nextDay, timeAdvance.target) > 0 ? timeAdvance.target : nextDay
+      const nextTraining = nextPlannedTrainingSession(state, state.now, timeAdvance.target)
+      let stepTarget = compareGameTime(nextDay, timeAdvance.target) > 0 ? timeAdvance.target : nextDay
+      if (nextTraining && compareGameTime(nextTraining.scheduledAt, stepTarget) < 0) {
+        stepTarget = nextTraining.scheduledAt
+      }
+
       const result = executeGameCommand(state, { type: 'ADVANCE_TIME', target: stepTarget })
 
       if (result.state === state || result.state.now === state.now) {
@@ -526,7 +538,7 @@ function App() {
         return
       }
 
-      const nextState = result.state
+      const nextState = processTrainingSessionsThrough(result.state, stepTarget)
       const stop = detectTimeProgressionStop(state, nextState)
       const reachedTarget = compareGameTime(nextState.now, timeAdvance.target) >= 0
 
@@ -931,58 +943,10 @@ function App() {
 
 
         {tab === 'Training' && (
-          <section className="sim-screen sim-practice">
-            <div className="sim-screen-head sim-practice-head">
-              <div>
-                <span>TRAINING GROUND · NO VRS · NO CASH</span>
-                <h1>PRACTICE</h1>
-              </div>
-              <div className="sim-practice-continuity">
-                <small>LINEUP CONTINUITY</small>
-                <b>{state.lineupContinuity}</b>
-                <i><em style={{ width: state.lineupContinuity + '%' }} /></i>
-              </div>
-            </div>
-
-            <div className="sim-practice-body">
-              <section className="sim-practice-squad">
-                <div className="sim-practice-squad-head">
-                  <div>
-                    <span>ACTIVE FIVE · {rating} OVR</span>
-                    <strong>{starters.map((player) => player.alias).join(' · ')}</strong>
-                  </div>
-                  <button className="secondary" onClick={() => openTab('Roster')}>EDIT FIVE</button>
-                </div>
-                <div className="sim-practice-cards">
-                  {starters.map((player) => (
-                    <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />
-                  ))}
-                </div>
-              </section>
-
-              <aside className="sim-practice-console">
-                <span className="control-label">SESSION RULES</span>
-                <h2>BO3 PRACTICE</h2>
-                <div className="sim-practice-rules">
-                  <span><b>0</b>CASH</span>
-                  <span><b>0</b>VRS</span>
-                  <span><b>+1</b>CONTINUITY</span>
-                  <span><b>+4</b>FATIGUE</span>
-                </div>
-                <div className="sim-practice-note">
-                  <span>STANDARD PRACTICE</span>
-                  <small>Тактические планы временно отключены. Пракк проходит в стандартном режиме.</small>
-                </div>
-                <button className="sim-primary-action sim-practice-start" disabled={!practiceGate.ok} onClick={() => play('practice')}>
-                  PLAY PRACC <span>→</span>
-                </button>
-                {!practiceGate.ok && <p className="sim-practice-block">{practiceGate.reason}</p>}
-                {state.activeTournament && !currentFixtureDue && bracketMatch && (
-                  <p className="sim-practice-next">NEXT OFFICIAL · {formatGameDate(bracketMatch.scheduledAt)} · {formatGameTime(bracketMatch.scheduledAt)}</p>
-                )}
-              </aside>
-            </div>
-          </section>
+          <TrainingGround
+            state={state}
+            setState={setState}
+          />
         )}
 
         {tab === 'Roster' && (

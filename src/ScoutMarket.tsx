@@ -166,15 +166,10 @@ export function ScoutMarket({
 
   const submitOffer = () => {
     if (!negotiating || !terms || !evaluation) return
-    const playerId = negotiating.id
-    let outcome = evaluation
-    setState((current) => {
-      const result = negotiateProspect(current, playerId, terms)
-      outcome = result.evaluation
-      return result.state
-    })
-    if (!outcome.accepted) {
-      setFeedback(outcome.reason)
+    const result = negotiateProspect(state, negotiating.id, terms)
+    setState(result.state)
+    if (!result.evaluation.accepted) {
+      setFeedback(result.evaluation.reason)
       return
     }
     setNegotiating(null)

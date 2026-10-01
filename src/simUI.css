@@ -8498,3 +8498,57 @@ body{
   .newsroom-inbox-actions{grid-column:2;justify-content:flex-start}
   .newsroom-hero-copy h2{font-size:22px}
 }
+
+
+/* RATING V2 + CANONICAL PLAYER TIMELINE -------------------------------- */
+.player-profile-rating-v2,.player-profile-timeline{
+  margin-top:10px;
+  padding:11px;
+  border:1px solid rgb(var(--ui-line-rgb) / .16);
+  background:rgba(255,255,255,.018);
+}
+.player-rating-v2-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin-top:8px;
+}
+.player-rating-v2-grid>div{
+  min-width:0;
+  display:grid;
+  gap:4px;
+  padding:8px;
+  border:1px solid rgb(var(--ui-line-rgb) / .12);
+  background:rgba(0,0,0,.12);
+}
+.player-rating-v2-grid small{color:#817b72;font:900 8px/1 Arial,sans-serif;letter-spacing:.08em}
+.player-rating-v2-grid strong{font-size:15px}
+.player-rating-v2-grid span{color:#6e6962;font-size:8px}
+.player-rating-v2-grid i{height:4px;overflow:hidden;background:rgba(255,255,255,.06)}
+.player-rating-v2-grid em{display:block;height:100%;background:var(--sim-cyan)}
+.player-profile-timeline-list{
+  display:grid;
+  gap:5px;
+  max-height:150px;
+  overflow-y:auto;
+  margin-top:8px;
+}
+.player-profile-timeline-list>div{
+  display:grid;
+  gap:2px;
+  padding:7px 8px;
+  border-left:2px solid rgb(var(--ui-accent-rgb) / .45);
+  background:rgba(255,255,255,.018);
+}
+.player-profile-timeline-list span{color:var(--sim-cyan);font:900 7px/1 Arial,sans-serif;letter-spacing:.08em}
+.player-profile-timeline-list strong{font-size:10px}
+.player-profile-timeline-list small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#777169;font-size:8px}
+.fifa-home-hint-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.fifa-home-hint-actions button{
+  border:0;
+  background:transparent;
+  color:#9d978e;
+  cursor:pointer;
+  font:900 9px/1 Arial,sans-serif;
+}
+.fifa-home-hint-actions button:hover{color:var(--sim-cyan)}

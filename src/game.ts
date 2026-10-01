@@ -1217,6 +1217,20 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
     week: Math.min(state.seasonLength, nextWeekRaw),
     credits: Math.max(0, state.credits - payrollCost),
     staffEnergy: payrollCycles > 0 ? 3 : state.staffEnergy,
+    training: payrollCycles > 0
+      ? {
+          ...(state.training ?? createTrainingState()),
+          readiness: clamp((state.training?.readiness ?? 56) - payrollCycles * 3),
+          tacticalCohesion: clamp((state.training?.tacticalCohesion ?? 50) - payrollCycles),
+          sharpness: clamp((state.training?.sharpness ?? 55) - payrollCycles * 2),
+          mapPreparation: Object.fromEntries(
+            TRAINING_MAPS.map((map) => [map, clamp((state.training?.mapPreparation[map] ?? 50) - payrollCycles * 2)]),
+          ) as Record<TrainingMap, number>,
+          opponentKnowledge: Object.fromEntries(
+            Object.entries(state.training?.opponentKnowledge ?? {}).map(([teamId, value]) => [teamId, clamp(value - payrollCycles * 6)]),
+          ),
+        }
+      : state.training,
     roster: state.roster.map((player) => ({
       ...player,
       fatigue: clamp(player.fatigue - Math.min(18, elapsedDays * 2)),

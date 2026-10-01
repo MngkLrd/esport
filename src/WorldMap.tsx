@@ -6,6 +6,8 @@ import { canBookTournament, managerLevelProgress, weeklyPayroll, type GameState 
 import { addGameHours, compareGameTime, formatGameDateTime, humanTimeUntil } from './calendar'
 import { nextPlayerMatch, tournamentEndsAt, tournamentStartsAt } from './tournamentEngine'
 import { worldVrsStandings } from './world'
+import { TeamBadge } from './TeamBadge'
+import { TeamProfile } from './TeamProfile'
 import {
   TOURNAMENTS,
   tournamentEntryCost,
@@ -119,6 +121,7 @@ export function WorldMap({
   const [circuit, setCircuit] = useState<'All' | CircuitTier>('All')
   const [format, setFormat] = useState<'All' | EventFormat>('All')
   const [selectedId, setSelectedId] = useState(state.activeEventId ?? 'eu-open-1')
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(DEFAULT_MAP_VIEW.zoom)
   const [pan, setPan] = useState(DEFAULT_MAP_PAN)
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
@@ -522,17 +525,17 @@ export function WorldMap({
         </div>
         <div className="vrs-table-scroll">
           {vrsStandings.map((row) => (
-            <article key={row.teamId} className={'vrs-row' + (row.isPlayer ? ' is-player' : '')}>
+            <button key={row.teamId} type="button" className={'vrs-row' + (row.isPlayer ? ' is-player' : '')} onClick={() => setSelectedTeamId(row.teamId)}>
               <b className="vrs-rank">{String(row.rank).padStart(2, '0')}</b>
               <div className="vrs-team">
-                <strong>{row.name}</strong>
-                <small>{row.isPlayer ? 'YOUR CLUB' : 'GLOBAL RANKING'}</small>
+                <TeamBadge name={row.name} size="sm" />
+                <span><strong>{row.name}</strong><small>{row.isPlayer ? 'YOUR CLUB' : 'GLOBAL RANKING'}</small></span>
               </div>
               <div className="vrs-lineup">
                 {row.roster.length ? row.roster.map((alias) => <span key={alias}>{alias}</span>) : <span>—</span>}
               </div>
               <b className="vrs-points">{row.points.toLocaleString('ru-RU')}</b>
-            </article>
+            </button>
           ))}
         </div>
         {clubVrs && (
@@ -544,6 +547,9 @@ export function WorldMap({
           </div>
         )}
       </section>
+      {selectedTeamId && (
+        <TeamProfile state={state} teamId={selectedTeamId} onClose={() => setSelectedTeamId(null)} />
+      )}
     </section>
   )
 }

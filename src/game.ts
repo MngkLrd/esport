@@ -593,7 +593,7 @@ export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState
   if (state.welcomeComplete || state.roster.length > 0 || cards.length !== 5) return state
   const roster = cards.map(playerFromPackCard).map((player) => ({ ...player, team: 'YOUR CLUB' }))
   const aliases = roster.map((player) => player.alias).join(' · ')
-  return {
+  const next: GameState = {
     ...state,
     welcomeComplete: true,
     roster,
@@ -602,14 +602,24 @@ export const applyWelcomePack = (state: GameState, cards: PackCard[]): GameState
     lineupSlots: inferLineupSlots(roster, roster.map((player) => player.id)),
     lineupContinuity: 50,
     packs: collectPackCards(state.packs, cards),
-    news: [{
-      id: 'welcome-complete-' + state.saveId,
-      week: 1,
-      kind: 'lineup' as const,
-      title: 'Первая пятёрка собрана',
-      body: aliases + ' теперь составляют стартовую пятёрку клуба.',
-    }, ...state.news].slice(0, 50),
   }
+
+  return recordClubEvent(next, {
+    id: 'welcome-complete-' + state.saveId,
+    at: state.now,
+    week: 1,
+    kind: 'lineup',
+    title: 'Первая пятёрка собрана',
+    detail: aliases + ' теперь составляют стартовую пятёрку клуба.',
+    importance: 70,
+    actorIds: roster.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    data: {
+      newsId: 'welcome-complete-' + state.saveId,
+      newsScope: 'club',
+      newsAttention: 'info',
+    },
+  })
 }
 
 const initialRoster: Player[] = [
@@ -2985,7 +2995,7 @@ export const startNextSeason = (state: GameState): GameState => {
   }))
   const seasonStart = addGameDays(state.seasonStart, state.seasonLength * 7 + 7, 9)
 
-  return {
+  const next: GameState = {
     ...state,
     season: state.season + 1,
     seasonStart,
@@ -3010,14 +3020,25 @@ export const startNextSeason = (state: GameState): GameState => {
       opponentKnowledge: {},
       sessions: [],
     },
-    news: [{
-      id: 'season-start-' + (state.season + 1),
-      week: 1,
-      kind: 'media' as const,
-      title: 'Начался новый сезон',
-      body: 'Календарь обновлён. Турниры снова распределены по датам, а форма и усталость состава частично восстановлены.',
-    }, ...state.news].slice(0, 80),
   }
+
+  return recordClubEvent(next, {
+    id: 'season-start-' + (state.season + 1),
+    at: seasonStart,
+    week: 1,
+    kind: 'media',
+    title: 'Начался новый сезон',
+    detail: 'Календарь обновлён. Турниры снова распределены по датам, а форма и усталость состава частично восстановлены.',
+    importance: 75,
+    actorIds: roster.map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    data: {
+      season: state.season + 1,
+      newsId: 'season-start-' + (state.season + 1),
+      newsScope: 'club',
+      newsAttention: 'info',
+    },
+  })
 }
 
 export const playerDevelopmentThreshold = (player: Player) => {
@@ -3170,21 +3191,39 @@ export const assignLineupSlot = (state: GameState, slot: LineupSlot, playerId: s
   slots[slot] = playerId
 
   const startingFive = lineupSlotIds(slots)
-  return {
+  const next: GameState = {
     ...state,
     lineupSlots: slots,
     startingFive,
     lineupContinuity: clamp(state.lineupContinuity - 6),
-    news: [{
-      id: 'lineup-slot-' + state.week + '-' + slot + '-' + playerId,
-      week: state.week,
-      kind: 'lineup' as const,
-      title: player.alias + ' занимает слот ' + slot,
-      body: displacedId
-        ? 'Игроки поменялись местами в активной пятёрке. Стабильность временно снижается после перестановки.'
-        : 'Изменение активной пятёрки временно снижает стабильность. Постоянный состав восстанавливает химию через матчи.',
-    }, ...state.news].slice(0, 50),
   }
+  const eventId = 'lineup-slot-' + state.week + '-' + slot + '-' + playerId
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'lineup',
+    title: player.alias + ' занимает слот ' + slot,
+    detail: displacedId
+      ? 'Игроки поменялись местами в активной пятёрке. Стабильность временно снижается после перестановки.'
+      : 'Изменение активной пятёрки временно снижает стабильность. Постоянный состав восстанавливает химию через матчи.',
+    importance: 30,
+    actorIds: [
+      player.playerKey ?? player.id,
+      ...(displacedId
+        ? state.roster
+            .filter((candidate) => candidate.id === displacedId)
+            .map((candidate) => candidate.playerKey ?? candidate.id)
+        : []),
+    ],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    data: {
+      slot,
+      newsId: eventId,
+      newsScope: 'club',
+      newsAttention: 'info',
+    },
+  })
 }
 
 export const clearLineupSlot = (state: GameState, slot: LineupSlot): GameState => {
@@ -3193,19 +3232,30 @@ export const clearLineupSlot = (state: GameState, slot: LineupSlot): GameState =
   if (!playerId) return state
   const player = state.roster.find((candidate) => candidate.id === playerId)
   slots[slot] = null
-  return {
+  const next: GameState = {
     ...state,
     lineupSlots: slots,
     startingFive: lineupSlotIds(slots),
     lineupContinuity: clamp(state.lineupContinuity - 8),
-    news: [{
-      id: 'lineup-clear-' + state.week + '-' + slot + '-' + playerId,
-      week: state.week,
-      kind: 'lineup' as const,
-      title: (player?.alias ?? 'Игрок') + ' отправляется в запас',
-      body: 'Слот ' + slot + ' освобождён. Матч потребует полностью собранную пятёрку.',
-    }, ...state.news].slice(0, 50),
   }
+  const eventId = 'lineup-clear-' + state.week + '-' + slot + '-' + playerId
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'lineup',
+    title: (player?.alias ?? 'Игрок') + ' отправляется в запас',
+    detail: 'Слот ' + slot + ' освобождён. Матч потребует полностью собранную пятёрку.',
+    importance: 28,
+    actorIds: [player?.playerKey ?? playerId],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    data: {
+      slot,
+      newsId: eventId,
+      newsScope: 'club',
+      newsAttention: 'info',
+    },
+  })
 }
 
 export const toggleStarter = (state: GameState, playerId: string): GameState => {

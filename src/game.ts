@@ -8,6 +8,10 @@ import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldP
 import { advanceWorldEcology, ensureWorldEcology, worldEventsSince, type WorldHistoryEvent } from './worldEcology'
 import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPreparationModifier, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
 import { cardStatsForAlias } from './cardStats'
+import { appendRatingEvidence, buildPlayerRatingV2, type PlayerRatingV2, type RatingEvidence } from './ratingEngine'
+import { createFinanceState, normalizeFinanceState, postFinanceEntry, type FinanceAccount, type FinanceLedgerEntry, type FinanceState } from './finance'
+import { appendClubEvent, normalizeClubEvents, projectEventToNews, type ClubEvent } from './clubEvents'
+import { activeTransferCaseForPlayer, createTransferCase, normalizeTransferCases, transitionTransferCase, type TransferCase } from './transferLifecycle'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -80,6 +84,7 @@ export interface Player {
   contractWeeks: number
   traits: string[]
   bio: string
+  ratingV2?: PlayerRatingV2
 }
 
 export interface MapResult {
@@ -246,7 +251,7 @@ export interface ClubDecision {
 }
 
 export interface GameState {
-  version: 12
+  version: 13
   saveId: string
   seed: number
   season: number
@@ -284,6 +289,9 @@ export interface GameState {
   training: TrainingState
   history: MatchResult[]
   news: NewsItem[]
+  clubEvents: ClubEvent[]
+  finance: FinanceState
+  transferCases: TransferCase[]
   lastPayroll: number
   lastWeekNet: number
   packs: PackState
@@ -344,14 +352,18 @@ const mulberry32 = (seed: number) => () => {
 const pick = <T,>(items: readonly T[], rng: () => number): T =>
   items[Math.floor(rng() * items.length)]
 
+const playerRatingSkills = (p: Pick<Player, 'aim' | 'gameSense' | 'utility' | 'clutch' | 'leadership'>) => ({
+  aim: p.aim,
+  gameSense: p.gameSense,
+  utility: p.utility,
+  clutch: p.clutch,
+  leadership: p.leadership,
+})
+
 export const overall = (p: Player) =>
-  Math.round(
-    p.aim * 0.31 +
-      p.gameSense * 0.24 +
-      p.utility * 0.15 +
-      p.clutch * 0.15 +
-      p.leadership * 0.15,
-  )
+  p.ratingV2?.version === 2
+    ? p.ratingV2.rating
+    : buildPlayerRatingV2(playerRatingSkills(p), p.role).rating
 
 export const getStartingFive = (roster: Player[], startingFive: string[]) =>
   startingFive
@@ -587,7 +599,7 @@ const initialRoster: Player[] = [
 ]
 
 export const createInitialState = (): GameState => ({
-  version: 12,
+  version: 13,
   saveId: createSaveId(),
   seed: 271828,
   season: 1,
@@ -633,6 +645,19 @@ export const createInitialState = (): GameState => ({
       body: 'Шестнадцать недель начинаются с welcome-пака. Пять выпавших игроков становятся первой стартовой пятёркой клуба.',
     },
   ],
+  clubEvents: [{
+    id: 'club-created',
+    at: INITIAL_SEASON_START,
+    week: 1,
+    kind: 'media',
+    title: 'Новый проект выходит на сцену',
+    detail: 'Клуб начинает карьеру и готовится собрать первую пятёрку.',
+    importance: 80,
+    actorIds: [],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+  }],
+  finance: createFinanceState(3200),
+  transferCases: [],
   lastPayroll: 0,
   lastWeekNet: 0,
   packs: createPackState(),

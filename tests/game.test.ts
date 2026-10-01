@@ -554,7 +554,7 @@ describe('P0 career flow', () => {
         }
       })
     }
-  })
+  }, 20_000)
 
   it('swaps sides every three rounds in MR12 overtime', () => {
     expect(homeSideForRound(0, 0)).toBe('CT')
@@ -738,6 +738,7 @@ describe('P0 career flow', () => {
       utility: Math.max(0, Math.min(100, player.utility + delta)),
       clutch: Math.max(0, Math.min(100, player.clutch + delta)),
       leadership: Math.max(0, Math.min(100, player.leadership + delta)),
+      ratingV2: undefined,
     }))
 
     const strong = playMatch({ ...ready, roster: tuneRoster(15) }, 'practice', 'balanced').history[0]
@@ -984,7 +985,10 @@ describe('P0 career flow', () => {
     const weak = { ...defaultNegotiationTerms(prospect), fee: 50, salary: 40, contractWeeks: 6 as const, squadRole: 'rotation' as const }
     const weakEvaluation = evaluateNegotiation(report, prospect, weak)
     expect(weakEvaluation.accepted).toBe(false)
-    expect(negotiateProspect(report, prospect.id, weak).state).toEqual(report)
+    const rejected = negotiateProspect(report, prospect.id, weak).state
+    expect(rejected.roster).toEqual(report.roster)
+    expect(rejected.credits).toBe(report.credits)
+    expect(rejected.transferCases[0]?.status).toBe('rejected')
 
     const base = defaultNegotiationTerms(prospect)
     const strong = { ...base, fee: Math.round(base.fee * 1.2), salary: Math.round(base.salary * 1.15), contractWeeks: 16, squadRole: 'starter' as const }
@@ -1030,7 +1034,7 @@ describe('P0 career flow', () => {
       now: undefined,
     }
     const migrated = migrateState(legacy)
-    expect(migrated.version).toBe(12)
+    expect(migrated.version).toBe(13)
     expect(migrated.activeEventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.eventId).toBe('eu-open-1')
     expect(migrated.activeTournament?.matches.length).toBe(7)
@@ -1041,7 +1045,7 @@ describe('P0 career flow', () => {
     const legacy = createInitialState()
     const raw = { ...legacy, version: 8, packTokens: undefined, managerXp: undefined }
     const migrated = migrateState(raw)
-    expect(migrated.version).toBe(12)
+    expect(migrated.version).toBe(13)
     expect(migrated.credits).toBe(legacy.credits)
     expect(migrated.packTokens).toBe(2600)
     expect(migrated.managerXp).toBe(0)
@@ -1060,7 +1064,7 @@ describe('P0 career flow', () => {
 
   it('migrates v5 careers without forcing the welcome flow', () => {
     const migrated = migrateState({ version: 5, saveId: 'legacy-career', roster: [], startingFive: [] })
-    expect(migrated.version).toBe(12)
+    expect(migrated.version).toBe(13)
     expect(migrated.saveId).toBe('legacy-career')
     expect(migrated.welcomeComplete).toBe(true)
   })

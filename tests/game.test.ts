@@ -455,6 +455,7 @@ describe('P0 career flow', () => {
     const first = result.maps[0].story!
     const second = result.maps[1].story!
     expect(second.opponentFactors?.adaptation ?? 0).toBeGreaterThan(first.opponentFactors?.adaptation ?? 0)
+    expect(second.factors.adaptation ?? 0).toBeGreaterThan(first.factors.adaptation ?? 0)
     expect(second.factors.fatigue).toBeLessThan(first.factors.fatigue)
   })
 

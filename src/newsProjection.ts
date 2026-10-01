@@ -101,7 +101,7 @@ const imageForEvent = (state: Pick<GameState, 'world'>, event: WorldHistoryEvent
   for (const actorId of event.actorIds) {
     const team = state.world.teams.find((candidate) => candidate.id === actorId)
     if (!team) continue
-    const src = teamVisualLogo(team.name)?.logoUrl ?? null
+    const src = teamVisualLogo(team.name)
     if (src) {
       return {
         kind: 'team',

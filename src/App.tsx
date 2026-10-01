@@ -594,6 +594,7 @@ function App() {
   const [welcomeRevealed, setWelcomeRevealed] = useState(0)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [conversationPlayerId, setConversationPlayerId] = useState<string | null>(null)
+  const [boardConversation, setBoardConversation] = useState(false)
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
@@ -937,6 +938,7 @@ function App() {
   const resolveDecision = (choice: 'a' | 'b') => {
     const result = executeGameCommand(state, { type: 'RESOLVE_DECISION', choice })
     if (result.state === state) return
+    setBoardConversation(false)
     setState(result.state)
     openTab('HQ')
   }
@@ -1046,6 +1048,48 @@ function App() {
           ]}
           choices={conversationChoicesForPlayer(conversationPlayer)}
           onClose={() => setConversationPlayerId(null)}
+        />
+      )}
+      {boardConversation && state.pendingDecision && (
+        <ConversationScreen
+          eyebrow="CLUB MEETING · BOARD"
+          title={state.pendingDecision.title}
+          subtitle={'WEEK ' + state.week + ' · MANAGEMENT DECISION'}
+          participant={{
+            name: 'Club Board',
+            role: 'КЛУБНОЕ РУКОВОДСТВО',
+            meta: 'Совет директоров · стратегическая встреча',
+            badge: <TeamBadge name="YOUR CLUB" size="md" />,
+          }}
+          openingLines={[
+            state.pendingDecision.body,
+            'Нам нужно зафиксировать позицию клуба до того, как календарь пойдёт дальше.',
+          ]}
+          objective="Принять управленческое решение и зафиксировать позицию клуба."
+          context={[
+            { label: 'НЕДЕЛЯ', value: String(state.week) },
+            { label: 'РЕПУТАЦИЯ', value: String(state.reputation), emphasis: state.reputation >= 55 ? 'positive' : 'neutral' },
+            { label: 'БЮДЖЕТ', value: state.credits.toLocaleString('ru-RU') + ' CR.' },
+            { label: 'РЕКОРД', value: state.wins + '-' + state.losses },
+          ]}
+          choices={[
+            {
+              id: 'a',
+              tone: 'ambitious',
+              label: state.pendingDecision.optionA,
+              detail: 'Первый вариант решения руководства.',
+              response: 'Позиция понятна. Совет зафиксирует этот вариант как решение клуба.',
+            },
+            {
+              id: 'b',
+              tone: 'calm',
+              label: state.pendingDecision.optionB,
+              detail: 'Альтернативный вариант с другим балансом риска.',
+              response: 'Принято. Зафиксируем этот подход и будем оценивать последствия по ходу сезона.',
+            },
+          ]}
+          onComplete={(choice) => resolveDecision(choice.id === 'a' ? 'a' : 'b')}
+          onClose={() => setBoardConversation(false)}
         />
       )}
       {transition && (
@@ -1242,6 +1286,7 @@ function App() {
           <WorldPortal
             state={state}
             onResolveDecision={resolveDecision}
+            onOpenDecision={() => setBoardConversation(true)}
             onNavigate={(target) => openTab(target)}
             onOpenPlayer={setSelectedPlayer}
             onReset={reset}

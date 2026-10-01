@@ -917,7 +917,11 @@ function App() {
         {currentFixtureDue ? (
           <button className="fifa-topbar-center fifa-current-match-button" onClick={() => openTab('Play')}>
             <span>CURRENT MATCH</span>
-            <b>YOUR CLUB <em>VS</em> {bracketOpponent?.name ?? 'OPPONENT'}</b>
+            <b className="fifa-current-match-teams">
+              <span><TeamBadge name="YOUR CLUB" size="sm" />YOUR CLUB</span>
+              <em>VS</em>
+              <span>{bracketOpponent?.name ?? 'OPPONENT'}<TeamBadge name={bracketOpponent?.name ?? 'OPPONENT'} size="sm" /></span>
+            </b>
             <i />
             <strong>PLAY →</strong>
           </button>

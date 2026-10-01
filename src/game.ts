@@ -1404,14 +1404,11 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const event = mode === 'practice' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
   const isPractice = effectiveMode === 'practice' && !event
-  const clubSeed = tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity)
-  const clubPlayerKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
   const preparedRun = event && state.activeTournament
-    ? advanceTournamentTo(
-        refreshTournamentTeamsFromWorld(state.activeTournament, state.world, clubPlayerKeys),
-        state.now,
-        state.seed + state.season,
-      )
+    // Tournament rosters are registration snapshots. The surrounding world keeps
+    // trading while the event is running, but an already registered opponent does
+    // not lose a player mid-bracket because of an external transfer.
+    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
     : null
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null

@@ -54,11 +54,13 @@ const plannerSourceLabel: Record<PlannerSource, string> = {
 function SquadPlanner({
   state,
   setState,
+  saveSignal,
   onOpenPlayer,
   onOpenScout,
 }: {
   state: GameState
   setState: Dispatch<SetStateAction<GameState>>
+  saveSignal: { revision: number; status: 'saved' | 'error' }
   onOpenPlayer: (player: Player) => void
   onOpenScout: () => void
 }) {
@@ -71,7 +73,9 @@ function SquadPlanner({
   const [draggingSlot, setDraggingSlot] = useState<{ role: LineupSlot; index: number } | null>(null)
   const [inspectedKey, setInspectedKey] = useState<string | null>(null)
   const [undoPlanner, setUndoPlanner] = useState<GameState['squadPlanner'] | null>(null)
-  const [saveIndicator, setSaveIndicator] = useState<'saved' | 'saving'>('saved')
+  const [undoNotice, setUndoNotice] = useState<string | null>(null)
+  const [saveIndicator, setSaveIndicator] = useState<'saved' | 'saving' | 'error'>('saved')
+  const [copyPrompt, setCopyPrompt] = useState(false)
   const planner = state.squadPlanner ?? { version: 1 as const, orders: {}, excluded: {} }
   const orders = planner.orders
   const excluded = planner.excluded
@@ -80,13 +84,20 @@ function SquadPlanner({
     setCandidateLimit(5)
     setSelectedCandidateKey(null)
     setPlacementSlot(null)
+    setInspectedKey(null)
+    setCopyPrompt(false)
   }, [selectedRole, horizon])
 
   useEffect(() => {
     if (saveIndicator !== 'saving') return
-    const timeout = window.setTimeout(() => setSaveIndicator('saved'), 420)
+    setSaveIndicator(saveSignal.status)
+  }, [saveSignal.revision, saveSignal.status, saveIndicator])
+
+  useEffect(() => {
+    if (!undoNotice) return
+    const timeout = window.setTimeout(() => setUndoNotice(null), 6500)
     return () => window.clearTimeout(timeout)
-  }, [state.squadPlanner, saveIndicator])
+  }, [undoNotice])
 
   const candidates = useMemo<PlannerCandidate[]>(() => {
     const rows: PlannerCandidate[] = []
@@ -195,8 +206,10 @@ function SquadPlanner({
 
   const updatePlanner = (
     updater: (current: NonNullable<GameState['squadPlanner']>) => NonNullable<GameState['squadPlanner']>,
+    label: string,
   ) => {
     setUndoPlanner(planner)
+    setUndoNotice(label)
     setSaveIndicator('saving')
     setState((current) => ({
       ...current,
@@ -209,10 +222,11 @@ function SquadPlanner({
     const currentPlanner = state.squadPlanner ?? { version: 1 as const, orders: {}, excluded: {} }
     setState((current) => ({ ...current, squadPlanner: undoPlanner }))
     setUndoPlanner(currentPlanner)
+    setUndoNotice('Изменение отменено')
     setSaveIndicator('saving')
   }
 
-  const setDepth = (role: LineupSlot, entries: PlannerCandidate[]) => {
+  const setDepth = (role: LineupSlot, entries: PlannerCandidate[], label = 'План роли обновлён') => {
     const key = orderKey(role)
     const keys = entries.map((entry) => entry.key).slice(0, 3)
     updatePlanner((current) => ({
@@ -222,11 +236,12 @@ function SquadPlanner({
         ...current.excluded,
         [key]: (current.excluded[key] ?? []).filter((item) => !keys.includes(item)),
       },
-    }))
+    }), label)
   }
 
   const removeDepth = (role: LineupSlot, keyToRemove: string) => {
     const key = orderKey(role)
+    const removed = depthForRole(role).find((entry) => entry.key === keyToRemove)
     const nextDepth = depthForRole(role).filter((entry) => entry.key !== keyToRemove)
     updatePlanner((current) => ({
       ...current,
@@ -235,7 +250,7 @@ function SquadPlanner({
         ...current.excluded,
         [key]: Array.from(new Set([...(current.excluded[key] ?? []), keyToRemove])),
       },
-    }))
+    }), (removed?.player.alias ?? 'Игрок') + ' исключён из плана ' + ROLE_LABELS[role])
   }
 
   const placeCandidateAt = (entry: PlannerCandidate, role = selectedRole, index?: number) => {
@@ -245,9 +260,24 @@ function SquadPlanner({
     const next = depth.filter((item) => item.key !== entry.key)
     if (targetIndex >= next.length) next.push(entry)
     else next.splice(targetIndex, 1, entry)
-    setDepth(role, next.slice(0, 3))
+    setDepth(role, next.slice(0, 3), entry.player.alias + ' назначен ' + ROLE_LABELS[role] + ' #' + (targetIndex + 1))
     setSelectedRole(role)
     setPlacementSlot(null)
+    setSelectedCandidateKey(null)
+  }
+
+  const assignExistingTo = (entry: PlannerCandidate, sourceRole: LineupSlot, sourceIndex: number, targetRole: LineupSlot, targetIndex: number) => {
+    if (sourceRole === targetRole) {
+      const sourceDepth = depthForRole(sourceRole)
+      const next = [...sourceDepth]
+      const target = next[targetIndex]
+      next[targetIndex] = entry
+      if (target) next[sourceIndex] = target
+      else next.splice(sourceIndex, 1)
+      setDepth(targetRole, next.filter(Boolean).slice(0, 3), entry.player.alias + ' перемещён на #' + (targetIndex + 1))
+      return
+    }
+    placeCandidateAt(entry, targetRole, targetIndex)
   }
 
   const dropPlannerSlot = (targetRole: LineupSlot, targetIndex: number) => {
@@ -255,17 +285,7 @@ function SquadPlanner({
     const sourceDepth = depthForRole(draggingSlot.role)
     const sourceEntry = sourceDepth[draggingSlot.index]
     if (!sourceEntry) return
-
-    if (draggingSlot.role === targetRole) {
-      const next = [...sourceDepth]
-      const target = next[targetIndex]
-      next[targetIndex] = sourceEntry
-      if (target) next[draggingSlot.index] = target
-      else next.splice(draggingSlot.index, 1)
-      setDepth(targetRole, next.filter(Boolean).slice(0, 3))
-    } else {
-      placeCandidateAt(sourceEntry, targetRole, targetIndex)
-    }
+    assignExistingTo(sourceEntry, draggingSlot.role, draggingSlot.index, targetRole, targetIndex)
     setDraggingSlot(null)
   }
 
@@ -277,10 +297,9 @@ function SquadPlanner({
       delete nextOrders[key]
       delete nextExcluded[key]
       return { ...current, orders: nextOrders, excluded: nextExcluded }
-    })
+    }, ROLE_LABELS[role] + ': восстановлен автоплан')
     setPlacementSlot(null)
   }
-
 
   const copyPreviousPlan = () => {
     if (horizon === 0) return
@@ -295,7 +314,8 @@ function SquadPlanner({
         delete nextExcluded[key]
       }
       return { ...current, orders: nextOrders, excluded: nextExcluded }
-    })
+    }, 'План предыдущего горизонта скопирован')
+    setCopyPrompt(false)
   }
 
   const primaryRoleUsage = new Map<string, LineupSlot[]>()
@@ -312,8 +332,10 @@ function SquadPlanner({
     const primary = depth[0]
     const securedDepth = depth.filter(isSecuredAtHorizon)
     const exact = securedDepth.filter((entry) => entry.player.role === role).length
-    const expiring = depth.filter(contractRiskAtHorizon).length
-    const departures = depth.filter((entry) => !isSecuredAtHorizon(entry)).length
+    const contractRiskEntries = depth.filter(contractRiskAtHorizon)
+    const departureEntries = depth.filter((entry) => !isSecuredAtHorizon(entry))
+    const expiring = contractRiskEntries.length
+    const departures = departureEntries.length
     const quality = primary && isSecuredAtHorizon(primary) ? projectedOverall(primary.player) : 0
     const fit = primary && isSecuredAtHorizon(primary) ? lineupFitScore(primary.player, role) : 0
     const targets = depth.filter((entry) => entry.source === 'target').length
@@ -324,24 +346,24 @@ function SquadPlanner({
     if (securedDepth.length < 2 || quality < 68 || fit < 66 || primaryConflicts.length > 0) status = 'risk'
     else if (securedDepth.length < 3 || expiring > 0 || departures > 0 || exact === 0 || quality < 76) status = 'watch'
 
-    return { depth, securedDepth, primary, exact, expiring, departures, quality, fit, targets, primaryConflicts, manual, status }
+    return { depth, securedDepth, primary, exact, expiring, departures, contractRiskEntries, departureEntries, quality, fit, targets, primaryConflicts, manual, status }
   }
 
   const analyses = LINEUP_SLOTS.map((role) => ({ role, ...roleAnalysis(role) }))
   const riskCount = analyses.filter((item) => item.status === 'risk').length
   const watchCount = analyses.filter((item) => item.status === 'watch').length
-  const expiringCount = analyses.reduce((sum, item) => sum + item.expiring, 0)
-  const conflictCount = analyses.filter((item) => item.primaryConflicts.length > 0).length
+  const contractPlayersCount = new Set(analyses.flatMap((item) => [...item.contractRiskEntries, ...item.departureEntries].map((entry) => entry.key))).size
+  const conflictPlayersCount = new Set(analyses.flatMap((item) => item.primaryConflicts.length && item.primary ? [item.primary.key] : [])).size
   const selectedAnalysis = roleAnalysis(selectedRole)
   const selectedDepthKeys = new Set(selectedAnalysis.depth.map((entry) => entry.key))
   const availableAll = sortedForRole(selectedRole).filter((entry) => !selectedDepthKeys.has(entry.key)).slice(0, 12)
   const available = availableAll.slice(0, candidateLimit)
-  const selectedCandidate = availableAll.find((entry) => entry.key === selectedCandidateKey) ?? availableAll[0] ?? null
-  const inspectedEntry = candidates.find((entry) => entry.key === inspectedKey) ?? selectedAnalysis.primary ?? null
+  const selectedCandidate = selectedCandidateKey ? availableAll.find((entry) => entry.key === selectedCandidateKey) ?? null : null
+  const inspectedEntry = inspectedKey ? candidates.find((entry) => entry.key === inspectedKey) ?? null : null
 
   const previousHorizon = horizon > 0 ? (horizon - 1) as PlannerHorizon : null
   const roleDiff = (role: LineupSlot) => {
-    if (previousHorizon === null) return { added: 0, removed: 0, addedKeys: new Set<string>() }
+    if (previousHorizon === null) return { added: 0, removed: 0, addedKeys: new Set<string>(), manual: Boolean(orders[orderKey(role)]) }
     const current = depthForRole(role)
     const previous = depthForRoleAt(role, previousHorizon)
     const currentKeys = new Set(current.map((entry) => entry.key))
@@ -350,11 +372,13 @@ function SquadPlanner({
       added: current.filter((entry) => !previousKeys.has(entry.key)).length,
       removed: previous.filter((entry) => !currentKeys.has(entry.key)).length,
       addedKeys: new Set(current.filter((entry) => !previousKeys.has(entry.key)).map((entry) => entry.key)),
+      manual: Boolean(orders[orderKey(role)]),
     }
   }
 
   const selectedDiff = roleDiff(selectedRole)
   const selectedPayroll = selectedAnalysis.depth.reduce((sum, entry) => sum + entry.player.salary, 0)
+  const payrollEstimated = selectedAnalysis.depth.some((entry) => entry.source !== 'club')
   const previousPayroll = previousHorizon === null
     ? selectedPayroll
     : depthForRoleAt(selectedRole, previousHorizon).reduce((sum, entry) => sum + entry.player.salary, 0)
@@ -401,6 +425,7 @@ function SquadPlanner({
     setSelectedRole(role)
     setPlacementSlot({ role, index })
     setCandidateLimit(5)
+    setSelectedCandidateKey(null)
   }
 
   const urgentRole = analyses.find((item) => item.primaryConflicts.length > 0)
@@ -408,27 +433,31 @@ function SquadPlanner({
     ?? analyses.find((item) => item.departures > 0 || item.expiring > 0)
     ?? analyses.find((item) => item.quality > 0 && item.quality < 76)
     ?? analyses.find((item) => item.status === 'watch')
-    ?? analyses[0]
+    ?? null
 
-  const urgentLabel = urgentRole.primaryConflicts.length > 0
-    ? 'РЕШИТЬ КОНФЛИКТ ' + ROLE_LABELS[urgentRole.role]
-    : urgentRole.securedDepth.length < 2
-      ? 'ЗАКРЫТЬ ГЛУБИНУ ' + ROLE_LABELS[urgentRole.role]
-      : urgentRole.departures > 0 || urgentRole.expiring > 0
-        ? 'ПРОВЕРИТЬ КОНТРАКТЫ ' + ROLE_LABELS[urgentRole.role]
-        : urgentRole.quality > 0 && urgentRole.quality < 76
-          ? 'УСИЛИТЬ ' + ROLE_LABELS[urgentRole.role]
-          : 'ПРОВЕРИТЬ ' + ROLE_LABELS[urgentRole.role]
+  const urgentLabel = !urgentRole
+    ? 'ПЛАН СБАЛАНСИРОВАН'
+    : urgentRole.primaryConflicts.length > 0
+      ? 'РЕШИТЬ КОНФЛИКТ ' + ROLE_LABELS[urgentRole.role]
+      : urgentRole.securedDepth.length < 2
+        ? 'ЗАКРЫТЬ ГЛУБИНУ ' + ROLE_LABELS[urgentRole.role]
+        : urgentRole.departures > 0 || urgentRole.expiring > 0
+          ? 'ПРОВЕРИТЬ КОНТРАКТЫ ' + ROLE_LABELS[urgentRole.role]
+          : urgentRole.quality > 0 && urgentRole.quality < 76
+            ? 'УСИЛИТЬ ' + ROLE_LABELS[urgentRole.role]
+            : 'ПРОВЕРИТЬ ' + ROLE_LABELS[urgentRole.role]
 
   const runUrgentAction = () => {
+    if (!urgentRole) return
     setSelectedRole(urgentRole.role)
     if (urgentRole.primaryConflicts.length > 0) return
     if (urgentRole.securedDepth.length < 2) {
       requestPlacement(urgentRole.role, Math.min(urgentRole.depth.length, 2))
       return
     }
-    if (urgentRole.departures > 0 || urgentRole.expiring > 0) {
-      if (urgentRole.primary) setInspectedKey(urgentRole.primary.key)
+    const contractEntry = urgentRole.departureEntries[0] ?? urgentRole.contractRiskEntries[0]
+    if (contractEntry) {
+      setInspectedKey(contractEntry.key)
       return
     }
     if (urgentRole.quality > 0 && urgentRole.quality < 76) {
@@ -436,6 +465,11 @@ function SquadPlanner({
       onOpenScout()
     }
   }
+
+  const copySourceHorizon = horizon > 0 ? (horizon - 1) as PlannerHorizon : null
+  const copyRiskCount = copySourceHorizon === null
+    ? 0
+    : new Set(LINEUP_SLOTS.flatMap((role) => depthForRoleAt(role, copySourceHorizon).filter((entry) => !isSecuredAt(entry, horizon)).map((entry) => entry.key))).size
 
   return (
     <section className="sim-squad-planner">
@@ -449,46 +483,57 @@ function SquadPlanner({
               className={horizon === value ? 'active' : ''}
               onClick={() => setHorizon(value)}
             >
-              {value === 0 ? 'СЕЙЧАС' : 'S+' + value}
+              <span>{value === 0 ? 'СЕЙЧАС' : 'СЕЗОН ' + (state.season + value)}</span>
+              <small>{value === 0 ? 'CURRENT' : 'S+' + value}</small>
             </button>
           ))}
         </div>
 
         <div className="sim-planner-toolbar-actions">
-          {horizon > 0 && <button onClick={copyPreviousPlan}>КОПИРОВАТЬ S+{horizon - 1}</button>}
-          <button onClick={undoLastPlannerChange} disabled={!undoPlanner}>ОТМЕНИТЬ</button>
-          <span className={'sim-planner-save-state ' + saveIndicator}>{saveIndicator === 'saving' ? 'СОХРАНЕНИЕ…' : 'СОХРАНЕНО'}</span>
+          {horizon > 0 && (
+            <button onClick={() => setCopyPrompt(true)}>
+              {horizon === 1 ? 'КОПИРОВАТЬ «СЕЙЧАС»' : 'КОПИРОВАТЬ СЕЗОН ' + (state.season + horizon - 1)}
+            </button>
+          )}
+          <span className={'sim-planner-save-state ' + saveIndicator}>
+            {saveIndicator === 'saving' ? 'СОХРАНЕНИЕ…' : saveIndicator === 'error' ? 'НЕ СОХРАНЕНО' : 'СОХРАНЕНО'}
+          </span>
         </div>
 
         <div className="sim-planner-summary" aria-label="Фильтры проблем состава">
           <button className={(summaryFilter === 'risk' ? 'active ' : '') + (riskCount ? 'risk' : '')} onClick={() => setSummaryFilter(summaryFilter === 'risk' ? 'all' : 'risk')}>
-            <b>{riskCount}</b><span>РИСК</span>
+            <b>{riskCount}</b><span>ПОЗИЦИИ РИСК</span>
           </button>
           <button className={(summaryFilter === 'watch' ? 'active ' : '') + (watchCount ? 'watch' : '')} onClick={() => setSummaryFilter(summaryFilter === 'watch' ? 'all' : 'watch')}>
             <b>{watchCount}</b><span>ВНИМАНИЕ</span>
           </button>
-          <button className={(summaryFilter === 'contract' ? 'active ' : '') + (expiringCount ? 'watch' : '')} onClick={() => setSummaryFilter(summaryFilter === 'contract' ? 'all' : 'contract')}>
-            <b>{expiringCount}</b><span>КОНТРАКТЫ</span>
+          <button className={(summaryFilter === 'contract' ? 'active ' : '') + (contractPlayersCount ? 'watch' : '')} onClick={() => setSummaryFilter(summaryFilter === 'contract' ? 'all' : 'contract')}>
+            <b>{contractPlayersCount}</b><span>ИГРОКИ · КОНТРАКТ</span>
           </button>
-          <button className={(summaryFilter === 'conflict' ? 'active ' : '') + (conflictCount ? 'risk' : '')} onClick={() => setSummaryFilter(summaryFilter === 'conflict' ? 'all' : 'conflict')}>
-            <b>{conflictCount}</b><span>КОНФЛИКТЫ</span>
+          <button className={(summaryFilter === 'conflict' ? 'active ' : '') + (conflictPlayersCount ? 'risk' : '')} onClick={() => setSummaryFilter(summaryFilter === 'conflict' ? 'all' : 'conflict')}>
+            <b>{conflictPlayersCount}</b><span>ИГРОКИ · КОНФЛИКТ</span>
           </button>
         </div>
       </div>
 
-      <div className="sim-planner-mobile-roles" aria-label="Роли состава">
-        {LINEUP_SLOTS.map((role) => {
-          const analysis = roleAnalysis(role)
-          return <button key={role} className={(selectedRole === role ? 'active ' : '') + 'status-' + analysis.status} onClick={() => setSelectedRole(role)}>{ROLE_LABELS_RU[role]}</button>
-        })}
-      </div>
+      {copyPrompt && horizon > 0 && (
+        <div className="sim-planner-copy-prompt" role="dialog" aria-label="Подтвердить копирование плана">
+          <div>
+            <span>КОПИРОВАНИЕ ПЛАНА</span>
+            <b>{horizon === 1 ? '«СЕЙЧАС» → СЕЗОН ' + (state.season + 1) : 'СЕЗОН ' + (state.season + horizon - 1) + ' → СЕЗОН ' + (state.season + horizon)}</b>
+            <small>Будут перезаписаны 5 ролей. {copyRiskCount > 0 ? copyRiskCount + ' игрок(а) не имеют подтверждённого контракта до целевого сезона.' : 'Контрактных потерь в копируемом плане не найдено.'}</small>
+          </div>
+          <button onClick={() => setCopyPrompt(false)}>ОТМЕНА</button>
+          <button className="primary" onClick={copyPreviousPlan}>ПРИМЕНИТЬ</button>
+        </div>
+      )}
 
-      <div className="sim-planner-next-action">
+      <div className={'sim-planner-next-action' + (!urgentRole ? ' balanced' : '')}>
         <div>
-          <span>СЛЕДУЮЩЕЕ ДЕЙСТВИЕ</span>
+          <span>{urgentRole ? 'СЛЕДУЮЩЕЕ ДЕЙСТВИЕ' : 'СОСТОЯНИЕ ПЛАНА'}</span>
           <b>{urgentLabel}</b>
         </div>
-        <button onClick={runUrgentAction}>ПЕРЕЙТИ <span>→</span></button>
+        {urgentRole && <button onClick={runUrgentAction}>ПЕРЕЙТИ <span>→</span></button>}
       </div>
 
       <div className="sim-planner-workspace">
@@ -505,33 +550,28 @@ function SquadPlanner({
             {LINEUP_SLOTS.map((role) => {
               const analysis = roleAnalysis(role)
               const muted = !laneMatchesFilter(analysis)
+              const diff = roleDiff(role)
               return (
                 <article
                   key={role}
                   className={'sim-planner-lane status-' + analysis.status + (selectedRole === role ? ' active' : '') + (muted ? ' is-muted' : '')}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={selectedRole === role}
-                  onClick={() => setSelectedRole(role)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelectedRole(role)
-                    }
-                  }}
                 >
                   <header>
-                    <div>
-                      <span>{ROLE_LABELS_RU[role]}</span>
-                      <small><i>{statusIcon(analysis.status)}</i> {statusLabel(analysis.status)} · {analysis.manual ? 'РУЧНОЙ' : 'АВТОПЛАН'}</small>
-                    </div>
-                    <div className="sim-planner-lane-head-meta">
-                      {horizon > 0 && (() => {
-                        const diff = roleDiff(role)
-                        return <small className="sim-planner-diff-chip">{diff.added > 0 ? '+' + diff.added : '0'} / {diff.removed > 0 ? '−' + diff.removed : '0'}</small>
-                      })()}
-                      <b>{analysis.quality || '—'}</b>
-                    </div>
+                    <button
+                      type="button"
+                      className="sim-planner-lane-select"
+                      aria-pressed={selectedRole === role}
+                      onClick={() => setSelectedRole(role)}
+                    >
+                      <span>
+                        <b>{ROLE_LABELS_RU[role]}</b>
+                        <small><i>{statusIcon(analysis.status)}</i> {statusLabel(analysis.status)} · {analysis.manual ? 'РУЧНОЙ' : 'АВТОПЛАН'}</small>
+                      </span>
+                      <span className="sim-planner-lane-head-meta">
+                        {horizon > 0 && <small className="sim-planner-diff-chip">{diff.manual ? 'ВАМИ' : 'ПРОГНОЗ'} · {diff.added > 0 ? '+' + diff.added : '0'} / {diff.removed > 0 ? '−' + diff.removed : '0'}</small>}
+                        <b>{analysis.quality || '—'}</b>
+                      </span>
+                    </button>
                   </header>
 
                   <div className="sim-planner-depth">
@@ -542,9 +582,9 @@ function SquadPlanner({
                           <button
                             key={index}
                             className={'sim-planner-empty-slot' + (placementSlot?.role === role && placementSlot.index === index ? ' awaiting' : '')}
-                            onClick={(event) => { event.stopPropagation(); requestPlacement(role, index) }}
+                            onClick={() => requestPlacement(role, index)}
                             onDragOver={(event) => event.preventDefault()}
-                            onDrop={(event) => { event.preventDefault(); event.stopPropagation(); dropPlannerSlot(role, index) }}
+                            onDrop={(event) => { event.preventDefault(); dropPlannerSlot(role, index) }}
                           >
                             <i>{index + 1}</i>
                             <strong>ДОБАВИТЬ ИГРОКА</strong>
@@ -559,25 +599,37 @@ function SquadPlanner({
                       const delta = projectionDelta(player)
                       const fit = lineupFitScore(player, role)
                       const conflicts = primaryRoleUsage.get(entry.key) ?? []
+                      const otherConflict = conflicts.find((item) => item !== role)
+                      const statusBadge = otherConflict && index === 0
+                        ? <button className="sim-planner-conflict-chip" onClick={() => setSelectedRole(otherConflict)}>№1 ЕЩЁ В {ROLE_LABELS[otherConflict]}</button>
+                        : !isSecuredAtHorizon(entry)
+                          ? <span className="risk">OUT ДО {horizonLabel}</span>
+                          : contractRisk
+                            ? <span className="watch">КОНТРАКТ</span>
+                            : horizon > 0 && diff.addedKeys.has(entry.key)
+                              ? <span className="good">NEW</span>
+                              : entry.source === 'club'
+                                ? <span>{player.contractWeeks} НЕД.</span>
+                                : <span>{entry.source === 'target' ? 'ТРАНСФЕР' : 'КАРТА'}</span>
+
                       return (
                         <div
                           className={'sim-planner-player rank-' + (index + 1) + ' source-' + entry.source + (contractRisk ? ' contract-risk' : '') + (placementSlot?.role === role && placementSlot.index === index ? ' awaiting' : '')}
                           key={entry.key}
                           draggable
                           onDragStart={(event) => {
-                            event.stopPropagation()
                             setDraggingSlot({ role, index })
                             event.dataTransfer.effectAllowed = role === selectedRole ? 'move' : 'copy'
                           }}
                           onDragEnd={() => setDraggingSlot(null)}
                           onDragOver={(event) => event.preventDefault()}
-                          onDrop={(event) => { event.preventDefault(); event.stopPropagation(); dropPlannerSlot(role, index) }}
+                          onDrop={(event) => { event.preventDefault(); dropPlannerSlot(role, index) }}
                         >
                           <div className="sim-planner-rank">
                             <b>#{index + 1}</b>
                             <span>{index === 0 ? 'ОСНОВА' : index === 1 ? 'РОТАЦИЯ' : 'РЕЗЕРВ'}</span>
                           </div>
-                          <button className="sim-planner-player-main" onClick={(event) => { event.stopPropagation(); setSelectedRole(role); setInspectedKey(entry.key) }}>
+                          <button className="sim-planner-player-main" onClick={() => { setSelectedRole(role); setInspectedKey(entry.key) }}>
                             <div className="sim-planner-portrait-stage">
                               <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} draggable={false} />
                             </div>
@@ -592,26 +644,7 @@ function SquadPlanner({
                           </button>
                           <div className="sim-planner-player-meta">
                             <span className={fit >= 76 ? 'good' : fit >= 68 ? 'watch' : 'risk'}>{fit} FIT</span>
-                            {!isSecuredAtHorizon(entry)
-                              ? <span className="risk">OUT ДО {horizonLabel}</span>
-                              : contractRisk
-                                ? <span className="watch">КОНТРАКТ</span>
-                                : entry.source === 'club'
-                                  ? <span>{player.contractWeeks} НЕД.</span>
-                                  : <span>{entry.source === 'target' ? 'ТРАНСФЕР' : 'КАРТА'}</span>}
-                            {horizon > 0 && roleDiff(role).addedKeys.has(entry.key) && <span className="good">NEW</span>}
-                            {conflicts.length > 1 && index === 0 && (
-                              <button
-                                className="sim-planner-conflict-chip"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  const other = conflicts.find((item) => item !== role)
-                                  if (other) setSelectedRole(other)
-                                }}
-                              >
-                                №1 ЕЩЁ В {ROLE_LABELS[conflicts.find((item) => item !== role) ?? role]}
-                              </button>
-                            )}
+                            {statusBadge}
                           </div>
                           {placementSlot?.role === role && placementSlot.index === index && selectedCandidate && selectedCandidate.key !== entry.key && (
                             <div className="sim-planner-slot-preview">
@@ -621,8 +654,25 @@ function SquadPlanner({
                             </div>
                           )}
                           <div className="sim-planner-slot-actions">
-                            <button onClick={(event) => { event.stopPropagation(); requestPlacement(role, index) }}>ЗАМЕНИТЬ</button>
-                            <button className="icon-action" onClick={(event) => { event.stopPropagation(); removeDepth(role, entry.key) }} aria-label={'Убрать ' + player.alias + ' из плана'}>×</button>
+                            <button onClick={() => requestPlacement(role, index)}>ЗАМЕНИТЬ</button>
+                            <select
+                              aria-label={'Назначить ' + player.alias + ' в другой слот'}
+                              defaultValue=""
+                              onChange={(event) => {
+                                const [targetRole, rawIndex] = event.target.value.split('|')
+                                if (!targetRole || rawIndex === undefined) return
+                                assignExistingTo(entry, role, index, targetRole as LineupSlot, Number(rawIndex))
+                                event.currentTarget.value = ''
+                              }}
+                            >
+                              <option value="" disabled>НАЗНАЧИТЬ…</option>
+                              {LINEUP_SLOTS.flatMap((targetRole) => [0, 1, 2].map((targetIndex) => (
+                                <option key={targetRole + '-' + targetIndex} value={targetRole + '|' + targetIndex}>
+                                  {ROLE_LABELS[targetRole]} #{targetIndex + 1}
+                                </option>
+                              )))}
+                            </select>
+                            <button className="icon-action" onClick={() => removeDepth(role, entry.key)} aria-label={'Убрать ' + player.alias + ' из плана'}>×</button>
                           </div>
                         </div>
                       )
@@ -646,7 +696,7 @@ function SquadPlanner({
             <p>{selectedAnalysis.status === 'good'
               ? 'Позиция закрыта по качеству и глубине.'
               : selectedAnalysis.status === 'watch'
-                ? 'Состав рабочий, но есть риск по глубине, качеству или контрактам.'
+                ? 'Состав рабочий, но есть риск по глубине, качестве или контрактам.'
                 : 'Позиция требует кадрового решения.'}</p>
           </div>
 
@@ -664,11 +714,11 @@ function SquadPlanner({
                 <button onClick={() => onOpenPlayer(inspectedEntry.player)}>ПРОФИЛЬ →</button>
               </div>
               <div className="sim-planner-inspector-stats">
-                <span><small>OVR</small><b>{projectedOverall(inspectedEntry.player)}</b></span>
                 <span><small>POT</small><b>{inspectedEntry.player.potential}</b></span>
                 <span><small>AIM</small><b>{inspectedEntry.player.aim}</b></span>
                 <span><small>SENSE</small><b>{inspectedEntry.player.gameSense}</b></span>
                 <span><small>UTILITY</small><b>{inspectedEntry.player.utility}</b></span>
+                <span><small>ФОРМА</small><b>{inspectedEntry.player.form}</b></span>
                 <span><small>КОНТРАКТ</small><b>{inspectedEntry.source === 'club' ? inspectedEntry.player.contractWeeks + ' нед.' : '—'}</b></span>
               </div>
             </div>
@@ -682,9 +732,9 @@ function SquadPlanner({
           </div>
 
           <div className="sim-planner-finance">
-            <span><small>PAYROLL РОЛИ</small><b>€{selectedPayroll.toLocaleString('ru-RU')} / нед.</b></span>
-            <span className={payrollDelta > 0 ? 'down' : payrollDelta < 0 ? 'up' : ''}><small>К {previousHorizon === null ? 'ТЕКУЩЕМУ' : 'S+' + previousHorizon}</small><b>{payrollDelta > 0 ? '+' : ''}€{payrollDelta.toLocaleString('ru-RU')}</b></span>
-            {horizon > 0 && <span><small>ИЗМЕНЕНИЯ</small><b>+{selectedDiff.added} / −{selectedDiff.removed}</b></span>}
+            <span><small>ПЛАНОВЫЙ PAYROLL</small><b>{payrollEstimated ? '≈' : ''}{selectedPayroll.toLocaleString('ru-RU')} кр./нед.</b></span>
+            <span className={payrollDelta > 0 ? 'down' : payrollDelta < 0 ? 'up' : ''}><small>К {previousHorizon === null ? 'ТЕКУЩЕМУ' : 'S+' + previousHorizon}</small><b>{payrollEstimated ? '≈' : ''}{payrollDelta > 0 ? '+' : ''}{payrollDelta.toLocaleString('ru-RU')} кр.</b></span>
+            {horizon > 0 && <span><small>{selectedDiff.manual ? 'ИЗМЕНЕНО ВАМИ' : 'ПРОГНОЗ ШТАБА'}</small><b>+{selectedDiff.added} / −{selectedDiff.removed}</b></span>}
           </div>
 
           <div className="sim-planner-diagnostics">
@@ -702,16 +752,16 @@ function SquadPlanner({
                   <button onClick={openScoutForRole}>НАЙТИ</button>
                 </li>
               )}
-              {selectedAnalysis.departures > 0 && (
+              {selectedAnalysis.departureEntries.length > 0 && (
                 <li className="risk">
-                  <span>{selectedAnalysis.departures} игрок(а) не имеют контракта до горизонта.</span>
-                  {selectedAnalysis.primary && <button onClick={() => onOpenPlayer(selectedAnalysis.primary!.player)}>ИГРОК</button>}
+                  <span>Без контракта до горизонта: {selectedAnalysis.departureEntries.map((entry) => entry.player.alias).join(', ')}.</span>
+                  <button onClick={() => setInspectedKey(selectedAnalysis.departureEntries[0].key)}>ПОКАЗАТЬ</button>
                 </li>
               )}
-              {selectedAnalysis.expiring > 0 && (
+              {selectedAnalysis.contractRiskEntries.length > 0 && (
                 <li className="watch">
-                  <span>{selectedAnalysis.expiring} игрок(а) в зоне контрактного риска.</span>
-                  {selectedAnalysis.primary && <button onClick={() => onOpenPlayer(selectedAnalysis.primary!.player)}>КОНТРАКТ</button>}
+                  <span>Контрактный риск: {selectedAnalysis.contractRiskEntries.map((entry) => entry.player.alias).join(', ')}.</span>
+                  <button onClick={() => setInspectedKey(selectedAnalysis.contractRiskEntries[0].key)}>ПОКАЗАТЬ</button>
                 </li>
               )}
               {selectedAnalysis.primaryConflicts.length > 0 && (
@@ -762,42 +812,34 @@ function SquadPlanner({
             </div>
           )}
 
-          <div className="sim-planner-candidate-list" role="listbox" aria-label={'Кандидаты на ' + ROLE_LABELS[selectedRole]}>
+          <div className="sim-planner-candidate-list" role="list" aria-label={'Кандидаты на ' + ROLE_LABELS[selectedRole]}>
             {available.map((entry) => {
               const fit = lineupFitScore(entry.player, selectedRole)
               const canPlace = selectedAnalysis.depth.length < 3 || placementSlot?.role === selectedRole
               return (
-                <article
-                  key={entry.key}
-                  className={selectedCandidate?.key === entry.key ? 'selected' : ''}
-                  role="option"
-                  aria-selected={selectedCandidate?.key === entry.key}
-                  tabIndex={0}
-                  onClick={() => { setSelectedCandidateKey(entry.key); setInspectedKey(entry.key) }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelectedCandidateKey(entry.key)
-                      setInspectedKey(entry.key)
-                    }
-                  }}
-                >
-                  <div className="sim-planner-candidate-portrait">
-                    <PlayerPortrait alias={entry.player.alias} playerId={entry.player.profileId} alt={entry.player.alias} draggable={false} />
-                  </div>
-                  <span>
-                    <b>{entry.player.alias}</b>
-                    <small><i className={'source-dot source-' + entry.source} />{plannerSourceLabel[entry.source]} · {fit} FIT</small>
-                  </span>
-                  <strong>{projectedOverall(entry.player)}</strong>
+                <article key={entry.key} role="listitem" className={selectedCandidate?.key === entry.key ? 'selected' : ''}>
                   <button
+                    className="sim-planner-candidate-select"
+                    aria-pressed={selectedCandidate?.key === entry.key}
+                    onClick={() => { setSelectedCandidateKey(entry.key); setInspectedKey(entry.key) }}
+                  >
+                    <div className="sim-planner-candidate-portrait">
+                      <PlayerPortrait alias={entry.player.alias} playerId={entry.player.profileId} alt={entry.player.alias} draggable={false} />
+                    </div>
+                    <span>
+                      <b>{entry.player.alias}</b>
+                      <small><i className={'source-dot source-' + entry.source} />{plannerSourceLabel[entry.source]} · {fit} FIT</small>
+                    </span>
+                    <strong>{projectedOverall(entry.player)}</strong>
+                  </button>
+                  <button
+                    className="sim-planner-candidate-action"
                     disabled={!canPlace}
-                    onClick={(event) => {
-                      event.stopPropagation()
+                    onClick={() => {
                       if (!canPlace) return
                       placeCandidateAt(entry, selectedRole, placementSlot?.role === selectedRole ? placementSlot.index : undefined)
                     }}
-                    aria-label={(placementSlot?.role === selectedRole ? 'Replace with ' : 'Add ') + entry.player.alias}
+                    aria-label={(placementSlot?.role === selectedRole ? 'Заменить на ' : 'Добавить ') + entry.player.alias}
                   >
                     {placementSlot?.role === selectedRole ? 'В #' + (placementSlot.index + 1) : 'ДОБАВИТЬ'}
                   </button>
@@ -821,6 +863,13 @@ function SquadPlanner({
           </div>
         </aside>
       </div>
+
+      {undoNotice && (
+        <div className="sim-planner-undo-toast" role="status">
+          <span>{undoNotice}</span>
+          <button onClick={undoLastPlannerChange}>ОТМЕНИТЬ</button>
+        </div>
+      )}
     </section>
   )
 }
@@ -927,11 +976,13 @@ function PoolCard({
 export function RosterBoard({
   state,
   setState,
+  saveSignal,
   onOpenPlayer,
   onOpenScout,
 }: {
   state: GameState
   setState: Dispatch<SetStateAction<GameState>>
+  saveSignal: { revision: number; status: 'saved' | 'error' }
   onOpenPlayer: (player: Player) => void
   onOpenScout: () => void
 }) {
@@ -1120,7 +1171,7 @@ export function RosterBoard({
       </div>
 
       {rosterView === 'planner' ? (
-        <SquadPlanner state={state} setState={setState} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
+        <SquadPlanner state={state} setState={setState} saveSignal={saveSignal} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
       ) : (
         <div className="sim-squad-mode-body">
       <div className="sim-squad-kpis">

@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:p0": "vitest run tests/cards.test.ts tests/game.test.ts tests/layout.test.ts tests/squadPlanner.test.ts",
+    "test:p0": "vitest run tests/cards.test.ts tests/game.test.ts tests/layout.test.ts tests/squadPlanner.test.ts tests/trainingGround.test.ts",
     "test:cards": "vitest run tests/cards.test.ts"
   },
   "dependencies": {

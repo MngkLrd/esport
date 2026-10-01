@@ -603,12 +603,23 @@ function App() {
   const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[]) => {
     setPendingMatch((current) => {
       if (!current) return null
+      const remappedMaps = current.result.maps.map((map, index) => {
+        const nextMap = maps[index] ?? map.map
+        return {
+          ...map,
+          map: nextMap,
+          story: map.story ? { ...map.story, map: nextMap } : undefined,
+        }
+      })
       const remappedResult: MatchResult = {
         ...current.result,
-        maps: current.result.maps.map((map, index) => ({
-          ...map,
-          map: maps[index] ?? map.map,
-        })),
+        maps: remappedMaps,
+        story: current.result.story
+          ? {
+              ...current.result.story,
+              maps: remappedMaps.flatMap((map) => map.story ? [map.story] : []),
+            }
+          : undefined,
       }
       const nextState: GameState = {
         ...current.nextState,

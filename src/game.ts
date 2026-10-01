@@ -2110,17 +2110,15 @@ export const playMatch = (
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null
 
-  const matchSeed = hashSeed([
+  const fixtureSeed = hashSeed([
     state.seed,
     state.season,
     state.now,
     state.history.length,
     effectiveMode,
-    tactic,
     tournamentMatch?.id ?? state.activeEventId ?? 'open',
-    state.startingFive.join(','),
   ].join(':'))
-  const rng = mulberry32(matchSeed)
+  const opponentRng = mulberry32(fixtureSeed)
 
   const opponent = tournamentOpponent
     ? {
@@ -2129,7 +2127,17 @@ export const playMatch = (
         teamId: tournamentOpponent.worldTeamId,
         roster: tournamentOpponent.roster,
       }
-    : generateOpponent(state, effectiveMode, rng)
+    : generateOpponent(state, effectiveMode, opponentRng)
+
+  // The fixture must not change because the manager picked another tactic.
+  // Outcome randomness may change, opponent identity may not.
+  const matchSeed = hashSeed([
+    fixtureSeed,
+    tactic,
+    state.startingFive.join(','),
+    opponent.teamId ?? opponent.name,
+  ].join(':'))
+  const rng = mulberry32(matchSeed)
 
   const active = getStartingFive(state.roster, state.startingFive)
   const baseRating = teamRating(state.roster, state.startingFive, state.lineupContinuity)

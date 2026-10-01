@@ -176,6 +176,21 @@ body{
     box-sizing:border-box;
   }
 
+  .app-main.app-main-training > .training-ground{
+    position:absolute;
+    inset:0;
+    width:min(1700px,100%);
+    max-width:1700px;
+    height:100%;
+    min-height:0;
+    margin:0 auto;
+    box-sizing:border-box;
+  }
+
+  .app-main.app-main-training > .training-ground .training-ground-head{
+    padding-left:118px;
+  }
+
   .app-main.app-main-world > .screen-back-button,
   .app-main.app-main-calendar > .screen-back-button,
   .app-main.app-main-play > .screen-back-button,

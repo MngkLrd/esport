@@ -60,6 +60,9 @@ export function TeamProfile({
   }, [state.world.transferHistory, team])
 
   const recentClubMatches = isClub ? state.history.slice(0, 6) : []
+
+  if (!team) return null
+
   const recentWorldMatches = !isClub
     ? competitions
         .flatMap((competition) => competition.matches
@@ -79,8 +82,6 @@ export function TeamProfile({
         .sort((a, b) => b.at.localeCompare(a.at))
         .slice(0, 6)
     : []
-
-  if (!team) return null
 
   return (
     <div className="team-profile-backdrop" role="presentation" onMouseDown={onClose}>

@@ -1273,7 +1273,7 @@ interface OpponentMatchProfile {
 const buildOpponentMatchProfile = (
   roster: TournamentRosterPlayer[] | undefined,
   teamRatingValue: number,
-  mapIndex: number,
+  seriesRoundsPlayed: number,
   adaptation: number,
   rng: () => number,
 ): OpponentMatchProfile => {
@@ -1289,7 +1289,7 @@ const buildOpponentMatchProfile = (
   }))
   const form = clamp(averageRating + (rng() - .5) * 12)
   const morale = clamp(62 + (averageRating - 65) * .18 + (rng() - .5) * 18)
-  const fatigue = clamp(18 + mapIndex * 7 + rng() * 30)
+  const fatigue = clamp(18 + seriesRoundsPlayed * .24 + rng() * 30)
   const communication = clamp(
     38 + gameSense * .18 + leadership * .24 + morale * .17 - Math.max(0, fatigue - 50) * .28 + adaptation * 1.5,
   )
@@ -1367,6 +1367,7 @@ const simulateStoryMap = (
   opponentRating: number,
   map: string,
   mapIndex: number,
+  seriesRoundsPlayed: number,
   tactic: TacticalPlan,
   probability: number,
   tacticMod: number,
@@ -1383,7 +1384,9 @@ const simulateStoryMap = (
   const avgMorale = averagePlayerStat(active, 'morale')
   const baseFatigue = averagePlayerStat(active, 'fatigue')
   const avgClutch = averagePlayerStat(active, 'clutch')
-  const seriesFatigueGain = mapIndex * (tactic === 'aggressive' ? 8 : tactic === 'structured' ? 4 : 6)
+  const seriesFatigueGain = seriesRoundsPlayed * (
+    tactic === 'aggressive' ? .32 : tactic === 'structured' ? .18 : .25
+  )
   const avgFatigue = clamp(baseFatigue + seriesFatigueGain)
   const communication = clamp(
     continuity * .42 + avgLeadership * .25 + avgMorale * .23 - Math.max(0, avgFatigue - 50) * .28 + 10 + ourAdaptation * 1.5,
@@ -1399,7 +1402,7 @@ const simulateStoryMap = (
     (a.form - a.fatigue * .72 + a.gameSense * .16) - (b.form - b.fatigue * .72 + b.gameSense * .16),
   )[0] ?? active[0]
   const clutchPlayer = [...active].sort((a, b) => b.clutch - a.clutch || b.form - a.form)[0] ?? active[0]
-  const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, mapIndex, opponentAdaptation, rng)
+  const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, seriesRoundsPlayed, opponentAdaptation, rng)
   const ourMapFit = lineupMapStyleFit(active, map)
   const opponentMapFit = opponentRosterMapStyleFit(opponentRoster, opponentRating, map)
   const mapEdge = clamp((ourMapFit - opponentMapFit) * .0022, -.05, .05)
@@ -2222,6 +2225,7 @@ export const playMatch = (
   const maps: MapResult[] = []
   let ourMaps = 0
   let theirMaps = 0
+  let seriesRoundsPlayed = 0
   let momentum = 0
   let ourAdaptation = 0
   let opponentAdaptation = 0
@@ -2261,6 +2265,7 @@ export const playMatch = (
       opponent.rating,
       map,
       maps.length,
+      seriesRoundsPlayed,
       tactic,
       probability,
       tacticMod,
@@ -2271,6 +2276,7 @@ export const playMatch = (
       mapRng,
     )
     maps.push(mapResult)
+    seriesRoundsPlayed += mapResult.us + mapResult.them
     if (mapResult.us > mapResult.them) {
       ourMaps += 1
       momentum = Math.min(2.5, momentum + 1.2)

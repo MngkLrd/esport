@@ -69,6 +69,9 @@ function SquadPlanner({
   const [placementSlot, setPlacementSlot] = useState<{ role: LineupSlot; index: number } | null>(null)
   const [summaryFilter, setSummaryFilter] = useState<'all' | 'risk' | 'watch' | 'contract' | 'conflict'>('all')
   const [draggingSlot, setDraggingSlot] = useState<{ role: LineupSlot; index: number } | null>(null)
+  const [inspectedKey, setInspectedKey] = useState<string | null>(null)
+  const [undoPlanner, setUndoPlanner] = useState<GameState['squadPlanner'] | null>(null)
+  const [saveIndicator, setSaveIndicator] = useState<'saved' | 'saving'>('saved')
   const planner = state.squadPlanner ?? { version: 1 as const, orders: {}, excluded: {} }
   const orders = planner.orders
   const excluded = planner.excluded
@@ -78,6 +81,12 @@ function SquadPlanner({
     setSelectedCandidateKey(null)
     setPlacementSlot(null)
   }, [selectedRole, horizon])
+
+  useEffect(() => {
+    if (saveIndicator !== 'saving') return
+    const timeout = window.setTimeout(() => setSaveIndicator('saved'), 420)
+    return () => window.clearTimeout(timeout)
+  }, [state.squadPlanner, saveIndicator])
 
   const candidates = useMemo<PlannerCandidate[]>(() => {
     const rows: PlannerCandidate[] = []
@@ -113,75 +122,94 @@ function SquadPlanner({
     return rows
   }, [state.roster, state.prospects, state.packs.inventory])
 
-  const weeksAhead = horizon === 0
+  const weeksAheadFor = (value: PlannerHorizon) => value === 0
     ? 0
-    : Math.max(1, state.seasonLength - state.week + 1) + (horizon - 1) * state.seasonLength
+    : Math.max(1, state.seasonLength - state.week + 1) + (value - 1) * state.seasonLength
 
-  const projectedOverall = (player: Player) => {
+  const projectedOverallAt = (player: Player, value: PlannerHorizon) => {
     const current = overall(player)
-    if (horizon === 0) return current
+    if (value === 0) return current
     const age = player.age ?? 25
     const growthRoom = Math.max(0, player.potential - current)
-    const youthGrowth = age <= 22 ? Math.min(growthRoom, 3 * horizon) : age <= 25 ? Math.min(growthRoom, 2 * horizon) : age <= 28 ? Math.min(growthRoom, horizon) : 0
-    const decline = age >= 31 ? Math.max(1, age - 29) * horizon : age >= 29 ? horizon : 0
+    const youthGrowth = age <= 22 ? Math.min(growthRoom, 3 * value) : age <= 25 ? Math.min(growthRoom, 2 * value) : age <= 28 ? Math.min(growthRoom, value) : 0
+    const decline = age >= 31 ? Math.max(1, age - 29) * value : age >= 29 ? value : 0
     return Math.max(45, Math.min(99, current + youthGrowth - decline))
   }
 
+  const projectedOverall = (player: Player) => projectedOverallAt(player, horizon)
   const projectionDelta = (player: Player) => projectedOverall(player) - overall(player)
 
-  const plannerScore = (entry: PlannerCandidate, role: LineupSlot) => {
-    const projection = projectionDelta(entry.player)
+  const orderKeyFor = (value: PlannerHorizon, role: LineupSlot) => value + ':' + role
+  const orderKey = (role: LineupSlot) => orderKeyFor(horizon, role)
+
+  const isSecuredAt = (entry: PlannerCandidate, value: PlannerHorizon) =>
+    entry.source !== 'club' || entry.player.contractWeeks > weeksAheadFor(value)
+
+  const isSecuredAtHorizon = (entry: PlannerCandidate) => isSecuredAt(entry, horizon)
+
+  const contractRiskAt = (entry: PlannerCandidate, value: PlannerHorizon) =>
+    entry.source === 'club' && entry.player.contractWeeks <= weeksAheadFor(value) + 2
+
+  const contractRiskAtHorizon = (entry: PlannerCandidate) => contractRiskAt(entry, horizon)
+
+  const plannerScoreAt = (entry: PlannerCandidate, role: LineupSlot, value: PlannerHorizon) => {
+    const projection = projectedOverallAt(entry.player, value) - overall(entry.player)
     const sourceBonus = entry.source === 'club' ? 2 : entry.source === 'target' ? 1 : 0
     return lineupFitScore(entry.player, role) + projection + sourceBonus
   }
 
-  const orderKey = (role: LineupSlot) => horizon + ':' + role
-
-  const isSecuredAtHorizon = (entry: PlannerCandidate) =>
-    entry.source !== 'club' || entry.player.contractWeeks > weeksAhead
-
-  const contractRiskAtHorizon = (entry: PlannerCandidate) =>
-    entry.source === 'club' && entry.player.contractWeeks <= weeksAhead + 2
-
-  const sortedForRole = (role: LineupSlot) => {
-    const excludedKeys = new Set(excluded[orderKey(role)] ?? [])
+  const sortedForRoleAt = (role: LineupSlot, value: PlannerHorizon) => {
+    const excludedKeys = new Set(excluded[orderKeyFor(value, role)] ?? [])
     return [...candidates]
       .filter((entry) => !excludedKeys.has(entry.key))
       .sort((a, b) =>
-        Number(isSecuredAtHorizon(b)) - Number(isSecuredAtHorizon(a)) ||
-        plannerScore(b, role) - plannerScore(a, role) ||
-        projectedOverall(b.player) - projectedOverall(a.player) ||
+        Number(isSecuredAt(b, value)) - Number(isSecuredAt(a, value)) ||
+        plannerScoreAt(b, role, value) - plannerScoreAt(a, role, value) ||
+        projectedOverallAt(b.player, value) - projectedOverallAt(a.player, value) ||
         a.player.alias.localeCompare(b.player.alias, 'en-US'),
       )
   }
 
-  const actualStarterForRole = (role: LineupSlot) => {
-    if (horizon !== 0) return null
+  const actualStarterForRoleAt = (role: LineupSlot, value: PlannerHorizon) => {
+    if (value !== 0) return null
     const id = state.lineupSlots?.[role]
     if (!id) return null
     return candidates.find((entry) => entry.source === 'club' && entry.player.id === id) ?? null
   }
 
-  const depthForRole = (role: LineupSlot) => {
-    const sorted = sortedForRole(role)
-    const saved = orders[orderKey(role)]
+  const depthForRoleAt = (role: LineupSlot, value: PlannerHorizon) => {
+    const sorted = sortedForRoleAt(role, value)
+    const saved = orders[orderKeyFor(value, role)]
     if (saved) {
       const byKey = new Map(sorted.map((entry) => [entry.key, entry]))
       return saved.map((key) => byKey.get(key)).filter((entry): entry is PlannerCandidate => Boolean(entry)).slice(0, 3)
     }
 
-    const starter = actualStarterForRole(role)
+    const starter = actualStarterForRoleAt(role, value)
     if (!starter) return sorted.slice(0, 3)
     return [starter, ...sorted.filter((entry) => entry.key !== starter.key)].slice(0, 3)
   }
 
+  const sortedForRole = (role: LineupSlot) => sortedForRoleAt(role, horizon)
+  const depthForRole = (role: LineupSlot) => depthForRoleAt(role, horizon)
+
   const updatePlanner = (
     updater: (current: NonNullable<GameState['squadPlanner']>) => NonNullable<GameState['squadPlanner']>,
   ) => {
+    setUndoPlanner(planner)
+    setSaveIndicator('saving')
     setState((current) => ({
       ...current,
       squadPlanner: updater(current.squadPlanner ?? { version: 1, orders: {}, excluded: {} }),
     }))
+  }
+
+  const undoLastPlannerChange = () => {
+    if (!undoPlanner) return
+    const currentPlanner = state.squadPlanner ?? { version: 1 as const, orders: {}, excluded: {} }
+    setState((current) => ({ ...current, squadPlanner: undoPlanner }))
+    setUndoPlanner(currentPlanner)
+    setSaveIndicator('saving')
   }
 
   const setDepth = (role: LineupSlot, entries: PlannerCandidate[]) => {
@@ -253,6 +281,23 @@ function SquadPlanner({
     setPlacementSlot(null)
   }
 
+
+  const copyPreviousPlan = () => {
+    if (horizon === 0) return
+    const sourceHorizon = (horizon - 1) as PlannerHorizon
+    const copied = LINEUP_SLOTS.map((role) => [role, depthForRoleAt(role, sourceHorizon)] as const)
+    updatePlanner((current) => {
+      const nextOrders = { ...current.orders }
+      const nextExcluded = { ...current.excluded }
+      for (const [role, entries] of copied) {
+        const key = orderKeyFor(horizon, role)
+        nextOrders[key] = entries.map((entry) => entry.key)
+        delete nextExcluded[key]
+      }
+      return { ...current, orders: nextOrders, excluded: nextExcluded }
+    })
+  }
+
   const primaryRoleUsage = new Map<string, LineupSlot[]>()
   for (const role of LINEUP_SLOTS) {
     const primary = depthForRole(role)[0]
@@ -292,6 +337,28 @@ function SquadPlanner({
   const availableAll = sortedForRole(selectedRole).filter((entry) => !selectedDepthKeys.has(entry.key)).slice(0, 12)
   const available = availableAll.slice(0, candidateLimit)
   const selectedCandidate = availableAll.find((entry) => entry.key === selectedCandidateKey) ?? availableAll[0] ?? null
+  const inspectedEntry = candidates.find((entry) => entry.key === inspectedKey) ?? selectedAnalysis.primary ?? null
+
+  const previousHorizon = horizon > 0 ? (horizon - 1) as PlannerHorizon : null
+  const roleDiff = (role: LineupSlot) => {
+    if (previousHorizon === null) return { added: 0, removed: 0, addedKeys: new Set<string>() }
+    const current = depthForRole(role)
+    const previous = depthForRoleAt(role, previousHorizon)
+    const currentKeys = new Set(current.map((entry) => entry.key))
+    const previousKeys = new Set(previous.map((entry) => entry.key))
+    return {
+      added: current.filter((entry) => !previousKeys.has(entry.key)).length,
+      removed: previous.filter((entry) => !currentKeys.has(entry.key)).length,
+      addedKeys: new Set(current.filter((entry) => !previousKeys.has(entry.key)).map((entry) => entry.key)),
+    }
+  }
+
+  const selectedDiff = roleDiff(selectedRole)
+  const selectedPayroll = selectedAnalysis.depth.reduce((sum, entry) => sum + entry.player.salary, 0)
+  const previousPayroll = previousHorizon === null
+    ? selectedPayroll
+    : depthForRoleAt(selectedRole, previousHorizon).reduce((sum, entry) => sum + entry.player.salary, 0)
+  const payrollDelta = selectedPayroll - previousPayroll
 
   const comparison = selectedCandidate && selectedAnalysis.primary
     ? {
@@ -334,6 +401,40 @@ function SquadPlanner({
     setSelectedRole(role)
     setPlacementSlot({ role, index })
     setCandidateLimit(5)
+  }
+
+  const urgentRole = analyses.find((item) => item.primaryConflicts.length > 0)
+    ?? analyses.find((item) => item.securedDepth.length < 2)
+    ?? analyses.find((item) => item.departures > 0 || item.expiring > 0)
+    ?? analyses.find((item) => item.quality > 0 && item.quality < 76)
+    ?? analyses.find((item) => item.status === 'watch')
+    ?? analyses[0]
+
+  const urgentLabel = urgentRole.primaryConflicts.length > 0
+    ? 'РЕШИТЬ КОНФЛИКТ ' + ROLE_LABELS[urgentRole.role]
+    : urgentRole.securedDepth.length < 2
+      ? 'ЗАКРЫТЬ ГЛУБИНУ ' + ROLE_LABELS[urgentRole.role]
+      : urgentRole.departures > 0 || urgentRole.expiring > 0
+        ? 'ПРОВЕРИТЬ КОНТРАКТЫ ' + ROLE_LABELS[urgentRole.role]
+        : urgentRole.quality > 0 && urgentRole.quality < 76
+          ? 'УСИЛИТЬ ' + ROLE_LABELS[urgentRole.role]
+          : 'ПРОВЕРИТЬ ' + ROLE_LABELS[urgentRole.role]
+
+  const runUrgentAction = () => {
+    setSelectedRole(urgentRole.role)
+    if (urgentRole.primaryConflicts.length > 0) return
+    if (urgentRole.securedDepth.length < 2) {
+      requestPlacement(urgentRole.role, Math.min(urgentRole.depth.length, 2))
+      return
+    }
+    if (urgentRole.departures > 0 || urgentRole.expiring > 0) {
+      if (urgentRole.primary) setInspectedKey(urgentRole.primary.key)
+      return
+    }
+    if (urgentRole.quality > 0 && urgentRole.quality < 76) {
+      setState((current) => ({ ...current, scoutBrief: { ...current.scoutBrief, role: urgentRole.role } }))
+      onOpenScout()
+    }
   }
 
   return (

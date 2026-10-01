@@ -69,8 +69,6 @@ const newsTarget = (item: NewsItem): WorldPortalTarget | null =>
           ? 'World'
           : null
 
-const storyTarget = (story: NewsStory): WorldPortalTarget =>
-  story.category === 'market' ? 'Scout' : 'World'
 
 const usePersistentSet = (key: string) => {
   const [values, setValues] = useState<Set<string>>(() => {

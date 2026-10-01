@@ -1362,6 +1362,7 @@ const simulateStoryMap = (
   tacticMod: number,
   preparationMod: number,
   continuity: number,
+  ourAdaptation: number,
   opponentAdaptation: number,
   rng: () => number,
 ): MapResult => {
@@ -1375,10 +1376,12 @@ const simulateStoryMap = (
   const seriesFatigueGain = mapIndex * (tactic === 'aggressive' ? 8 : tactic === 'structured' ? 4 : 6)
   const avgFatigue = clamp(baseFatigue + seriesFatigueGain)
   const communication = clamp(
-    continuity * .42 + avgLeadership * .25 + avgMorale * .23 - Math.max(0, avgFatigue - 50) * .28 + 10,
+    continuity * .42 + avgLeadership * .25 + avgMorale * .23 - Math.max(0, avgFatigue - 50) * .28 + 10 + ourAdaptation * 1.5,
   )
-  const tacticalQuality = clamp(50 + tacticMod * 6 + (avgGameSense - 65) * .35 + (avgUtility - 65) * .25)
-  const preparation = clamp(50 + preparationMod * 8)
+  const tacticalQuality = clamp(
+    50 + tacticMod * 6 + (avgGameSense - 65) * .35 + (avgUtility - 65) * .25 + ourAdaptation * 4,
+  )
+  const preparation = clamp(50 + preparationMod * 8 + ourAdaptation * 6)
   const fatigueFactor = clamp(100 - avgFatigue)
   const clutchFactor = clamp(avgClutch)
   const individual = clamp(avgAim * .58 + averagePlayerStat(active, 'form') * .42)
@@ -1564,7 +1567,7 @@ const simulateStoryMap = (
     clutch: Math.round(clutchFactor),
     individual: Math.round(individual),
     mapFit: Math.round(ourMapFit),
-    adaptation: 0,
+    adaptation: Math.round(ourAdaptation * 10) / 10,
   }
   const opponentFactors: NonNullable<MapStory['opponentFactors']> = {
     tactics: Math.round(opponent.tactical),
@@ -1599,6 +1602,9 @@ const simulateStoryMap = (
   }
   if (opponentAdaptation >= 1.1 && !usWon) {
     explanationParts.push('По ходу серии соперник адаптировался к повторяющемуся плану и усилил чтение раундов.')
+  }
+  if (ourAdaptation >= 1.1 && usWon) {
+    explanationParts.push('Штаб и игроки перестроились по ходу серии и лучше читали повторяющиеся решения соперника.')
   }
   if (!explanationParts.length) {
     const opponentCollapse = rounds.filter((round) =>
@@ -2147,7 +2153,21 @@ export const playMatch = (
   let ourMaps = 0
   let theirMaps = 0
   let momentum = 0
+  let ourAdaptation = 0
   let opponentAdaptation = 0
+  const avgGameSense = averagePlayerStat(active, 'gameSense')
+  const avgLeadership = averagePlayerStat(active, 'leadership')
+  const ourAdaptationRate = clamp(
+    (avgGameSense * .45 + avgLeadership * .35 + state.lineupContinuity * .20) / 70,
+    .72,
+    1.28,
+  )
+  const opponentBaseSkills = opponentRosterSkillProfile(opponent.roster, opponent.rating)
+  const opponentAdaptationRate = clamp(
+    (opponentBaseSkills.gameSense * .55 + opponentBaseSkills.leadership * .45) / 70,
+    .72,
+    1.28,
+  )
 
   while (ourMaps < 2 && theirMaps < 2) {
     const availableMaps = mapPool.filter((name) => !maps.some((current) => current.map === name))
@@ -2176,6 +2196,7 @@ export const playMatch = (
       tacticMod,
       preparationMod,
       state.lineupContinuity,
+      ourAdaptation,
       opponentAdaptation,
       mapRng,
     )
@@ -2188,15 +2209,25 @@ export const playMatch = (
       momentum = Math.max(-2.5, momentum - 1.2)
     }
 
-    const systemRoundsLostByOpponent = (mapResult.story?.rounds ?? []).filter((round) =>
+    const storyRounds = mapResult.story?.rounds ?? []
+    const systemRoundsLostByOpponent = storyRounds.filter((round) =>
       round.winner === 'US' &&
-      (round.cause === 'ANTI_STRAT' || round.cause === 'TACTICAL_EDGE' || round.cause === 'MOMENTUM'),
+      (round.cause === 'ANTI_STRAT' || round.cause === 'TACTICAL_EDGE'),
     ).length
+    const systemRoundsLostByUs = storyRounds.filter((round) =>
+      round.winner === 'THEM' &&
+      (round.cause === 'ANTI_STRAT' || round.cause === 'TACTICAL_EDGE'),
+    ).length
+
+    ourAdaptation = Math.min(
+      3,
+      ourAdaptation +
+      ((mapResult.us < mapResult.them ? .65 : .25) + Math.min(.55, systemRoundsLostByUs * .045)) * ourAdaptationRate,
+    )
     opponentAdaptation = Math.min(
       3,
       opponentAdaptation +
-      (mapResult.us > mapResult.them ? .65 : .25) +
-      Math.min(.55, systemRoundsLostByOpponent * .045),
+      ((mapResult.us > mapResult.them ? .65 : .25) + Math.min(.55, systemRoundsLostByOpponent * .045)) * opponentAdaptationRate,
     )
   }
 

@@ -520,7 +520,7 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
     player.contractWeeks = Math.max(0, player.contractWeeks - (rng() < .35 ? 1 : 0))
     if (player.contractWeeks === 0) {
       const renewalUtility = effectiveRating(player) - teamStrength(world, team) + clubPrestige(team) * .08 + (player.morale - 50) * .04
-      if ((renewalUtility > -2 || team.rosterKeys.length <= 5) && clubBudget(team) > 1200) {
+      if (team.rosterKeys.length <= 5 || (renewalUtility > -2 && clubBudget(team) > 1200)) {
         player.contractWeeks = 18 + Math.floor(rng() * 35)
         player.salary = Math.round((player.salary ?? player.currentRating * 1.7) * (1.02 + rng() * .18))
       } else {
@@ -1041,7 +1041,7 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
       ecology.metrics.sponsorLiquidity * .18 +
       ecology.metrics.audienceDemand * .12 +
       underRepresentation +
-      Math.min(24, organizationGap * .8) -
+      Math.min(30, organizationGap * 1.1) -
       regionalTeams.length * .28
 
     if (
@@ -1049,7 +1049,7 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
       organizationGap > 0 &&
       ecology.metrics.sponsorLiquidity >= 42 &&
       ecology.metrics.audienceDemand >= 45 &&
-      opportunityWithoutSupply + rng() * 10 > 42
+      opportunityWithoutSupply + rng() * 10 > 38
     ) {
       const intake = Math.min(7 - regionalFree.length, Math.max(1, Math.ceil(organizationGap / 18)))
       for (let index = 0; index < intake; index += 1) {
@@ -1061,7 +1061,7 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
     }
 
     const entryUtility = opportunityWithoutSupply + Math.min(28, regionalFree.length * 1.4)
-    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 50) {
+    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 47) {
       const before = activeTeams(world).length
       foundTeam(world, ecology, region, at, seed)
       if (activeTeams(world).length > before) activeTeamCount += 1

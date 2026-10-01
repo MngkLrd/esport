@@ -2321,7 +2321,7 @@ body{
 .sim-market .market-field>span b{font-size: 13px}
 .sim-market .market-field select{min-height:37px;font-size: 13px}
 .sim-market .market-segmented button{min-height:32px;font-size: 12px}
-.sim-market .market-segmented button.active{border-color:var(--sim-cyan);background:rgb(var(--ui-accent-rgb) / .08);color:#fff}
+.sim-market .market-segmented button.active{border-color:var(--sim-cyan);background:rgb(var(--ui-accent-rgb) / .08);color:var(--ui-text)}
 .sim-market input[type=range]{accent-color:var(--sim-cyan)}
 .sim-market .market-field small,.sim-market .market-brief-preview p{font-size: 12px}
 .sim-market .market-brief-preview{margin:14px 0 10px;padding:10px 0}
@@ -2694,18 +2694,18 @@ body{
 /* MODALS / OVERLAYS ------------------------------------------------------ */
 
 .card-detail-backdrop,.lineup-picker-backdrop,.market-negotiation-backdrop,.pack-purchase-backdrop,.tournament-bracket-backdrop{
-  background:rgba(3,6,19,.89);backdrop-filter:blur(10px)
+  background:rgba(3,4,5,.89);backdrop-filter:blur(10px)
 }
 .card-detail-modal,.lineup-picker,.market-negotiation,.pack-purchase-modal,.tournament-bracket-modal{
   border:1px solid var(--sim-line-strong);
   border-radius:0;
   background:
-    radial-gradient(circle at 14% 0%,rgba(96,69,214,.12),transparent 30%),
-    #091027;
+    radial-gradient(circle at 14% 0%,rgb(var(--ui-accent-rgb) / .07),transparent 30%),
+    var(--ui-bg-1);
   box-shadow:0 30px 100px rgba(0,0,0,.64)
 }
 .card-detail-close,.lineup-picker-close,.market-negotiation-close,.pack-purchase-close,.tournament-bracket-modal-head>button{
-  width:38px;height:38px;border:1px solid var(--sim-line);background:#0e1731;color:#fff
+  width:38px;height:38px;border:1px solid var(--sim-line);background:var(--ui-panel);color:var(--ui-text)
 }
 .market-negotiation .market-segmented button.active,.market-negotiation .market-contract-options button.active,.market-negotiation .market-role-promise button.active{
   border-color:var(--sim-cyan);background:rgb(var(--ui-accent-rgb) / .08);color:#fff

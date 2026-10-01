@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { newsBelongsInInbox, type GameState, type NewsItem } from './game'
+import { newsBelongsInInbox, type GameState, type NewsItem, type Player } from './game'
 import {
   filterNewsFeed,
   projectWorldNews,
@@ -18,6 +18,7 @@ interface WorldPortalProps {
   state: GameState
   onResolveDecision: (choice: 'a' | 'b') => void
   onNavigate: (target: WorldPortalTarget) => void
+  onOpenPlayer?: (player: Player) => void
   onReset: () => void
 }
 
@@ -196,7 +197,7 @@ function WorldContext({ state, onOpenTeam }: { state: GameState; onOpenTeam: (te
   )
 }
 
-export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: WorldPortalProps) {
+export function WorldPortal({ state, onResolveDecision, onNavigate, onOpenPlayer, onReset }: WorldPortalProps) {
   const [view, setView] = useState<PortalView>('news')
   const [selectedStory, setSelectedStory] = useState<NewsStory | null>(null)
   const [selectedClubItem, setSelectedClubItem] = useState<NewsItem | null>(null)
@@ -550,6 +551,7 @@ export function WorldPortal({ state, onResolveDecision, onNavigate, onReset }: W
           state={state}
           teamId={selectedTeamId}
           onClose={() => setSelectedTeamId(null)}
+          onOpenPlayer={onOpenPlayer}
         />
       )}
     </section>

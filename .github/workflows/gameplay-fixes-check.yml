@@ -1,0 +1,29 @@
+name: gameplay-fixes-check
+
+on:
+  push:
+    branches:
+      - gameplay-fixes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout gameplay branch
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: P0 tests
+        run: npm run test:p0
+      - name: TypeScript and production build
+        run: npm run build

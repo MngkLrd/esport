@@ -520,7 +520,7 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
     player.contractWeeks = Math.max(0, player.contractWeeks - (rng() < .35 ? 1 : 0))
     if (player.contractWeeks === 0) {
       const renewalUtility = effectiveRating(player) - teamStrength(world, team) + clubPrestige(team) * .08 + (player.morale - 50) * .04
-      if (renewalUtility > -2 && clubBudget(team) > 1200) {
+      if ((renewalUtility > -2 || team.rosterKeys.length <= 5) && clubBudget(team) > 1200) {
         player.contractWeeks = 18 + Math.floor(rng() * 35)
         player.salary = Math.round((player.salary ?? player.currentRating * 1.7) * (1.02 + rng() * .18))
       } else {
@@ -624,7 +624,7 @@ const executeTransfer = (
   if (!winner || winner.id !== offer.id) return
 
   const mutual = Math.min(offer.buyerUtility, offer.playerUtility, seller ? offer.sellerUtility : 99)
-  if (mutual < -4 || clubBudget(buyer) < offer.fee + offer.salary * 4) {
+  if ((seller && seller.rosterKeys.length <= 5) || mutual < -4 || clubBudget(buyer) < offer.fee + offer.salary * 4) {
     offer.status = 'rejected'
     return
   }
@@ -773,6 +773,61 @@ const retirePlayer = (world: WorldState, ecology: WorldEcologyState, player: Wor
     causes: ['career-hazard:' + player.key],
     data: { age: player.age, rating: player.currentRating },
   })
+}
+
+const stabilizeRosters = (
+  world: WorldState,
+  ecology: WorldEcologyState,
+  at: string,
+  seed: number,
+) => {
+  for (const team of world.teams.filter((candidate) => candidate.active !== false)) {
+    team.rosterKeys = team.rosterKeys.filter((key) => {
+      const player = world.players[key]
+      return Boolean(player && !player.retiredAt && player.teamId === team.id)
+    })
+    if (team.rosterKeys.length >= 5) continue
+
+    const region = team.region ?? teamRegion(world, team)
+    let attempts = 0
+    while (team.rosterKeys.length < 5 && attempts < 12) {
+      attempts += 1
+      const neededRole = [...ROLES].sort((a, b) => roleNeedScore(world, team, b) - roleNeedScore(world, team, a))[0]
+      const candidates = Object.values(world.players)
+        .filter((player) => !player.teamId && !player.retiredAt)
+        .map((player) => ({
+          player,
+          score:
+            effectiveRating(player) +
+            (player.role === neededRole ? 18 : 0) +
+            (regionForCountry(player.country) === region ? 8 : 0) -
+            playerMarketValue(player) / Math.max(800, clubBudget(team)) * 4,
+        }))
+        .sort((a, b) => b.score - a.score)
+
+      let signed = false
+      for (const candidate of candidates.slice(0, 16)) {
+        createTransferOffer(world, ecology, team, candidate.player, at, seed + attempts)
+        const offer = ecology.offers.find((entry) =>
+          entry.status === 'open' &&
+          entry.playerKey === candidate.player.key &&
+          entry.buyerTeamId === team.id,
+        )
+        if (!offer) continue
+        const before = team.rosterKeys.length
+        executeTransfer(world, ecology, offer, at)
+        if (team.rosterKeys.length > before) {
+          signed = true
+          break
+        }
+      }
+      if (!signed) break
+    }
+
+    if (team.rosterKeys.length < 5) {
+      dissolveTeam(world, ecology, team, at)
+    }
+  }
 }
 
 const foundTeam = (world: WorldState, ecology: WorldEcologyState, region: EcologyRegion, at: string, seed: number) => {
@@ -925,6 +980,7 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
     if (rng() < Math.min(.45, ageHazard + marketHazard + performanceHazard)) retirePlayer(world, ecology, player, at)
   }
 
+  stabilizeRosters(world, ecology, at, seed)
   recalcMetrics(world, ecology)
   const regionDemand = new Map<EcologyRegion, number>(REGIONS.map((region) => [region, 0]))
   for (const team of world.teams.filter((team) => team.active !== false)) {

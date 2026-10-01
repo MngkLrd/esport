@@ -69,8 +69,8 @@ export const normalizeFinanceState = (
     : Math.max(0, Math.round(fallbackCash - ledger.reduce((sum, entry) => sum + entry.amount, 0)))
   const derivedCash = openingCash + ledger.reduce((sum, entry) => sum + entry.amount, 0)
   const cash = typeof source.cash === 'number'
-    ? Math.max(0, Math.round(source.cash))
-    : Math.max(0, Math.round(derivedCash))
+    ? Math.round(source.cash)
+    : Math.round(derivedCash)
   return {
     version: 1,
     openingCash,
@@ -93,7 +93,7 @@ export const postFinanceEntry = (
   if (alreadyExists) return source
   return {
     ...source,
-    cash: Math.max(0, source.cash + normalizedAmount),
+    cash: source.cash + normalizedAmount,
     ledger: [nextEntry, ...source.ledger].slice(0, 600),
   }
 }
@@ -135,7 +135,7 @@ export const financeSeriesByWeek = (
     const income = entries.filter((entry) => entry.amount > 0).reduce((sum, entry) => sum + entry.amount, 0)
     const expenses = Math.abs(entries.filter((entry) => entry.amount < 0).reduce((sum, entry) => sum + entry.amount, 0))
     cash += income - expenses
-    if (week >= firstWeek) points.push({ week, cash: Math.max(0, cash), income, expenses })
+    if (week >= firstWeek) points.push({ week, cash, income, expenses })
   }
 
   if (!points.length) points.push({ week: Math.max(1, currentWeek), cash: state.cash, income: 0, expenses: 0 })

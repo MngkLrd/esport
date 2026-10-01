@@ -4695,7 +4695,7 @@ button.primary:hover,
   letter-spacing: .11em;
 }
 .match-radar-context b {
-  color: #eee9df;
+  color: var(--ui-text);
   font: 1000 13px/1 'Cyril UI', 'Noto Sans', system-ui, sans-serif;
 }
 .match-radar-roster-v2 {
@@ -5907,7 +5907,7 @@ button.primary:hover,
 }
 .tactical-opponent-roster b {
   overflow: hidden;
-  color: #eee9df;
+  color: var(--ui-text);
   font: 900 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   text-overflow: ellipsis;
 }
@@ -6340,7 +6340,7 @@ button.primary:hover,
   align-items: center;
   padding: 0 16px;
   border-bottom: 2px solid rgb(var(--ui-line-rgb) / .14);
-  color: #697591;
+  color: var(--ui-soft);
   font: 900 8px/1 Arial,sans-serif;
   letter-spacing: .12em;
 }
@@ -6366,7 +6366,7 @@ button.primary:hover,
   box-shadow: inset 4px 0 0 var(--fifa-cyan);
 }
 .vrs-rank {
-  color: #7e89a5;
+  color: var(--ui-muted);
   font: 1000 16px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
 .vrs-row.is-player .vrs-rank { color: var(--fifa-cyan); }
@@ -6377,13 +6377,13 @@ button.primary:hover,
 }
 .vrs-team strong {
   overflow: hidden;
-  color: #eee9df;
+  color: var(--ui-text);
   font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .vrs-team small {
-  color: #5f6b87;
+  color: var(--ui-soft);
   font: 800 7px/1 Arial,sans-serif;
   letter-spacing: .08em;
 }
@@ -6399,14 +6399,14 @@ button.primary:hover,
   padding: 5px 7px;
   border: 1px solid rgb(var(--ui-line-rgb) / .12);
   background: rgba(255,255,255,.025);
-  color: #929db8;
+  color: var(--ui-muted);
   font: 800 8px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .vrs-points {
   text-align: right;
-  color: #fff;
+  color: var(--ui-text);
   font: 1000 17px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
 .vrs-club-pin {
@@ -6528,7 +6528,7 @@ button.primary:hover,
 .calendar-event-badge { width: 44px; height: 44px; display: grid; place-items: center; border: 2px solid rgb(var(--ui-line-rgb) / .24); background: #111831; color: #fff; font: 1000 13px/1 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-event-main { min-width: 0; display: grid; gap: 3px; }
 .calendar-event-main small, .calendar-event-main span, .calendar-event-main i { color: #74809d; font: 800 8px/1.15 Arial,sans-serif; font-style: normal; }
-.calendar-event-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eee9df; font: 1000 14px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif; }
+.calendar-event-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-text); font: 1000 14px/1.05 'Cyril UI','Noto Sans',system-ui,sans-serif; }
 .calendar-event-main i { color: #56627f; font-size: 12px; }
 .calendar-event-actions { display: grid; gap: 5px; }
 .calendar-event-actions > b { color: var(--fifa-cyan); font: 1000 7px/1 Arial,sans-serif; letter-spacing: .08em; }
@@ -7900,8 +7900,8 @@ button.primary:hover,
   gap:28px;
   padding:24px 68px 24px 26px;
   background:
-    radial-gradient(circle at 24% 35%,rgba(78,111,255,.13),transparent 40%),
-    #111a2d;
+    radial-gradient(circle at 24% 35%,rgb(var(--ui-accent-rgb) / .10),transparent 40%),
+    var(--ui-panel-raised);
 }
 .card-detail-card-wrap{width:190px}
 .card-detail-card-wrap .card-detail-shared-card{width:100%;max-width:none}
@@ -7909,7 +7909,7 @@ button.primary:hover,
 .card-detail-hero-shared .card-detail-edition{
   position:static;
   margin-bottom:10px;
-  color:#7f8dac;
+  color:var(--ui-muted);
   font:900 8px/1 Arial,sans-serif;
   letter-spacing:.12em;
 }

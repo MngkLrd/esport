@@ -60,6 +60,18 @@ export interface TournamentOperatorAgent {
   consecutiveLosses: number
 }
 
+export interface AutonomousMatch {
+  id: string
+  round: 'quarterfinal' | 'semifinal' | 'final'
+  teamAId: string
+  teamBId: string
+  winnerTeamId: string
+  loserTeamId: string
+  scoreA: number
+  scoreB: number
+  fidelity: 0 | 1
+}
+
 export interface AutonomousCompetition {
   id: string
   operatorId: string
@@ -75,6 +87,7 @@ export interface AutonomousCompetition {
   prestige: number
   audience: number
   participantTeamIds: string[]
+  matches: AutonomousMatch[]
   winnerTeamId: string | null
   revenue: number
   cost: number
@@ -939,6 +952,7 @@ const createCompetition = (
     prestige: clamp(operator.reputation * .72 + (tier === 1 ? 24 : tier === 2 ? 12 : 3)),
     audience: 0,
     participantTeamIds: participants,
+    matches: [],
     winnerTeamId: null,
     revenue: 0,
     cost: Math.round(prizePool * (format === 'LAN' ? 1.72 : 1.18)),
@@ -1002,6 +1016,43 @@ const startCompetition = (ecology: WorldEcologyState, competitionId: string) => 
   if (competition?.status === 'announced') competition.status = 'running'
 }
 
+const simulateAutonomousSeries = (
+  world: WorldState,
+  competition: AutonomousCompetition,
+  teamA: WorldTeam,
+  teamB: WorldTeam,
+  round: AutonomousMatch['round'],
+  index: number,
+  seed: number,
+): { match: AutonomousMatch; winner: WorldTeam; loser: WorldTeam } => {
+  const rng = rngFor(seed, 'series:' + competition.id + ':' + round + ':' + index + ':' + teamA.id + ':' + teamB.id)
+  const strengthA = teamStrength(world, teamA) + ((teamA.form ?? 50) - 50) * .08
+  const strengthB = teamStrength(world, teamB) + ((teamB.form ?? 50) - 50) * .08
+  const winProbabilityA = clamp(1 / (1 + Math.exp(-(strengthA - strengthB) / 5.2)), .08, .92)
+  const aWins = rng() < winProbabilityA
+  const closeSeries = rng() > Math.abs(winProbabilityA - .5) * 1.25
+  const scoreA = aWins ? 2 : closeSeries ? 1 : 0
+  const scoreB = aWins ? (closeSeries ? 1 : 0) : 2
+  const winner = aWins ? teamA : teamB
+  const loser = aWins ? teamB : teamA
+  const fidelity: 0 | 1 = competition.tier === 1 || round === 'final' ? 1 : 0
+  return {
+    winner,
+    loser,
+    match: {
+      id: competition.id + '-' + round + '-' + (index + 1),
+      round,
+      teamAId: teamA.id,
+      teamBId: teamB.id,
+      winnerTeamId: winner.id,
+      loserTeamId: loser.id,
+      scoreA,
+      scoreB,
+      fidelity,
+    },
+  }
+}
+
 const finishCompetition = (
   world: WorldState,
   ecology: WorldEcologyState,
@@ -1025,16 +1076,47 @@ const finishCompetition = (
     return
   }
 
-  const weighted = entrants.map((team) => {
-    const strength = teamStrength(world, team)
-    const form = team.form ?? 50
-    const score = Math.exp((strength + (form - 50) * .08) / 11) * (.82 + rng() * .36)
-    return { team, score }
-  }).sort((a, b) => b.score - a.score)
-  const winner = weighted[0].team
-  const runnerUp = weighted[1].team
+  const seeded = [...entrants].sort((a, b) => a.vrsRank - b.vrsRank || b.vrsPoints - a.vrsPoints)
+  const quarterPairs: Array<[WorldTeam, WorldTeam]> = [
+    [seeded[0], seeded[7]],
+    [seeded[3], seeded[4]],
+    [seeded[1], seeded[6]],
+    [seeded[2], seeded[5]],
+  ]
+  const quarterResults = quarterPairs.map(([a, b], index) =>
+    simulateAutonomousSeries(world, competition, a, b, 'quarterfinal', index, seed),
+  )
+  const semiPairs: Array<[WorldTeam, WorldTeam]> = [
+    [quarterResults[0].winner, quarterResults[1].winner],
+    [quarterResults[2].winner, quarterResults[3].winner],
+  ]
+  const semiResults = semiPairs.map(([a, b], index) =>
+    simulateAutonomousSeries(world, competition, a, b, 'semifinal', index, seed),
+  )
+  const finalResult = simulateAutonomousSeries(
+    world,
+    competition,
+    semiResults[0].winner,
+    semiResults[1].winner,
+    'final',
+    0,
+    seed,
+  )
+  competition.matches = [
+    ...quarterResults.map((result) => result.match),
+    ...semiResults.map((result) => result.match),
+    finalResult.match,
+  ]
+  const winner = finalResult.winner
+  const runnerUp = finalResult.loser
   competition.winnerTeamId = winner.id
   competition.status = 'complete'
+
+  const matchPointValue = competition.tier === 1 ? 16 : competition.tier === 2 ? 9 : 5
+  for (const match of competition.matches) {
+    const team = world.teams.find((candidate) => candidate.id === match.winnerTeamId)
+    if (team) team.vrsPoints = Math.round(team.vrsPoints + matchPointValue)
+  }
   competition.audience = Math.round(
     (competition.prestige * 900 + entrants.reduce((sum, team) => sum + (team.fanbase ?? 1500), 0) * .4) *
     (.8 + rng() * .45),

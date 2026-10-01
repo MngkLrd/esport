@@ -165,6 +165,16 @@ export interface MatchStory {
   maps: MapStory[]
 }
 
+export interface MatchFixture {
+  id: string
+  mode: MatchMode
+  tactic: TacticalPlan
+  opponent: string
+  opponentRating: number
+  opponentTeamId: string | null
+  opponentRoster: TournamentRosterPlayer[]
+}
+
 export interface MatchResult {
   id: string
   season?: number
@@ -2095,15 +2105,22 @@ export const canPlayMatch = (state: GameState, mode: MatchMode) => {
   return { ok: true, reason: '' }
 }
 
-export const playMatch = (
-  state: GameState,
-  mode: MatchMode,
-  tactic: TacticalPlan,
-  selectedMaps: string[] = [],
-): GameState => {
-  const gate = canPlayMatch(state, mode)
-  if (!gate.ok) return state
+interface PreparedMatchContext {
+  event: TournamentEvent | null
+  effectiveMode: MatchMode
+  isPractice: boolean
+  preparedRun: TournamentRun | null
+  tournamentMatch: ReturnType<typeof nextPlayerMatch>
+  opponent: {
+    name: string
+    rating: number
+    teamId: string | null
+    roster: TournamentRosterPlayer[]
+  }
+  fixtureSeed: number
+}
 
+const prepareMatchContext = (state: GameState, mode: MatchMode): PreparedMatchContext => {
   const event = mode === 'practice' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
   const isPractice = effectiveMode === 'practice' && !event
@@ -2115,7 +2132,6 @@ export const playMatch = (
     : null
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null
-
   const fixtureSeed = hashSeed([
     state.seed,
     state.season,
@@ -2125,8 +2141,7 @@ export const playMatch = (
     tournamentMatch?.id ?? state.activeEventId ?? 'open',
   ].join(':'))
   const opponentRng = mulberry32(fixtureSeed)
-
-  const opponent = tournamentOpponent
+  const generated = tournamentOpponent
     ? {
         name: tournamentOpponent.name,
         rating: tournamentOpponent.rating,
@@ -2134,6 +2149,61 @@ export const playMatch = (
         roster: tournamentOpponent.roster,
       }
     : generateOpponent(state, effectiveMode, opponentRng)
+  const opponent = {
+    name: generated.name,
+    rating: generated.rating,
+    teamId: generated.teamId ?? null,
+    roster: generated.roster ?? [],
+  }
+
+  return {
+    event,
+    effectiveMode,
+    isPractice,
+    preparedRun,
+    tournamentMatch,
+    opponent,
+    fixtureSeed,
+  }
+}
+
+export const prepareMatchFixture = (
+  state: GameState,
+  mode: MatchMode,
+  tactic: TacticalPlan = 'balanced',
+): MatchFixture | null => {
+  const gate = canPlayMatch(state, mode)
+  if (!gate.ok) return null
+  const context = prepareMatchContext(state, mode)
+  return {
+    id: 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, ''),
+    mode: context.effectiveMode,
+    tactic,
+    opponent: context.opponent.name,
+    opponentRating: context.opponent.rating,
+    opponentTeamId: context.opponent.teamId,
+    opponentRoster: context.opponent.roster,
+  }
+}
+
+export const playMatch = (
+  state: GameState,
+  mode: MatchMode,
+  tactic: TacticalPlan,
+  selectedMaps: string[] = [],
+): GameState => {
+  const gate = canPlayMatch(state, mode)
+  if (!gate.ok) return state
+
+  const {
+    event,
+    effectiveMode,
+    isPractice,
+    preparedRun,
+    tournamentMatch,
+    opponent,
+    fixtureSeed,
+  } = prepareMatchContext(state, mode)
 
   // The fixture must not change because the manager picked another tactic.
   // Outcome randomness may change, opponent identity may not.

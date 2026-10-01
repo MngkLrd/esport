@@ -163,12 +163,20 @@ function MatchStoryPanel({ result }: { result: MatchResult }) {
                 {mapStory.tags.slice(0, 4).map((tag) => <span key={tag}>{STORY_TAG_LABELS[tag]}</span>)}
               </div>
               <p>{mapStory.explanation}</p>
-              <small>{mapStory.turningPoint}</small>
+              <small>
+                {mapStory.turningPoint}
+                {(mapStory.opponentFactors?.adaptation ?? 0) >= .5
+                  ? ' · OPP ADAPT ' + mapStory.opponentFactors!.adaptation
+                  : ''}
+              </small>
               <div className="match-story-factors">
-                <span><i style={{ width: mapStory.factors.tactics + '%' }} /><b>TACTICS</b><em>{mapStory.factors.tactics}</em></span>
-                <span><i style={{ width: mapStory.factors.preparation + '%' }} /><b>PREP</b><em>{mapStory.factors.preparation}</em></span>
-                <span><i style={{ width: mapStory.factors.communication + '%' }} /><b>COMMS</b><em>{mapStory.factors.communication}</em></span>
-                <span><i style={{ width: mapStory.factors.fatigue + '%' }} /><b>ENERGY</b><em>{mapStory.factors.fatigue}</em></span>
+                <span><i style={{ width: mapStory.factors.tactics + '%' }} /><b>TACTICS</b><em>{mapStory.factors.tactics}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.tactics : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.preparation + '%' }} /><b>PREP</b><em>{mapStory.factors.preparation}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.preparation : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.communication + '%' }} /><b>COMMS</b><em>{mapStory.factors.communication}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.communication : ''}</em></span>
+                <span><i style={{ width: mapStory.factors.fatigue + '%' }} /><b>ENERGY</b><em>{mapStory.factors.fatigue}{mapStory.opponentFactors ? ' / ' + mapStory.opponentFactors.fatigue : ''}</em></span>
+                {mapStory.factors.mapFit != null && (
+                  <span><i style={{ width: mapStory.factors.mapFit + '%' }} /><b>MAP FIT</b><em>{mapStory.factors.mapFit}{mapStory.opponentFactors?.mapFit != null ? ' / ' + mapStory.opponentFactors.mapFit : ''}</em></span>
+                )}
               </div>
             </article>
           )

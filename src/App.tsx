@@ -354,6 +354,7 @@ function App() {
   )
   const [progressToast, setProgressToast] = useState<{ title: string; reward: string } | null>(null)
   const [timeAdvance, setTimeAdvance] = useState<TimeAdvanceTransition | null>(null)
+  const [saveSignal, setSaveSignal] = useState<{ revision: number; status: 'saved' | 'error' }>({ revision: 0, status: 'saved' })
   const completedObjectivesRef = useRef<Set<string> | null>(null)
 
   const starters = useMemo(() => getStartingFive(state.roster, state.startingFive), [state.roster, state.startingFive])
@@ -391,7 +392,11 @@ function App() {
   )
 
   useEffect(() => {
-    saveRepository.save(state)
+    const saved = saveRepository.save(state)
+    setSaveSignal((current) => ({
+      revision: current.revision + 1,
+      status: saved ? 'saved' : 'error',
+    }))
   }, [state])
 
   useEffect(() => {
@@ -871,6 +876,7 @@ function App() {
           <RosterBoard
             state={state}
             setState={setState}
+            saveSignal={saveSignal}
             onOpenPlayer={setSelectedPlayer}
             onOpenScout={() => openTab('Scout')}
           />

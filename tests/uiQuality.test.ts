@@ -13,6 +13,7 @@ const playerIdentity = read('src/PlayerIdentity.tsx')
 const tournament = read('src/TournamentHub.tsx')
 const world = read('src/WorldMap.tsx')
 const lobby = read('src/MatchLobby.tsx')
+const radar = read('src/MatchRadar.tsx')
 const packs = read('src/PacksView.tsx')
 
 describe('2026 UI quality pass', () => {
@@ -31,6 +32,7 @@ describe('2026 UI quality pass', () => {
     expect(simCss).not.toContain('#091027')
     expect(simCss).not.toContain('#0e1731')
     expect(simCss).not.toContain('rgba(96,69,214,.12)')
+    expect(simCss).not.toContain('background:rgba(12,18,43,.78)')
     expect(visual).toContain('Dark-theme contrast guard for interactive states.')
     expect(visual).toMatch(/:disabled\{[\s\S]*?color:var\(--ui-muted\)!important;/)
     expect(visual).toMatch(/:focus-visible\{[\s\S]*?outline:2px solid var\(--ui-accent\)/)
@@ -42,6 +44,8 @@ describe('2026 UI quality pass', () => {
     expect(app).toContain('player-profile-stat-grid')
     expect(app).toContain('RENEW CONTRACT')
     expect(app).toContain('DEVELOPMENT FOCUS')
+    expect(app).toContain('RECENT FORM')
+    expect(app).toContain('recentPerformances')
     expect(app).toContain('<TeamBadge name={player.team}')
   })
 
@@ -59,6 +63,8 @@ describe('2026 UI quality pass', () => {
     expect(tournament).toContain('<TeamBadge name={teamName(run, match.teamAId)}')
     expect(lobby).toContain('<TeamBadge name="YOUR CLUB"')
     expect(lobby).toContain('<TeamBadge name={result.opponent}')
+    expect(radar).toContain('<TeamBadge name={result.opponent} size="sm" />')
+    expect(radar).toContain('className="match-radar-score-team away"')
     expect(app).toContain('className="fifa-current-match-teams"')
     expect(app).toContain('<TeamBadge name={bracketOpponent?.name')
   })
@@ -75,12 +81,25 @@ describe('2026 UI quality pass', () => {
     expect(news).toContain('YOUR CLUB PROFILE')
   })
 
-  it('opens editorial items as article pages instead of redirecting to World', () => {
+  it('opens every news item as an article before optional contextual navigation', () => {
     expect(news).toContain("type PortalView = 'inbox' | 'feed' | 'news' | 'article'")
     expect(news).toContain('className="newsroom-article-page"')
     expect(news).toContain('setSelectedStory(story)')
+    expect(news).toContain('setSelectedClubItem(item)')
     expect(news).toContain("setView('article')")
-    expect(news).not.toContain('onNavigate(storyTarget(story))')
+    expect(news).toContain('className="newsroom-article-actions"')
+    expect(news).toContain('ПЕРЕЙТИ К РЕШЕНИЮ')
+    const handlerStart = news.indexOf('const openClubItem')
+    const handlerEnd = news.indexOf('const openStory', handlerStart)
+    expect(news.slice(handlerStart, handlerEnd)).not.toContain('onNavigate(')
+  })
+
+  it('covers newly added tactics, match story and live simulation states', () => {
+    expect(lobby).toContain('className="match-lobby-tactics"')
+    expect(lobby).toContain('className="match-story-panel"')
+    expect(simCss).toContain('.match-lobby-tactics button.is-active')
+    expect(simCss).toContain('.match-story-maps>article')
+    expect(simCss).toContain('.match-radar-score-team')
   })
 
   it('keeps tournament visuals in one shared graphite system', () => {

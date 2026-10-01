@@ -8567,3 +8567,40 @@ body{
 .match-story-factors span{
   min-height:27px;
 }
+
+
+/* Planner inspector uses the shared player identity primitive. */
+.sim-planner-inspector-main{
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:5px!important;
+}
+.sim-planner-inspector-identity{
+  width:100%;
+}
+.sim-planner-inspector-identity .player-identity-photo{
+  --player-id-size:46px;
+}
+.sim-planner-inspector-identity .player-identity-copy>strong{
+  font-size:14px;
+}
+.sim-planner-inspector-identity .player-identity-copy>small,
+.sim-planner-inspector-identity .player-identity-copy>em{
+  font-size:9px;
+}
+.sim-planner-inspector-identity .player-identity-trailing button{
+  min-height:30px;
+  padding:0 8px;
+  border:0;
+  background:rgba(255,255,255,.03);
+  color:var(--ui-muted);
+  cursor:pointer;
+  font:900 9px/1 Arial,sans-serif;
+}
+.sim-planner-inspector-identity .player-identity-trailing button:hover{
+  background:rgb(var(--ui-accent-rgb) / .06);
+  color:var(--ui-text);
+}
+.sim-planner-inspector-main>.source-chip{
+  justify-self:start;
+  margin-left:55px;
+}

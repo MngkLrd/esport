@@ -454,6 +454,12 @@ function SquadPlanner({
           ))}
         </div>
 
+        <div className="sim-planner-toolbar-actions">
+          {horizon > 0 && <button onClick={copyPreviousPlan}>КОПИРОВАТЬ S+{horizon - 1}</button>}
+          <button onClick={undoLastPlannerChange} disabled={!undoPlanner}>ОТМЕНИТЬ</button>
+          <span className={'sim-planner-save-state ' + saveIndicator}>{saveIndicator === 'saving' ? 'СОХРАНЕНИЕ…' : 'СОХРАНЕНО'}</span>
+        </div>
+
         <div className="sim-planner-summary" aria-label="Фильтры проблем состава">
           <button className={(summaryFilter === 'risk' ? 'active ' : '') + (riskCount ? 'risk' : '')} onClick={() => setSummaryFilter(summaryFilter === 'risk' ? 'all' : 'risk')}>
             <b>{riskCount}</b><span>РИСК</span>
@@ -468,6 +474,21 @@ function SquadPlanner({
             <b>{conflictCount}</b><span>КОНФЛИКТЫ</span>
           </button>
         </div>
+      </div>
+
+      <div className="sim-planner-mobile-roles" aria-label="Роли состава">
+        {LINEUP_SLOTS.map((role) => {
+          const analysis = roleAnalysis(role)
+          return <button key={role} className={(selectedRole === role ? 'active ' : '') + 'status-' + analysis.status} onClick={() => setSelectedRole(role)}>{ROLE_LABELS_RU[role]}</button>
+        })}
+      </div>
+
+      <div className="sim-planner-next-action">
+        <div>
+          <span>СЛЕДУЮЩЕЕ ДЕЙСТВИЕ</span>
+          <b>{urgentLabel}</b>
+        </div>
+        <button onClick={runUrgentAction}>ПЕРЕЙТИ <span>→</span></button>
       </div>
 
       <div className="sim-planner-workspace">
@@ -504,7 +525,13 @@ function SquadPlanner({
                       <span>{ROLE_LABELS_RU[role]}</span>
                       <small><i>{statusIcon(analysis.status)}</i> {statusLabel(analysis.status)} · {analysis.manual ? 'РУЧНОЙ' : 'АВТОПЛАН'}</small>
                     </div>
-                    <b>{analysis.quality || '—'}</b>
+                    <div className="sim-planner-lane-head-meta">
+                      {horizon > 0 && (() => {
+                        const diff = roleDiff(role)
+                        return <small className="sim-planner-diff-chip">{diff.added > 0 ? '+' + diff.added : '0'} / {diff.removed > 0 ? '−' + diff.removed : '0'}</small>
+                      })()}
+                      <b>{analysis.quality || '—'}</b>
+                    </div>
                   </header>
 
                   <div className="sim-planner-depth">
@@ -550,7 +577,7 @@ function SquadPlanner({
                             <b>#{index + 1}</b>
                             <span>{index === 0 ? 'ОСНОВА' : index === 1 ? 'РОТАЦИЯ' : 'РЕЗЕРВ'}</span>
                           </div>
-                          <button className="sim-planner-player-main" onClick={(event) => { event.stopPropagation(); onOpenPlayer(player) }}>
+                          <button className="sim-planner-player-main" onClick={(event) => { event.stopPropagation(); setSelectedRole(role); setInspectedKey(entry.key) }}>
                             <div className="sim-planner-portrait-stage">
                               <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} draggable={false} />
                             </div>
@@ -572,6 +599,7 @@ function SquadPlanner({
                                 : entry.source === 'club'
                                   ? <span>{player.contractWeeks} НЕД.</span>
                                   : <span>{entry.source === 'target' ? 'ТРАНСФЕР' : 'КАРТА'}</span>}
+                            {horizon > 0 && roleDiff(role).addedKeys.has(entry.key) && <span className="good">NEW</span>}
                             {conflicts.length > 1 && index === 0 && (
                               <button
                                 className="sim-planner-conflict-chip"
@@ -585,6 +613,13 @@ function SquadPlanner({
                               </button>
                             )}
                           </div>
+                          {placementSlot?.role === role && placementSlot.index === index && selectedCandidate && selectedCandidate.key !== entry.key && (
+                            <div className="sim-planner-slot-preview">
+                              <span>ПРЕВЬЮ ЗАМЕНЫ</span>
+                              <b>{selectedCandidate.player.alias}</b>
+                              <small>{projectedOverall(selectedCandidate.player)} OVR · {lineupFitScore(selectedCandidate.player, role)} FIT</small>
+                            </div>
+                          )}
                           <div className="sim-planner-slot-actions">
                             <button onClick={(event) => { event.stopPropagation(); requestPlacement(role, index) }}>ЗАМЕНИТЬ</button>
                             <button className="icon-action" onClick={(event) => { event.stopPropagation(); removeDepth(role, entry.key) }} aria-label={'Убрать ' + player.alias + ' из плана'}>×</button>
@@ -615,11 +650,41 @@ function SquadPlanner({
                 : 'Позиция требует кадрового решения.'}</p>
           </div>
 
+          {inspectedEntry && (
+            <div className="sim-planner-inspector">
+              <div className="sim-planner-inspector-main">
+                <div className="sim-planner-inspector-portrait">
+                  <PlayerPortrait alias={inspectedEntry.player.alias} playerId={inspectedEntry.player.profileId} alt={inspectedEntry.player.alias} draggable={false} />
+                </div>
+                <div>
+                  <small>ВЫБРАННЫЙ ИГРОК</small>
+                  <h3>{inspectedEntry.player.alias}</h3>
+                  <span>{plannerSourceLabel[inspectedEntry.source]} · {inspectedEntry.player.role} · {inspectedEntry.player.age ?? '—'} лет</span>
+                </div>
+                <button onClick={() => onOpenPlayer(inspectedEntry.player)}>ПРОФИЛЬ →</button>
+              </div>
+              <div className="sim-planner-inspector-stats">
+                <span><small>OVR</small><b>{projectedOverall(inspectedEntry.player)}</b></span>
+                <span><small>POT</small><b>{inspectedEntry.player.potential}</b></span>
+                <span><small>AIM</small><b>{inspectedEntry.player.aim}</b></span>
+                <span><small>SENSE</small><b>{inspectedEntry.player.gameSense}</b></span>
+                <span><small>UTILITY</small><b>{inspectedEntry.player.utility}</b></span>
+                <span><small>КОНТРАКТ</small><b>{inspectedEntry.source === 'club' ? inspectedEntry.player.contractWeeks + ' нед.' : '—'}</b></span>
+              </div>
+            </div>
+          )}
+
           <div className="sim-planner-analysis-metrics">
             <span><small>ГЛУБИНА</small><b>{selectedAnalysis.securedDepth.length}/3</b></span>
             <span><small>OVR #1</small><b>{selectedAnalysis.quality || '—'}</b></span>
             <span><small>FIT #1</small><b>{selectedAnalysis.fit || '—'}</b></span>
             <span><small>ЦЕЛИ</small><b>{selectedAnalysis.targets}</b></span>
+          </div>
+
+          <div className="sim-planner-finance">
+            <span><small>PAYROLL РОЛИ</small><b>€{selectedPayroll.toLocaleString('ru-RU')} / нед.</b></span>
+            <span className={payrollDelta > 0 ? 'down' : payrollDelta < 0 ? 'up' : ''}><small>К {previousHorizon === null ? 'ТЕКУЩЕМУ' : 'S+' + previousHorizon}</small><b>{payrollDelta > 0 ? '+' : ''}€{payrollDelta.toLocaleString('ru-RU')}</b></span>
+            {horizon > 0 && <span><small>ИЗМЕНЕНИЯ</small><b>+{selectedDiff.added} / −{selectedDiff.removed}</b></span>}
           </div>
 
           <div className="sim-planner-diagnostics">
@@ -708,11 +773,12 @@ function SquadPlanner({
                   role="option"
                   aria-selected={selectedCandidate?.key === entry.key}
                   tabIndex={0}
-                  onClick={() => setSelectedCandidateKey(entry.key)}
+                  onClick={() => { setSelectedCandidateKey(entry.key); setInspectedKey(entry.key) }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
                       setSelectedCandidateKey(entry.key)
+                      setInspectedKey(entry.key)
                     }
                   }}
                 >

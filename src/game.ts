@@ -208,6 +208,19 @@ export interface GameState {
   packs: PackState
 }
 
+export const worldEventTouchesPlayerClub = (
+  state: Pick<GameState, 'roster'>,
+  event: WorldHistoryEvent,
+) => {
+  const playerClubActorIds = new Set<string>([
+    PLAYER_CLUB_WORLD_ID,
+    ...state.roster.flatMap((player) =>
+      [player.id, player.playerKey].filter((value): value is string => Boolean(value)),
+    ),
+  ])
+  return event.actorIds.some((actorId) => playerClubActorIds.has(actorId))
+}
+
 export const DEFAULT_SCOUT_BRIEF: ScoutBrief = {
   role: 'Any',
   maxSalary: 170,
@@ -1240,15 +1253,8 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
         ? 'match'
         : 'media'
 
-  const playerClubActorIds = new Set<string>([
-    PLAYER_CLUB_WORLD_ID,
-    ...state.roster.flatMap((player) => [player.id, player.playerKey].filter((value): value is string => Boolean(value))),
-  ])
-  const worldEventTouchesClub = (event: WorldHistoryEvent) =>
-    event.actorIds.some((actorId) => playerClubActorIds.has(actorId))
-
   const ecologyNews: NewsItem[] = worldEvents
-    .filter(worldEventTouchesClub)
+    .filter((event) => worldEventTouchesPlayerClub(state, event))
     .map((event) => ({
       id: 'ecology-' + event.id,
       week: next.week,

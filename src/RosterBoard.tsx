@@ -29,6 +29,370 @@ const ROLE_LABELS: Record<LineupSlot, string> = {
   IGL: 'IGL',
 }
 
+const ROLE_LABELS_RU: Record<LineupSlot, string> = {
+  Entry: 'ЭНТРИ',
+  AWP: 'AWP',
+  Rifler: 'РИФЛЕР',
+  Support: 'САППОРТ',
+  IGL: 'IGL',
+}
+
+type PlannerHorizon = 0 | 1 | 2
+type PlannerSource = 'club' | 'collection' | 'target'
+type PlannerOrder = Record<string, string[]>
+
+type PlannerCandidate = {
+  key: string
+  player: Player
+  source: PlannerSource
+}
+
+const plannerSourceLabel: Record<PlannerSource, string> = {
+  club: 'КЛУБ',
+  collection: 'КОЛЛЕКЦИЯ',
+  target: 'ЦЕЛЬ',
+}
+
+const plannerStorageKey = (saveId: string) => 'esport:squad-planner:' + saveId
+
+const loadPlannerOrder = (saveId: string): PlannerOrder => {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(plannerStorageKey(saveId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed as PlannerOrder : {}
+  } catch {
+    return {}
+  }
+}
+
+function SquadPlanner({
+  state,
+  onOpenPlayer,
+  onOpenScout,
+}: {
+  state: GameState
+  onOpenPlayer: (player: Player) => void
+  onOpenScout: () => void
+}) {
+  const [horizon, setHorizon] = useState<PlannerHorizon>(0)
+  const [selectedRole, setSelectedRole] = useState<LineupSlot>('AWP')
+  const [orders, setOrders] = useState<PlannerOrder>(() => loadPlannerOrder(state.saveId))
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(plannerStorageKey(state.saveId), JSON.stringify(orders))
+  }, [orders, state.saveId])
+
+  useEffect(() => {
+    setOrders(loadPlannerOrder(state.saveId))
+  }, [state.saveId])
+
+  const candidates = useMemo<PlannerCandidate[]>(() => {
+    const rows: PlannerCandidate[] = []
+    const seen = new Set<string>()
+
+    for (const player of state.roster) {
+      const alias = player.alias.toLocaleLowerCase('en-US')
+      seen.add(alias)
+      rows.push({ key: 'club:' + player.id, player, source: 'club' })
+    }
+
+    for (const player of state.prospects) {
+      const alias = player.alias.toLocaleLowerCase('en-US')
+      if (seen.has(alias)) continue
+      seen.add(alias)
+      rows.push({ key: 'target:' + player.id, player, source: 'target' })
+    }
+
+    const bestOwnedByAlias = new Map<string, PackCard>()
+    for (const card of state.packs.inventory) {
+      const alias = card.alias.toLocaleLowerCase('en-US')
+      if (seen.has(alias)) continue
+      const previous = bestOwnedByAlias.get(alias)
+      if (!previous || card.power > previous.power) bestOwnedByAlias.set(alias, card)
+    }
+
+    let previewIndex = 4000
+    for (const card of bestOwnedByAlias.values()) {
+      const player = playerFromPackCard(card, previewIndex++)
+      rows.push({ key: 'collection:' + card.id, player, source: 'collection' })
+    }
+
+    return rows
+  }, [state.roster, state.prospects, state.packs.inventory])
+
+  const weeksAhead = horizon === 0
+    ? 0
+    : Math.max(1, state.seasonLength - state.week + 1) + (horizon - 1) * state.seasonLength
+
+  const projectedOverall = (player: Player) => {
+    const current = overall(player)
+    if (horizon === 0) return current
+    const age = player.age ?? 25
+    const growthRoom = Math.max(0, player.potential - current)
+    const youthGrowth = age <= 22 ? Math.min(growthRoom, 3 * horizon) : age <= 25 ? Math.min(growthRoom, 2 * horizon) : age <= 28 ? Math.min(growthRoom, horizon) : 0
+    const decline = age >= 31 ? Math.max(1, age - 29) * horizon : age >= 29 ? horizon : 0
+    return Math.max(45, Math.min(99, current + youthGrowth - decline))
+  }
+
+  const plannerScore = (entry: PlannerCandidate, role: LineupSlot) => {
+    const current = overall(entry.player)
+    const projection = projectedOverall(entry.player) - current
+    const sourceBonus = entry.source === 'club' ? 2 : entry.source === 'target' ? 1 : 0
+    return lineupFitScore(entry.player, role) + projection + sourceBonus
+  }
+
+  const sortedForRole = (role: LineupSlot) =>
+    [...candidates].sort((a, b) =>
+      plannerScore(b, role) - plannerScore(a, role) ||
+      projectedOverall(b.player) - projectedOverall(a.player) ||
+      a.player.alias.localeCompare(b.player.alias, 'en-US'),
+    )
+
+  const orderKey = (role: LineupSlot) => horizon + ':' + role
+
+  const depthForRole = (role: LineupSlot) => {
+    const sorted = sortedForRole(role)
+    const saved = orders[orderKey(role)]
+    if (!saved) return sorted.slice(0, 3)
+
+    const byKey = new Map(sorted.map((entry) => [entry.key, entry]))
+    return saved.map((key) => byKey.get(key)).filter((entry): entry is PlannerCandidate => Boolean(entry)).slice(0, 3)
+  }
+
+  const setDepth = (role: LineupSlot, entries: PlannerCandidate[]) => {
+    setOrders((current) => ({ ...current, [orderKey(role)]: entries.map((entry) => entry.key).slice(0, 3) }))
+  }
+
+  const moveDepth = (role: LineupSlot, index: number, delta: -1 | 1) => {
+    const depth = depthForRole(role)
+    const nextIndex = index + delta
+    if (nextIndex < 0 || nextIndex >= depth.length) return
+    const next = [...depth]
+    ;[next[index], next[nextIndex]] = [next[nextIndex], next[index]]
+    setDepth(role, next)
+  }
+
+  const removeDepth = (role: LineupSlot, key: string) => {
+    setDepth(role, depthForRole(role).filter((entry) => entry.key !== key))
+  }
+
+  const addDepth = (role: LineupSlot, entry: PlannerCandidate) => {
+    const current = depthForRole(role)
+    if (current.some((item) => item.key === entry.key) || current.length >= 3) return
+    setDepth(role, [...current, entry])
+  }
+
+  const resetRole = (role: LineupSlot) => {
+    setOrders((current) => {
+      const next = { ...current }
+      delete next[orderKey(role)]
+      return next
+    })
+  }
+
+  const roleAnalysis = (role: LineupSlot) => {
+    const depth = depthForRole(role)
+    const primary = depth[0]
+    const exact = depth.filter((entry) => entry.player.role === role).length
+    const expiring = depth.filter((entry) => entry.source === 'club' && entry.player.contractWeeks <= weeksAhead + 2).length
+    const quality = primary ? projectedOverall(primary.player) : 0
+    const fit = primary ? lineupFitScore(primary.player, role) : 0
+    const targets = depth.filter((entry) => entry.source === 'target').length
+
+    let status: 'good' | 'watch' | 'risk' = 'good'
+    if (depth.length < 2 || quality < 68 || fit < 66) status = 'risk'
+    else if (depth.length < 3 || expiring > 0 || exact === 0 || quality < 76) status = 'watch'
+
+    return { depth, primary, exact, expiring, quality, fit, targets, status }
+  }
+
+  const analyses = LINEUP_SLOTS.map((role) => ({ role, ...roleAnalysis(role) }))
+  const riskCount = analyses.filter((item) => item.status === 'risk').length
+  const watchCount = analyses.filter((item) => item.status === 'watch').length
+  const targetCount = new Set(analyses.flatMap((item) => item.depth.filter((entry) => entry.source === 'target').map((entry) => entry.key))).size
+  const expiringCount = analyses.reduce((sum, item) => sum + item.expiring, 0)
+  const selectedAnalysis = roleAnalysis(selectedRole)
+  const selectedDepthKeys = new Set(selectedAnalysis.depth.map((entry) => entry.key))
+  const available = sortedForRole(selectedRole).filter((entry) => !selectedDepthKeys.has(entry.key)).slice(0, 7)
+
+  const horizonLabel = horizon === 0 ? 'СЕЙЧАС' : 'СЕЗОН ' + (state.season + horizon)
+  const statusLabel = (status: 'good' | 'watch' | 'risk') => status === 'good' ? 'ГОТОВО' : status === 'watch' ? 'ВНИМАНИЕ' : 'РИСК'
+
+  return (
+    <section className="sim-squad-planner">
+      <div className="sim-planner-toolbar">
+        <div className="sim-planner-horizons">
+          {([0, 1, 2] as PlannerHorizon[]).map((value) => (
+            <button key={value} className={horizon === value ? 'active' : ''} onClick={() => setHorizon(value)}>
+              {value === 0 ? 'СЕЙЧАС' : 'СЕЗОН ' + (state.season + value)}
+              <small>{value === 0 ? 'активный состав' : value === 1 ? 'следующий цикл' : 'долгий горизонт'}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="sim-planner-summary">
+          <span className={riskCount ? 'risk' : ''}><b>{riskCount}</b> КРИТИЧЕСКИХ</span>
+          <span className={watchCount ? 'watch' : ''}><b>{watchCount}</b> ПОД НАБЛЮДЕНИЕМ</span>
+          <span><b>{targetCount}</b> ЦЕЛЕЙ</span>
+          <span className={expiringCount ? 'watch' : ''}><b>{expiringCount}</b> РИСК КОНТРАКТА</span>
+        </div>
+      </div>
+
+      <div className="sim-planner-workspace">
+        <section className="sim-planner-board">
+          <div className="sim-planner-board-head">
+            <div>
+              <span>ГЛУБИНА СОСТАВА · {horizonLabel}</span>
+              <strong>План по пяти игровым ролям</strong>
+            </div>
+            <small>1-й выбор → ротация → резерв. Порядок здесь не меняет реальный стартовый состав.</small>
+          </div>
+
+          <div className="sim-planner-lanes">
+            {LINEUP_SLOTS.map((role) => {
+              const analysis = roleAnalysis(role)
+              return (
+                <article
+                  key={role}
+                  className={'sim-planner-lane status-' + analysis.status + (selectedRole === role ? ' active' : '')}
+                  onClick={() => setSelectedRole(role)}
+                >
+                  <header>
+                    <div>
+                      <span>{ROLE_LABELS_RU[role]}</span>
+                      <small>{statusLabel(analysis.status)}</small>
+                    </div>
+                    <b>{analysis.quality || '—'}</b>
+                  </header>
+
+                  <div className="sim-planner-depth">
+                    {[0, 1, 2].map((index) => {
+                      const entry = analysis.depth[index]
+                      if (!entry) {
+                        return (
+                          <button key={index} className="sim-planner-empty-slot" onClick={(event) => { event.stopPropagation(); setSelectedRole(role) }}>
+                            <i>{index + 1}</i>
+                            <strong>ПУСТО</strong>
+                            <small>добавить кандидата</small>
+                          </button>
+                        )
+                      }
+
+                      const player = entry.player
+                      const contractRisk = entry.source === 'club' && player.contractWeeks <= weeksAhead + 2
+                      const projected = projectedOverall(player)
+                      const fit = lineupFitScore(player, role)
+                      return (
+                        <div className={'sim-planner-player source-' + entry.source + (contractRisk ? ' contract-risk' : '')} key={entry.key}>
+                          <div className="sim-planner-rank">{index + 1}</div>
+                          <button className="sim-planner-player-main" onClick={(event) => { event.stopPropagation(); onOpenPlayer(player) }}>
+                            <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} draggable={false} />
+                            <span>
+                              <b>{player.alias}</b>
+                              <small>{plannerSourceLabel[entry.source]} · {player.role}</small>
+                            </span>
+                            <strong>{projected}</strong>
+                          </button>
+                          <div className="sim-planner-player-meta">
+                            <span className={fit >= 76 ? 'good' : fit >= 68 ? 'watch' : 'risk'}>{fit} FIT</span>
+                            {contractRisk
+                              ? <span className="risk">КОНТРАКТ</span>
+                              : entry.source === 'club'
+                                ? <span>{player.contractWeeks} НЕД.</span>
+                                : <span>{entry.source === 'target' ? 'ТРАНСФЕР' : 'КАРТА'}</span>}
+                          </div>
+                          <div className="sim-planner-order-actions">
+                            <button disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, -1) }} aria-label="Move up">↑</button>
+                            <button disabled={index >= analysis.depth.length - 1} onClick={(event) => { event.stopPropagation(); moveDepth(role, index, 1) }} aria-label="Move down">↓</button>
+                            <button onClick={(event) => { event.stopPropagation(); removeDepth(role, entry.key) }} aria-label="Remove">×</button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <footer>
+                    <span><b>{analysis.depth.length}</b>/3 ГЛУБИНА</span>
+                    <span><b>{analysis.exact}</b> ПРОФИЛЬНЫХ</span>
+                    <button onClick={(event) => { event.stopPropagation(); resetRole(role) }}>СБРОС</button>
+                  </footer>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+
+        <aside className={'sim-planner-analysis status-' + selectedAnalysis.status}>
+          <div className="sim-planner-analysis-head">
+            <span>АНАЛИЗ ПОЗИЦИИ</span>
+            <h2>{ROLE_LABELS_RU[selectedRole]}</h2>
+            <p>{selectedAnalysis.status === 'good'
+              ? 'Позиция закрыта по качеству и глубине.'
+              : selectedAnalysis.status === 'watch'
+                ? 'Состав рабочий, но есть риск по глубине, качеству или контрактам.'
+                : 'Позиция требует кадрового решения.'}</p>
+          </div>
+
+          <div className="sim-planner-analysis-metrics">
+            <span><small>ГЛУБИНА</small><b>{selectedAnalysis.depth.length}/3</b></span>
+            <span><small>КАЧЕСТВО #1</small><b>{selectedAnalysis.quality || '—'}</b></span>
+            <span><small>FIT #1</small><b>{selectedAnalysis.fit || '—'}</b></span>
+            <span><small>КОНТРАКТ-РИСК</small><b>{selectedAnalysis.expiring}</b></span>
+          </div>
+
+          <div className="sim-planner-diagnostics">
+            <span>ДИАГНОСТИКА</span>
+            <ul>
+              {selectedAnalysis.depth.length < 3 && <li className="watch">Не хватает {3 - selectedAnalysis.depth.length} игрок(а) до полной глубины.</li>}
+              {selectedAnalysis.exact === 0 && <li className="risk">Нет профильного игрока под роль {ROLE_LABELS[selectedRole]}.</li>}
+              {selectedAnalysis.expiring > 0 && <li className="risk">{selectedAnalysis.expiring} игрок(а) могут выпасть из плана по контракту.</li>}
+              {selectedAnalysis.quality > 0 && selectedAnalysis.quality < 76 && <li className="watch">Первый выбор ниже целевого уровня 76 OVR.</li>}
+              {selectedAnalysis.depth.length === 3 && selectedAnalysis.exact > 0 && selectedAnalysis.expiring === 0 && selectedAnalysis.quality >= 76 && <li className="good">Позиция сбалансирована. Срочный трансфер не требуется.</li>}
+            </ul>
+          </div>
+
+          <div className="sim-planner-candidate-head">
+            <div>
+              <span>КАНДИДАТЫ</span>
+              <small>Лучшие варианты для {ROLE_LABELS[selectedRole]}</small>
+            </div>
+            <button onClick={onOpenScout}>ТРАНСФЕРЫ →</button>
+          </div>
+
+          <div className="sim-planner-candidate-list">
+            {available.map((entry) => {
+              const fit = lineupFitScore(entry.player, selectedRole)
+              return (
+                <article key={entry.key}>
+                  <PlayerPortrait alias={entry.player.alias} playerId={entry.player.profileId} alt={entry.player.alias} draggable={false} />
+                  <span>
+                    <b>{entry.player.alias}</b>
+                    <small>{plannerSourceLabel[entry.source]} · {fit} FIT</small>
+                  </span>
+                  <strong>{projectedOverall(entry.player)}</strong>
+                  <button
+                    disabled={selectedAnalysis.depth.length >= 3}
+                    onClick={() => addDepth(selectedRole, entry)}
+                    aria-label={'Add ' + entry.player.alias}
+                  >+</button>
+                </article>
+              )
+            })}
+            {available.length === 0 && <div className="sim-planner-no-candidates">НЕТ ДОПОЛНИТЕЛЬНЫХ КАНДИДАТОВ</div>}
+          </div>
+
+          <button className="sim-planner-scout-action" onClick={onOpenScout}>
+            НАЙТИ УСИЛЕНИЕ ПОД {ROLE_LABELS[selectedRole]} <span>→</span>
+          </button>
+        </aside>
+      </div>
+    </section>
+  )
+}
+
 type Candidate = {
   key: string
   player: Player
@@ -146,6 +510,7 @@ export function RosterBoard({
   const [poolSource, setPoolSource] = useState<PoolSource>('all')
   const [poolSort, setPoolSort] = useState<PoolSort>('ovr')
   const [selectedPoolKey, setSelectedPoolKey] = useState<string | null>(null)
+  const [rosterView, setRosterView] = useState<'squad' | 'planner'>('squad')
 
   useEffect(() => {
     if (!pickerSlot) return
@@ -311,12 +676,21 @@ export function RosterBoard({
     <section className="sim-screen sim-roster sim-roster-v2">
       <div className="sim-screen-head sim-roster-head">
         <div>
-          <span className="eyebrow">CLUB OPERATIONS · ACTIVE LINEUP</span>
-          <h1>SQUAD</h1>
+          <span className="eyebrow">{rosterView === 'planner' ? 'CLUB OPERATIONS · SQUAD PLANNING' : 'CLUB OPERATIONS · ACTIVE LINEUP'}</span>
+          <h1>{rosterView === 'planner' ? 'SQUAD PLANNER' : 'SQUAD'}</h1>
         </div>
         <button className="sim-roster-market-action" onClick={onOpenScout}>TRANSFER MARKET <span>→</span></button>
       </div>
 
+      <div className="sim-roster-mode-tabs" role="tablist" aria-label="Squad mode">
+        <button className={rosterView === 'squad' ? 'active' : ''} onClick={() => setRosterView('squad')}>СОСТАВ <small>активная пятёрка</small></button>
+        <button className={rosterView === 'planner' ? 'active' : ''} onClick={() => setRosterView('planner')}>ПЛАНИРОВЩИК <small>глубина и будущие решения</small></button>
+      </div>
+
+      {rosterView === 'planner' ? (
+        <SquadPlanner state={state} onOpenPlayer={onOpenPlayer} onOpenScout={onOpenScout} />
+      ) : (
+        <>
       <div className="sim-squad-kpis">
         <div><span>TEAM RATING</span><strong>{rating}</strong><small>{rating >= 70 ? 'CONTENDER' : rating >= 60 ? 'COMPETITIVE' : 'DEVELOPING'}</small></div>
         <div className="chemistry">
@@ -541,6 +915,8 @@ export function RosterBoard({
             </div>
           </section>
         </div>
+      )}
+        </>
       )}
     </section>
   )

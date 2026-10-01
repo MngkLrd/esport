@@ -5,7 +5,7 @@ import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 import { metadataForAlias } from './playerMetadata'
 import { cardStatsForAlias } from './cardStats'
-import { teamVisualLogo } from './visualIdentity'
+import { TeamBadge } from './TeamBadge'
 
 export type LobbyVetoAction = {
   step: number
@@ -127,7 +127,6 @@ export function MatchLobby({
   onContinue?: () => void
 }) {
   const rivals = useMemo(() => opponentPlayers(result), [result])
-  const opponentLogo = teamVisualLogo(result.opponent)
   const [veto, setVeto] = useState<LobbyVetoAction[]>(initialVeto)
   const [focusedMap, setFocusedMap] = useState(
     initialVeto.find((action) => action.type === 'PICK')?.map ?? MAPS[2].name,
@@ -198,9 +197,12 @@ export function MatchLobby({
       <section className={'match-lobby-shell ' + (phase === 'result' ? 'is-result' : 'is-prematch')}>
         <header className="match-lobby-scoreboard">
           <div className="match-lobby-team-title home">
-            <span>YOUR CLUB</span>
-            <strong>{homeRating} OVR</strong>
-            <small>5 / 5 READY</small>
+            <TeamBadge name="YOUR CLUB" size="lg" className="match-lobby-team-logo" />
+            <div className="match-lobby-team-copy">
+              <span>YOUR CLUB</span>
+              <strong>{homeRating} OVR</strong>
+              <small>5 / 5 READY</small>
+            </div>
           </div>
 
           <div className="match-lobby-score-center">
@@ -219,15 +221,7 @@ export function MatchLobby({
               <strong>{awayRating} OVR</strong>
               <small>5 / 5 READY</small>
             </div>
-            {opponentLogo && (
-              <img
-                className="match-lobby-team-logo"
-                src={opponentLogo}
-                alt=""
-                draggable={false}
-                referrerPolicy="no-referrer"
-              />
-            )}
+            <TeamBadge name={result.opponent} size="lg" className="match-lobby-team-logo" />
           </div>
         </header>
 

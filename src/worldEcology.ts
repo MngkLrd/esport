@@ -1119,7 +1119,7 @@ const startCompetition = (
   const existing = new Set<string>()
   const participants = competition.participantTeamIds
     .map((id) => world.teams.find((team) => team.id === id))
-    .filter((team): team is WorldTeam => Boolean(team) && team.active !== false && team.rosterKeys.length >= 5)
+    .filter((team): team is WorldTeam => team != null && team.active !== false && team.rosterKeys.length >= 5)
 
   for (const team of participants) existing.add(team.id)
   if (participants.length < 8) {

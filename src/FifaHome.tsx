@@ -160,7 +160,7 @@ export function FifaHome({
         <button {...tileProps(5)} className="fifa-mode-tile fifa-practice-tile" onClick={() => onOpen('Training')}>
           <div className="fifa-tile-kicker">TRAINING GROUND</div>
           <h2>TRAINING</h2>
-          <p>0 CASH · 0 VRS · +1 сыгранность. Отдельная тренировочная комната, не Matchday.</p>
+          <p>План недели, scrim, map prep, recovery и развитие состава без фарма OVR.</p>
         </button>
       </div>
 

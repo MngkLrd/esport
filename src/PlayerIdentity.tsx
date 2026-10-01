@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { PlayerPortrait } from './PlayerPortrait'
 import { countryFlag } from './playerVisuals'
 
@@ -19,7 +20,7 @@ export function PlayerIdentity({
   role?: string | null
   profileId?: number | null
   size?: 'sm' | 'md' | 'lg'
-  trailing?: React.ReactNode
+  trailing?: ReactNode
   className?: string
 }) {
   return (

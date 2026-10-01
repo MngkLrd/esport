@@ -1124,6 +1124,10 @@ export const mapStyleFit = (skills: MatchSkillProfile, map: string) => {
   )
 }
 
+export const matchDurationHoursForRounds = (rounds: number, maps: number) =>
+  Math.max(1, Math.min(5, Math.ceil((Math.max(0, rounds) * 2 + Math.max(1, maps) * 12) / 60)))
+
+
 const opponentRoleBoost = (
   role: TournamentRosterPlayer['role'],
   stat: 'aim' | 'sense' | 'utility' | 'clutch' | 'leadership',
@@ -2308,9 +2312,11 @@ export const playMatch = (
   }
 
   const won = ourMaps > theirMaps
+  const totalRoundsPlayed = maps.reduce((sum, map) => sum + map.us + map.them, 0)
+  const matchDurationHours = matchDurationHoursForRounds(totalRoundsPlayed, maps.length)
   const matchVrs = matchVrsAward(effectiveMode, event ?? null, won, opponent.rating, baseRating)
   const opponentVrs = !won ? matchVrsBase(effectiveMode, event ?? null) : 0
-  const matchEnd = addGameHours(state.now, 3)
+  const matchEnd = addGameHours(state.now, matchDurationHours)
   let resolvedRun = preparedRun
     ? resolvePlayerTournamentMatch(preparedRun, won, ourMaps, theirMaps)
     : null
@@ -2338,7 +2344,6 @@ export const playMatch = (
   const payroll = 0
   const net = reward
   const fansDelta = isPractice ? 0 : Math.round(tune.fans * (won ? 1 : .25))
-  const totalRoundsPlayed = maps.reduce((sum, map) => sum + map.us + map.them, 0)
   const roundLoad = Math.max(1, Math.round(totalRoundsPlayed / 14))
 
   const storyErrors = new Map<string, number>()

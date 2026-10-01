@@ -10,6 +10,7 @@ import {
   newsBelongsInInbox,
   newsRequiresAction,
   overall,
+  playMatch,
   releasePlayer,
   renewContract,
   restPlayer,
@@ -481,6 +482,8 @@ function App() {
   const [selectedCard, setSelectedCard] = useState<PackCard | null>(null)
   const [transition, setTransition] = useState<{ target: Tab; title: string } | null>(null)
   const [pendingMatch, setPendingMatch] = useState<{
+    sourceState: GameState
+    mode: MatchMode
     nextState: GameState
     result: MatchResult
     returnTab: Tab
@@ -674,32 +677,23 @@ function App() {
   const startPendingSeries = useCallback((maps: string[], veto: LobbyVetoAction[]) => {
     setPendingMatch((current) => {
       if (!current) return null
-      const remappedMaps = current.result.maps.map((map, index) => {
-        const nextMap = maps[index] ?? map.map
-        return {
-          ...map,
-          map: nextMap,
-          story: map.story ? { ...map.story, map: nextMap } : undefined,
-        }
-      })
-      const remappedResult: MatchResult = {
-        ...current.result,
-        maps: remappedMaps,
-        story: current.result.story
-          ? {
-              ...current.result.story,
-              maps: remappedMaps.flatMap((map) => map.story ? [map.story] : []),
-            }
-          : undefined,
-      }
-      const nextState: GameState = {
-        ...current.nextState,
-        history: current.nextState.history.map((entry, index) => index === 0 ? remappedResult : entry),
-      }
+
+      // The lobby veto is authoritative. Re-simulate from the untouched pre-match
+      // state so map preparation, causal rounds, scoreline and post-match effects
+      // are all produced from the maps the player actually selected.
+      const resolvedState = playMatch(
+        current.sourceState,
+        current.mode,
+        current.result.tactic,
+        maps,
+      )
+      const resolvedResult = resolvedState.history[0]
+      if (!resolvedResult || resolvedState === current.sourceState) return current
+
       return {
         ...current,
-        nextState,
-        result: remappedResult,
+        nextState: resolvedState,
+        result: resolvedResult,
         veto,
         stage: 'simulation',
       }
@@ -717,6 +711,8 @@ function App() {
     const match = result.state.history[0]
     if (result.state === state || !match) return
     setPendingMatch({
+      sourceState: state,
+      mode,
       nextState: result.state,
       result: match,
       returnTab: mode === 'practice' ? 'Training' : result.state.activeTournament ? 'Play' : 'HQ',

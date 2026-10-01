@@ -5,7 +5,7 @@ import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEv
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
-import { createTrainingState, normalizeTrainingState, type TrainingState } from './trainingTypes'
+import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, type TrainingMap, type TrainingState } from './trainingTypes'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
 export type LineupSlot = Role
@@ -763,6 +763,7 @@ export const migrateState = (raw: unknown): GameState => {
       startingFive,
       lineupSlots: normalizeLineupSlots(roster, startingFive, parsed.lineupSlots),
       scoutBrief: normalizeScoutBrief(parsed.scoutBrief),
+      training: normalizeTrainingState(parsed.training),
       packs,
     } as GameState
   }
@@ -967,6 +968,26 @@ const tacticalModifier = (active: Player[], tactic: TacticalPlan) => {
     return (structure - 68) * 0.09
   }
   return 0
+}
+
+const trainingMatchModifier = (
+  state: GameState,
+  map: string,
+  opponentTeamId: string | null,
+) => {
+  const training = state.training ?? createTrainingState()
+  const mapPrep = TRAINING_MAPS.includes(map as TrainingMap)
+    ? training.mapPreparation[map as TrainingMap]
+    : 50
+  const knowledge = opponentTeamId ? training.opponentKnowledge[opponentTeamId] ?? 0 : 0
+  const raw =
+    (training.readiness - 55) * 0.035 +
+    (training.tacticalCohesion - 50) * 0.022 +
+    (training.sharpness - 55) * 0.018 +
+    (mapPrep - 50) * 0.028 +
+    (knowledge - 30) * 0.012
+
+  return Math.max(-3.2, Math.min(3.2, raw))
 }
 
 const mapScore = (won: boolean, winProbability: number, rng: () => number): [number, number] => {
@@ -1448,7 +1469,8 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   while (ourMaps < 2 && theirMaps < 2) {
     const map = pick(mapPool.filter((name) => !maps.some((current) => current.map === name)), rng)
     const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
-    const effectiveRating = baseRating + tacticMod + momentum - rolePenalty - mapFatigue
+    const preparationMod = isPractice ? 0 : trainingMatchModifier(state, map, opponent.teamId)
+    const effectiveRating = baseRating + tacticMod + preparationMod + momentum - rolePenalty - mapFatigue
     // OVR difference is the primary competitive signal. Keep some upset room,
     // but make even a 5-10 point gap materially change the series.
     const ratingGap = effectiveRating - opponent.rating
@@ -1612,6 +1634,13 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     clubVrsPoints: state.clubVrsPoints + (isPractice ? 0 : matchVrs + tournamentVrs),
     roster,
     lineupContinuity: clamp(state.lineupContinuity + (isPractice ? 1 : won ? 3 : 1), 0, 100),
+    training: isPractice
+      ? state.training
+      : {
+          ...(state.training ?? createTrainingState()),
+          readiness: clamp((state.training?.readiness ?? 56) - 7),
+          sharpness: clamp((state.training?.sharpness ?? 55) - 3),
+        },
     history: [result, ...state.history].slice(0, 80),
     news: [
       { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail + (result.vrsDelta ? ' · VRS +' + result.vrsDelta : '') },
@@ -1667,6 +1696,14 @@ export const startNextSeason = (state: GameState): GameState => {
     activeTournament: null,
     pendingDecision: null,
     roster,
+    training: {
+      ...(state.training ?? createTrainingState()),
+      readiness: 54,
+      tacticalCohesion: clamp((state.training?.tacticalCohesion ?? 50) * .82 + 8),
+      sharpness: 52,
+      opponentKnowledge: {},
+      sessions: [],
+    },
     news: [{
       id: 'season-start-' + (state.season + 1),
       week: 1,
@@ -1679,28 +1716,64 @@ export const startNextSeason = (state: GameState): GameState => {
 
 export const trainPlayer = (state: GameState, playerId: string): GameState => {
   if (state.staffEnergy < 1 || state.credits < 120) return state
+  const training = state.training ?? createTrainingState()
+  const player = state.roster.find((candidate) => candidate.id === playerId)
+  if (!player) return state
+
+  const currentOverall = overall(player)
+  const development = training.development[playerId] ?? { focus: 'balanced' as const, progress: 0 }
+  const age = player.age ?? 25
+  const headroom = Math.max(0, player.potential - currentOverall)
+  const ageGain = age <= 21 ? 6 : age <= 24 ? 5 : age <= 27 ? 3 : age <= 30 ? 2 : 1
+  const gain = headroom <= 0 ? 0 : Math.max(1, Math.min(ageGain, Math.ceil(headroom / 4)))
+  const threshold =
+    (currentOverall < 70 ? 90 : currentOverall < 80 ? 125 : currentOverall < 88 ? 175 : 240) +
+    Math.max(0, age - 23) * 8
+  const nextProgress = development.progress + gain
+  const earnsPoint = nextProgress >= threshold && currentOverall < player.potential
+
+  const focusKey =
+    development.focus === 'mechanics' ? 'aim'
+      : development.focus === 'game-sense' ? 'gameSense'
+        : development.focus === 'utility' ? 'utility'
+          : development.focus === 'leadership' ? 'leadership'
+            : null
+
+  const skills = [
+    ['aim', player.aim],
+    ['gameSense', player.gameSense],
+    ['utility', player.utility],
+    ['clutch', player.clutch],
+    ['leadership', player.leadership],
+  ] as const
+  const targetKey = focusKey ?? [...skills].sort((a, b) => a[1] - b[1])[0][0]
+
   return {
     ...state,
     credits: state.credits - 120,
     staffEnergy: state.staffEnergy - 1,
-    roster: state.roster.map((player) => {
-      if (player.id !== playerId) return player
-      const skills = [
-        ['aim', player.aim],
-        ['gameSense', player.gameSense],
-        ['utility', player.utility],
-        ['clutch', player.clutch],
-        ['leadership', player.leadership],
-      ] as const
-      const weakest = [...skills].sort((a, b) => a[1] - b[1])[0][0]
-      return {
-        ...player,
-        [weakest]: clamp(player[weakest] + 1),
-        form: clamp(player.form + 2),
-        morale: clamp(player.morale + 1),
-        fatigue: clamp(player.fatigue + 7),
-      }
-    }),
+    training: {
+      ...training,
+      sharpness: clamp(training.sharpness + 1),
+      development: {
+        ...training.development,
+        [playerId]: {
+          ...development,
+          progress: earnsPoint ? nextProgress - threshold : nextProgress,
+        },
+      },
+    },
+    roster: state.roster.map((candidate) =>
+      candidate.id === playerId
+        ? {
+            ...candidate,
+            [targetKey]: earnsPoint ? clamp(candidate[targetKey] + 1) : candidate[targetKey],
+            form: clamp(candidate.form + 1),
+            morale: clamp(candidate.morale + 1),
+            fatigue: clamp(candidate.fatigue + 4),
+          }
+        : candidate,
+    ),
   }
 }
 

@@ -990,9 +990,18 @@ function App() {
             {state.activeTournament && <TournamentHub state={state} onAdvance={advanceToTournamentMatch} />}
             <div className="sim-match-head"><div><span className="eyebrow">{activeEvent ? activeEvent.city.toUpperCase() + ' · TIER ' + activeEvent.circuitTier + ' · ' + activeEvent.format : 'TACTICAL DESK · WEEK ' + state.week}</span><h1>{activeEvent ? activeEvent.name : 'Решение до серии.'}</h1></div><div className="sim-match-prize"><span>{activeEvent ? 'PRIZE POOL' : 'ЗАРПЛАТА'}</span><b>{activeEvent ? activeEvent.prize.toLocaleString('ru-RU') : payroll} кр.</b><small>{state.credits.toLocaleString('ru-RU')} кр. в кассе</small></div></div>
             <div className="sim-match-stage">
-              <section className="sim-team-deck sim-team-home"><div className="sim-team-kicker">YOUR CLUB</div><div className="sim-team-name">STARTING FIVE</div><div className="sim-team-meta"><span>{rating} OVR</span><span>{chem} CHEM</span><span>{state.lineupContinuity} CONTINUITY</span></div><div className="sim-match-roster">{starters.map((player) => <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />)}</div><button className="sim-ghost-action sim-team-edit" onClick={() => openTab('Roster')}>EDIT FIVE</button></section>
+              <section className="sim-team-deck sim-team-home">
+                <div className="sim-match-team-identity"><TeamBadge name="YOUR CLUB" size="lg" /><div><span className="sim-team-kicker">YOUR CLUB</span><div className="sim-team-name">STARTING FIVE</div></div></div>
+                <div className="sim-team-meta"><span>{rating} OVR</span><span>{chem} CHEM</span><span>{state.lineupContinuity} CONTINUITY</span></div>
+                <div className="sim-match-roster">{starters.map((player) => <PlayerVisualCard key={player.id} player={player} starter compact onClick={() => setSelectedPlayer(player)} />)}</div>
+                <button className="sim-ghost-action sim-team-edit" onClick={() => openTab('Roster')}>EDIT FIVE</button>
+              </section>
               <div className="sim-match-versus"><span>BO3</span><strong>VS</strong></div>
-              <section className="sim-team-deck sim-team-away"><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'SERIES'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2><p>{bracketOpponent ? bracketOpponent.rating + ' OVR' : modeInfo[activeEventMode ?? 'scrim'].description}</p>{bracketRoster.length > 0 && <div className="sim-match-roster sim-opponent-roster">{bracketRoster.map((player) => <OpponentVisualCard key={player.playerKey} player={player} />)}</div>}</section>
+              <section className="sim-team-deck sim-team-away">
+                <div className="sim-match-team-identity away"><div><span className="eyebrow">{activeEvent ? (bracketMatch?.label ?? 'EVENT FORMAT') : 'SERIES'}</span><h2>{bracketOpponent?.name ?? modeInfo[activeEventMode ?? 'scrim'].name}</h2></div><TeamBadge name={bracketOpponent?.name ?? 'OPPONENT'} size="lg" /></div>
+                <p>{bracketOpponent ? bracketOpponent.rating + ' OVR' : modeInfo[activeEventMode ?? 'scrim'].description}</p>
+                {bracketRoster.length > 0 && <div className="sim-match-roster sim-opponent-roster">{bracketRoster.map((player) => <OpponentVisualCard key={player.playerKey} player={player} />)}</div>}
+              </section>
             </div>
             <div className="sim-match-actions">
               <div className="sim-match-format-wrap">

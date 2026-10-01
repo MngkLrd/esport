@@ -479,11 +479,11 @@ export function MatchRadar({
     })
   }, [rounds])
 
+  const locatedRoundIndex = rounds.length
+    ? roundOffsets.findIndex((offset) => elapsed < offset.end)
+    : -1
   const currentRoundIndex = rounds.length
-    ? Math.min(
-        rounds.length - 1,
-        Math.max(0, roundOffsets.findIndex((offset) => elapsed < offset.end)),
-      )
+    ? (locatedRoundIndex >= 0 ? locatedRoundIndex : rounds.length - 1)
     : 0
   const round = rounds[currentRoundIndex]
   const activeRound = navigationRound?.id === round?.id ? navigationRound : null

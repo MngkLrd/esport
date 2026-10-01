@@ -20,6 +20,7 @@ import { cardTier, countryFlag } from './playerVisuals'
 import { PlayerPortrait } from './PlayerPortrait'
 import type { PackCard } from './packState'
 import { CollectiblePlayerCard, tierForPackRarity } from './CollectiblePlayerCard'
+import { buildAutoPlannerAll, buildAutoPlannerRole } from './squadPlannerAuto'
 
 const ROLE_LABELS: Record<LineupSlot, string> = {
   Entry: 'ENTRY',
@@ -326,6 +327,54 @@ function SquadPlanner({
     setCopyPrompt(false)
   }
 
+
+  const autoContext = {
+    horizon,
+    seasonLength: state.seasonLength,
+    week: state.week,
+  } as const
+
+  const autoFillAllRoles = () => {
+    const autoPlan = buildAutoPlannerAll(candidates, autoContext)
+    updatePlanner((current) => {
+      const nextOrders = { ...current.orders }
+      const nextExcluded = { ...current.excluded }
+      for (const role of LINEUP_SLOTS) {
+        const key = orderKey(role)
+        nextOrders[key] = autoPlan[role]
+        delete nextExcluded[key]
+      }
+      return { ...current, orders: nextOrders, excluded: nextExcluded }
+    }, 'Автоподбор применён ко всему составу')
+    setPlacementSlot(null)
+    setSelectedCandidateKey(null)
+  }
+
+  const autoFillRole = (role: LineupSlot) => {
+    const reservedPrimaryKeys = new Set(
+      LINEUP_SLOTS
+        .filter((otherRole) => otherRole !== role)
+        .map((otherRole) => depthForRole(otherRole)[0]?.key)
+        .filter((key): key is string => Boolean(key)),
+    )
+    const autoDepth = buildAutoPlannerRole(candidates, role, autoContext, reservedPrimaryKeys)
+    if (!autoDepth.length) return
+
+    updatePlanner((current) => {
+      const key = orderKey(role)
+      const nextExcluded = { ...current.excluded }
+      delete nextExcluded[key]
+      return {
+        ...current,
+        orders: { ...current.orders, [key]: autoDepth },
+        excluded: nextExcluded,
+      }
+    }, 'Автоподбор ' + ROLE_LABELS[role] + ' обновлён')
+    setSelectedRole(role)
+    setPlacementSlot(null)
+    setSelectedCandidateKey(null)
+  }
+
   const primaryRoleUsage = new Map<string, LineupSlot[]>()
   for (const role of LINEUP_SLOTS) {
     const primary = depthForRole(role)[0]
@@ -498,6 +547,9 @@ function SquadPlanner({
         </div>
 
         <div className="sim-planner-toolbar-actions">
+          <button className="sim-planner-auto-all" onClick={autoFillAllRoles} title="Автоматически заполнить все роли по FIT, рейтингу и доступности">
+            <span>✦</span> АВТО
+          </button>
           {horizon > 0 && (
             <button onClick={() => setCopyPrompt(true)}>
               {horizon === 1 ? 'КОПИРОВАТЬ «СЕЙЧАС»' : 'КОПИРОВАТЬ СЕЗОН ' + (state.season + horizon - 1)}
@@ -551,7 +603,14 @@ function SquadPlanner({
               <span>ГЛУБИНА СОСТАВА · {horizonLabel}</span>
               <strong>План по игровым ролям</strong>
             </div>
-            <button className="sim-planner-help" type="button" title="Планировщик не меняет стартовую пятёрку. #1 — основной выбор, #2 — ротация, #3 — резерв.">?</button>
+            <div className="sim-planner-board-actions">
+              <button className="sim-planner-board-auto" type="button" onClick={autoFillAllRoles}>
+                <span>✦</span>
+                <b>АВТОПОДБОР</b>
+                <small>5 ролей</small>
+              </button>
+              <button className="sim-planner-help" type="button" title="Планировщик не меняет стартовую пятёрку. #1 — основной выбор, #2 — ротация, #3 — резерв.">?</button>
+            </div>
           </div>
 
           <div className="sim-planner-lanes">
@@ -573,12 +632,20 @@ function SquadPlanner({
                     >
                       <span>
                         <b>{ROLE_LABELS_RU[role]}</b>
-                        <small><i>{statusIcon(analysis.status)}</i> {statusLabel(analysis.status)} · {analysis.manual ? 'РУЧНОЙ' : 'АВТОПЛАН'}</small>
+                        <small><i>{statusIcon(analysis.status)}</i> {statusLabel(analysis.status)} · {analysis.manual ? 'ПЛАН' : 'АВТОПЛАН'}</small>
                       </span>
                       <span className="sim-planner-lane-head-meta">
                         {horizon > 0 && <small className="sim-planner-diff-chip">{diff.manual ? 'ВАМИ' : 'ПРОГНОЗ'} · {diff.added > 0 ? '+' + diff.added : '0'} / {diff.removed > 0 ? '−' + diff.removed : '0'}</small>}
                         <b>{analysis.quality || '—'}</b>
                       </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="sim-planner-role-auto"
+                      onClick={() => autoFillRole(role)}
+                      title={'Автоподбор для ' + ROLE_LABELS[role]}
+                    >
+                      ✦ АВТО
                     </button>
                   </header>
 

@@ -935,6 +935,46 @@ function App() {
     if (action) openTab(action)
   }
 
+  const resolvePlayerConversation = (playerId: string, choice: ConversationChoice) => {
+    setState((current) => ({
+      ...current,
+      roster: current.roster.map((player) => {
+        if (player.id !== playerId) return player
+
+        if (choice.id === 'support') {
+          return { ...player, morale: Math.min(100, player.morale + 4) }
+        }
+
+        if (choice.id === 'standards') {
+          return {
+            ...player,
+            form: Math.min(100, player.form + 2),
+            morale: Math.max(0, player.morale - 1),
+          }
+        }
+
+        if (choice.id === 'load') {
+          return {
+            ...player,
+            fatigue: Math.max(0, player.fatigue - 6),
+            morale: Math.min(100, player.morale + 1),
+          }
+        }
+
+        if (choice.id === 'responsibility') {
+          return {
+            ...player,
+            morale: Math.min(100, player.morale + 2),
+            form: Math.min(100, player.form + 1),
+          }
+        }
+
+        return player
+      }),
+    }))
+    setConversationPlayerId(null)
+  }
+
   const resolveDecision = (choice: 'a' | 'b') => {
     const result = executeGameCommand(state, { type: 'RESOLVE_DECISION', choice })
     if (result.state === state) return
@@ -1047,6 +1087,7 @@ function App() {
             { label: 'КОНТРАКТ', value: conversationPlayer.contractWeeks + ' НЕД.' },
           ]}
           choices={conversationChoicesForPlayer(conversationPlayer)}
+          onComplete={(choice) => resolvePlayerConversation(conversationPlayer.id, choice)}
           onClose={() => setConversationPlayerId(null)}
         />
       )}

@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { overall, type MatchResult, type Player } from './game'
 import type { TournamentRosterPlayer } from './tournamentEngine'
-import { PlayerPortrait } from './PlayerPortrait'
-import { countryFlag } from './playerVisuals'
 import { metadataForAlias } from './playerMetadata'
 import { cardStatsForAlias } from './cardStats'
 import { TeamBadge } from './TeamBadge'
+import { PlayerIdentity } from './PlayerIdentity'
 
 export type LobbyVetoAction = {
   step: number
@@ -69,23 +68,27 @@ function HomePlayerCard({ player }: { player: Player }) {
   const rating = overall(player)
   return (
     <article className="match-lobby-player is-home">
-      <div className="match-lobby-player-photo">
-        <PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="eager" draggable={false} />
+      <PlayerIdentity
+        alias={player.alias}
+        realName={player.realName}
+        country={player.country}
+        team={player.team}
+        role={player.role}
+        profileId={player.profileId}
+        size="md"
+        className="match-lobby-player-identity"
+        trailing={<span className="match-lobby-player-ovr"><small>OVR</small><b>{rating}</b></span>}
+      />
+      <div className="match-lobby-player-stats">
+        <span><b>{player.aim}</b>AIM</span>
+        <span><b>{player.clutch}</b>CLU</span>
+        <span><b>{player.form}</b>FORM</span>
       </div>
-      <div className="match-lobby-player-copy">
-        <div className="match-lobby-player-name"><strong>{player.alias}</strong><span>{countryFlag(player.country)} {player.role}</span></div>
-        <div className="match-lobby-player-stats">
-          <span><b>{player.aim}</b>AIM</span>
-          <span><b>{player.clutch}</b>CLU</span>
-          <span><b>{player.form}</b>FORM</span>
-        </div>
-      </div>
-      <div className="match-lobby-player-ovr"><small>OVR</small><b>{rating}</b></div>
     </article>
   )
 }
 
-function AwayPlayerCard({ player }: { player: TournamentRosterPlayer }) {
+function AwayPlayerCard({ player, teamName }: { player: TournamentRosterPlayer; teamName: string }) {
   const metadata = metadataForAlias(player.alias)
   const profileMatch = metadata?.profileUrl?.match(/\/player\/(\d+)/)
   const profileId = player.profileId ?? (profileMatch ? Number(profileMatch[1]) : null)
@@ -95,18 +98,21 @@ function AwayPlayerCard({ player }: { player: TournamentRosterPlayer }) {
 
   return (
     <article className="match-lobby-player is-away">
-      <div className="match-lobby-player-photo">
-        <PlayerPortrait alias={player.alias} playerId={profileId} alt={player.alias} loading="eager" draggable={false} />
+      <PlayerIdentity
+        alias={player.alias}
+        country={country}
+        team={teamName}
+        role={role}
+        profileId={profileId}
+        size="md"
+        className="match-lobby-player-identity"
+        trailing={<span className="match-lobby-player-ovr"><small>OVR</small><b>{player.rating}</b></span>}
+      />
+      <div className="match-lobby-player-stats">
+        <span><b>{stats?.rating != null ? stats.rating.toFixed(2) : '—'}</b>HLTV</span>
+        <span><b>{stats?.aim ?? '—'}</b>AIM</span>
+        <span><b>{stats?.clutch ?? '—'}</b>CLU</span>
       </div>
-      <div className="match-lobby-player-copy">
-        <div className="match-lobby-player-name"><strong>{player.alias}</strong><span>{countryFlag(country)} {role}</span></div>
-        <div className="match-lobby-player-stats">
-          <span><b>{stats?.rating != null ? stats.rating.toFixed(2) : '—'}</b>HLTV</span>
-          <span><b>{stats?.aim ?? '—'}</b>AIM</span>
-          <span><b>{stats?.clutch ?? '—'}</b>CLU</span>
-        </div>
-      </div>
-      <div className="match-lobby-player-ovr"><small>OVR</small><b>{player.rating}</b></div>
     </article>
   )
 }
@@ -314,7 +320,7 @@ export function MatchLobby({
           </main>
 
           <aside className="match-lobby-roster away">
-            {rivals.map((player) => <AwayPlayerCard key={player.playerKey} player={player} />)}
+            {rivals.map((player) => <AwayPlayerCard key={player.playerKey} player={player} teamName={result.opponent} />)}
           </aside>
         </div>
       </section>

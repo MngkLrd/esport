@@ -104,6 +104,7 @@ export function SquadWorkspace({
   const [source, setSource] = useState<PoolSource>('all')
   const [sort, setSort] = useState<PoolSort>('fit')
   const [showAll, setShowAll] = useState(false)
+  const [contractsOnly, setContractsOnly] = useState(false)
 
   const starterIds = useMemo(() => new Set(state.startingFive), [state.startingFive])
   const activePlayers = useMemo(
@@ -168,6 +169,7 @@ export function SquadWorkspace({
       .filter((entry) => {
         if (targetPlayer && entry.source === 'roster' && entry.player.id === targetPlayer.id) return false
         if (source !== 'all' && entry.source !== source) return false
+        if (contractsOnly && (entry.source !== 'roster' || entry.player.contractWeeks <= 0 || entry.player.contractWeeks > 4)) return false
         if (q && ![entry.player.alias, entry.player.realName, entry.player.team].some((value) => value.toLocaleLowerCase('en-US').includes(q))) return false
         return true
       })
@@ -176,7 +178,7 @@ export function SquadWorkspace({
         if (sort === 'form') return b.player.form - a.player.form || b.fit - a.fit
         return b.fit - a.fit || Number(b.player.role === selectedSlot) - Number(a.player.role === selectedSlot) || overall(b.player) - overall(a.player)
       })
-  }, [poolEntries, query, source, sort, selectedSlot, targetPlayer])
+  }, [poolEntries, query, source, sort, selectedSlot, targetPlayer, contractsOnly])
 
   const visiblePool = showAll ? filteredPool : filteredPool.slice(0, 7)
 
@@ -256,6 +258,7 @@ export function SquadWorkspace({
     const player = slotPlayer(slot)
     setSelectedKey(player ? 'roster:' + player.id : null)
     setShowAll(false)
+    setContractsOnly(false)
     setSort('fit')
   }
 
@@ -291,7 +294,7 @@ export function SquadWorkspace({
         <div><span>CHEM</span><b>{chem}</b><small>TEAM CHEMISTRY</small></div>
         <div className={state.lineupContinuity < 30 ? 'risk' : ''}><span>CONTINUITY</span><b>{state.lineupContinuity}</b><small>{state.lineupContinuity < 30 ? 'REBUILDING' : 'STABLE'}</small></div>
         <div className={fatigueWarnings > 0 ? 'risk' : ''}><span>FATIGUE</span><b>{fatigueWarnings}</b><small>{fatigueWarnings ? 'PLAYERS AT RISK' : 'NO WARNINGS'}</small></div>
-        <button className={expiringPlayers.length ? 'risk' : ''} onClick={() => { setSource('roster'); setQuery(''); setShowAll(true) }}>
+        <button className={(expiringPlayers.length ? 'risk ' : '') + (contractsOnly ? 'active' : '')} onClick={() => { setSource('roster'); setQuery(''); setShowAll(true); setContractsOnly((value) => !value) }}>
           <span>CONTRACTS</span><b>{expiringPlayers.length}</b><small>{expiringPlayers.length ? 'EXPIRING ≤ 4W' : 'CLEAR'}</small>
         </button>
       </div>
@@ -366,7 +369,7 @@ export function SquadWorkspace({
             <header className="squad-opt-pool-head">
               <div className="squad-opt-pool-context">
                 <span>PLAYER POOL</span>
-                <strong>BEST OPTIONS FOR {ROLE_LABELS[selectedSlot]}</strong>
+                <strong>{contractsOnly ? 'EXPIRING CONTRACTS' : 'BEST OPTIONS FOR ' + ROLE_LABELS[selectedSlot]}</strong>
                 <small>{filteredPool.length} доступно · показано {Math.min(visiblePool.length, filteredPool.length)}</small>
               </div>
 

@@ -370,8 +370,9 @@ describe('P0 career flow', () => {
     const playbackB = generateMatchPlayback(result, ready.roster, 'structured')
 
     expect(playbackA).toEqual(playbackB)
-    expect(playbackA.rounds).toHaveLength(result.maps.length)
+    expect(playbackA.rounds).toHaveLength(result.maps.reduce((sum, map) => sum + map.us + map.them, 0))
     expect(playbackA.rounds.every((round) => round.frames.length > 80)).toBe(true)
+    expect(playbackA.rounds.every((round) => Boolean(round.cause))).toBe(true)
     expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'kill'))).toBe(true)
     expect(playbackA.rounds.every((round) => round.events.some((event) => event.type === 'utility'))).toBe(true)
 

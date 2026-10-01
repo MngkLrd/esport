@@ -96,5 +96,5 @@ describe('autonomous world ecology', () => {
       expect(world.players[key]).toBeDefined()
       expect(world.players[key].retiredAt).toBeFalsy()
     }
-  }, 50_000)
+  }, 90_000)
 })

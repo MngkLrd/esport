@@ -87,6 +87,7 @@ export interface AutonomousCompetition {
   prestige: number
   audience: number
   participantTeamIds: string[]
+  rosterSnapshots: Record<string, string[]>
   matches: AutonomousMatch[]
   winnerTeamId: string | null
   revenue: number
@@ -220,6 +221,44 @@ const teamStrength = (world: WorldState, team: WorldTeam) => {
 const eventSort = (a: WorldScheduledEvent, b: WorldScheduledEvent) =>
   a.at.localeCompare(b.at) || a.sequence - b.sequence || a.id.localeCompare(b.id)
 
+const queuePush = (queue: WorldScheduledEvent[], event: WorldScheduledEvent) => {
+  queue.push(event)
+  let index = queue.length - 1
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2)
+    if (eventSort(queue[parent], queue[index]) <= 0) break
+    ;[queue[parent], queue[index]] = [queue[index], queue[parent]]
+    index = parent
+  }
+}
+
+const queuePop = (queue: WorldScheduledEvent[]) => {
+  if (!queue.length) return undefined
+  const root = queue[0]
+  const tail = queue.pop()!
+  if (queue.length) {
+    queue[0] = tail
+    let index = 0
+    while (true) {
+      const left = index * 2 + 1
+      const right = left + 1
+      let smallest = index
+      if (left < queue.length && eventSort(queue[left], queue[smallest]) < 0) smallest = left
+      if (right < queue.length && eventSort(queue[right], queue[smallest]) < 0) smallest = right
+      if (smallest === index) break
+      ;[queue[index], queue[smallest]] = [queue[smallest], queue[index]]
+      index = smallest
+    }
+  }
+  return root
+}
+
+const queueHeapify = (queue: WorldScheduledEvent[]) => {
+  const source = [...queue]
+  queue.length = 0
+  for (const event of source) queuePush(queue, event)
+}
+
 const pushHistory = (
   ecology: WorldEcologyState,
   event: Omit<WorldHistoryEvent, 'id'>,
@@ -240,7 +279,7 @@ const schedule = (
 ) => {
   const sequence = ecology.nextSequence
   ecology.nextSequence += 1
-  ecology.scheduled.push({
+  queuePush(ecology.scheduled, {
     id: 'scheduled-' + sequence + '-' + type,
     type,
     at,
@@ -378,6 +417,34 @@ const clubBudget = (team: WorldTeam) =>
 const clubPrestige = (team: WorldTeam) =>
   typeof team.prestige === 'number' ? team.prestige : clamp(104 - team.vrsRank * .72, 12, 94)
 
+const clubPersonality = (team: WorldTeam, seed: number) => {
+  const rng = rngFor(seed, 'club-personality:' + team.id)
+  return {
+    risk: 25 + rng() * 65,
+    stability: 30 + rng() * 65,
+    youthBias: 20 + rng() * 75,
+    travelTolerance: 25 + rng() * 70,
+    marketPatience: 20 + rng() * 75,
+  }
+}
+
+const recentClubPressure = (ecology: WorldEcologyState, teamId: string, at: string) => {
+  const cutoff = addDays(at, -90)
+  let losses = 0
+  let wins = 0
+  const competitions = Object.values(ecology.competitions)
+  for (let index = competitions.length - 1; index >= 0; index -= 1) {
+    const competition = competitions[index]
+    if (competition.endsAt < cutoff) break
+    if (competition.status !== 'complete' || !competition.participantTeamIds.includes(teamId)) continue
+    for (const match of competition.matches) {
+      if (match.winnerTeamId === teamId) wins += 1
+      if (match.loserTeamId === teamId) losses += 1
+    }
+  }
+  return clamp(losses * 5 - wins * 2, 0, 28)
+}
+
 const playerMoveUtility = (world: WorldState, player: WorldPlayer, buyer: WorldTeam, salary: number) => {
   const current = player.teamId ? world.teams.find((team) => team.id === player.teamId) : null
   const prestigeGain = clubPrestige(buyer) - (current ? clubPrestige(current) : 20)
@@ -447,6 +514,8 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
   const team = world.teams.find((candidate) => candidate.id === teamId)
   if (!team || team.active === false) return
   const rng = rngFor(seed, 'club:' + team.id + ':' + at)
+  const personality = clubPersonality(team, seed)
+  const performancePressure = recentClubPressure(ecology, team.id, at)
   const roster = team.rosterKeys.map((key) => world.players[key]).filter((player): player is WorldPlayer => Boolean(player) && !player.retiredAt)
 
   for (const player of roster) {
@@ -454,7 +523,7 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
     player.contractWeeks = Math.max(0, player.contractWeeks - (rng() < .35 ? 1 : 0))
     if (player.contractWeeks === 0) {
       const renewalUtility = effectiveRating(player) - teamStrength(world, team) + clubPrestige(team) * .08 + (player.morale - 50) * .04
-      if (renewalUtility > -2 && clubBudget(team) > 1200) {
+      if (team.rosterKeys.length <= 5 || (renewalUtility > -2 && clubBudget(team) > 1200)) {
         player.contractWeeks = 18 + Math.floor(rng() * 35)
         player.salary = Math.round((player.salary ?? player.currentRating * 1.7) * (1.02 + rng() * .18))
       } else {
@@ -493,8 +562,11 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
       .map((player) => {
         const seller = player.teamId ? world.teams.find((candidate) => candidate.id === player.teamId) : null
         const accessibility = player.teamId ? (seller && seller.rosterKeys.length > 5 ? 8 : -5) : 18
-        const ageBonus = (player.age ?? 24) <= 23 ? 5 : 0
-        const fit = (player.role === need ? 14 : 2) + effectiveRating(player) + accessibility + ageBonus
+        const age = player.age ?? 24
+        const ageBonus = age <= 23 ? personality.youthBias * .08 : age >= 29 ? -personality.youthBias * .035 : 0
+        const regionFit = regionForCountry(player.country) === (team.region ?? teamRegion(world, team)) ? 4 : -2
+        const stabilityCost = player.teamId ? personality.stability * .035 : 0
+        const fit = (player.role === need ? 14 : 2) + effectiveRating(player) + accessibility + ageBonus + regionFit - stabilityCost
         const noise = (hashSeed(team.id + ':' + player.key + ':' + at) % 1000) / 1000 * 5
         return { player, score: fit + noise }
       })
@@ -520,8 +592,13 @@ const planClub = (world: WorldState, ecology: WorldEcologyState, teamId: string,
     if (survival < 35) dissolveTeam(world, ecology, team, at)
   }
 
-  const turbulence = needScore + Math.max(0, 6 - roster.length) * 4 + (team.cash < 0 ? 8 : 0)
-  const nextDays = Math.max(3, Math.round(14 - Math.min(9, turbulence * .35) + rng() * 7))
+  const turbulence =
+    needScore +
+    performancePressure +
+    Math.max(0, 6 - roster.length) * 4 +
+    (team.cash < 0 ? 8 : 0) -
+    personality.stability * .08
+  const nextDays = Math.max(3, Math.round(16 - Math.min(11, turbulence * .35) + personality.marketPatience * .035 + rng() * 7))
   schedule(ecology, 'club-plan', addDays(at, nextDays, 9 + Math.floor(rng() * 9)), team.id)
 }
 
@@ -550,7 +627,7 @@ const executeTransfer = (
   if (!winner || winner.id !== offer.id) return
 
   const mutual = Math.min(offer.buyerUtility, offer.playerUtility, seller ? offer.sellerUtility : 99)
-  if (mutual < -4 || clubBudget(buyer) < offer.fee + offer.salary * 4) {
+  if ((seller && seller.rosterKeys.length <= 5) || mutual < -4 || clubBudget(buyer) < offer.fee + offer.salary * 4) {
     offer.status = 'rejected'
     return
   }
@@ -699,6 +776,83 @@ const retirePlayer = (world: WorldState, ecology: WorldEcologyState, player: Wor
     causes: ['career-hazard:' + player.key],
     data: { age: player.age, rating: player.currentRating },
   })
+}
+
+const stabilizeRosters = (
+  world: WorldState,
+  ecology: WorldEcologyState,
+  at: string,
+  seed: number,
+) => {
+  for (const team of world.teams.filter((candidate) => candidate.active !== false)) {
+    team.rosterKeys = team.rosterKeys.filter((key) => {
+      const player = world.players[key]
+      return Boolean(player && !player.retiredAt && player.teamId === team.id)
+    })
+    if (team.rosterKeys.length >= 5) continue
+
+    const region = team.region ?? teamRegion(world, team)
+    let attempts = 0
+    while (team.rosterKeys.length < 5 && attempts < 12) {
+      attempts += 1
+      const neededRole = [...ROLES].sort((a, b) => roleNeedScore(world, team, b) - roleNeedScore(world, team, a))[0]
+      const candidates = Object.values(world.players)
+        .filter((player) => !player.teamId && !player.retiredAt)
+        .map((player) => ({
+          player,
+          score:
+            effectiveRating(player) +
+            (player.role === neededRole ? 18 : 0) +
+            (regionForCountry(player.country) === region ? 8 : 0) -
+            playerMarketValue(player) / Math.max(800, clubBudget(team)) * 4,
+        }))
+        .sort((a, b) => b.score - a.score)
+
+      let signed = false
+      for (const candidate of candidates.slice(0, 16)) {
+        createTransferOffer(world, ecology, team, candidate.player, at, seed + attempts)
+        const offer = ecology.offers.find((entry) =>
+          entry.status === 'open' &&
+          entry.playerKey === candidate.player.key &&
+          entry.buyerTeamId === team.id,
+        )
+        if (!offer) continue
+        const before = team.rosterKeys.length
+        executeTransfer(world, ecology, offer, at)
+        if (team.rosterKeys.length > before) {
+          signed = true
+          break
+        }
+      }
+
+      if (!signed && ecology.metrics.sponsorLiquidity >= 30 && clubBudget(team) > 600) {
+        const serial = ecology.metrics.generatedPlayers + 1
+        createGeneratedPlayer(world, ecology, region, at, seed + attempts * 97, serial)
+        const rookie = Object.values(world.players)
+          .filter((player) => !player.teamId && !player.retiredAt && player.generated && regionForCountry(player.country) === region)
+          .sort((a, b) => (b.careerStartedAt ?? '').localeCompare(a.careerStartedAt ?? ''))[0]
+        if (rookie) {
+          createTransferOffer(world, ecology, team, rookie, at, seed + attempts * 193)
+          const offer = ecology.offers.find((entry) =>
+            entry.status === 'open' &&
+            entry.playerKey === rookie.key &&
+            entry.buyerTeamId === team.id,
+          )
+          if (offer) {
+            const before = team.rosterKeys.length
+            executeTransfer(world, ecology, offer, at)
+            signed = team.rosterKeys.length > before
+          }
+        }
+      }
+
+      if (!signed) break
+    }
+
+    if (team.rosterKeys.length < 5) {
+      dissolveTeam(world, ecology, team, at)
+    }
+  }
 }
 
 const foundTeam = (world: WorldState, ecology: WorldEcologyState, region: EcologyRegion, at: string, seed: number) => {
@@ -851,6 +1005,7 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
     if (rng() < Math.min(.45, ageHazard + marketHazard + performanceHazard)) retirePlayer(world, ecology, player, at)
   }
 
+  stabilizeRosters(world, ecology, at, seed)
   recalcMetrics(world, ecology)
   const regionDemand = new Map<EcologyRegion, number>(REGIONS.map((region) => [region, 0]))
   for (const team of world.teams.filter((team) => team.active !== false)) {
@@ -871,24 +1026,49 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
   }
 
   recalcMetrics(world, ecology)
-  const activeTeamCount = activeTeams(world).length
+  let activeTeamCount = activeTeams(world).length
   const sustainableTeamCapacity = ecology.carryingCapacityTeams + Math.max(0, Math.floor((ecology.metrics.audienceDemand - 55) / 8))
   for (const region of REGIONS) {
     if (activeTeamCount >= sustainableTeamCapacity) break
-    const regionalFree = Object.values(world.players).filter((player) =>
-      !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
-    )
+
     const regionalTeams = activeTeams(world).filter((team) => (team.region ?? teamRegion(world, team)) === region)
     const tournamentAccess = activeCompetitions(ecology).filter((event) => event.region === region).length
     const regionalShare = regionalTeams.length / Math.max(1, activeTeams(world).length)
     const underRepresentation = Math.max(0, .18 - regionalShare) * 80
-    const entryUtility =
-      Math.min(28, regionalFree.length * 1.4) +
+    const organizationGap = sustainableTeamCapacity - activeTeamCount
+    let regionalFree = Object.values(world.players).filter((player) =>
+      !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
+    )
+    const opportunityWithoutSupply =
       tournamentAccess * 4 +
       ecology.metrics.sponsorLiquidity * .18 +
-      underRepresentation -
+      ecology.metrics.audienceDemand * .12 +
+      underRepresentation +
+      Math.min(30, organizationGap * 1.1) -
       regionalTeams.length * .28
-    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 50) foundTeam(world, ecology, region, at, seed)
+
+    if (
+      regionalFree.length < 7 &&
+      organizationGap > 0 &&
+      ecology.metrics.sponsorLiquidity >= 42 &&
+      ecology.metrics.audienceDemand >= 45 &&
+      opportunityWithoutSupply + rng() * 10 > 38
+    ) {
+      const intake = Math.min(7 - regionalFree.length, Math.max(1, Math.ceil(organizationGap / 18)))
+      for (let index = 0; index < intake; index += 1) {
+        createGeneratedPlayer(world, ecology, region, at, seed + activeTeamCount * 131, ecology.metrics.generatedPlayers + 1)
+      }
+      regionalFree = Object.values(world.players).filter((player) =>
+        !player.teamId && !player.retiredAt && regionForCountry(player.country) === region && player.currentRating >= 53,
+      )
+    }
+
+    const entryUtility = opportunityWithoutSupply + Math.min(28, regionalFree.length * 1.4)
+    if (regionalFree.length >= 7 && entryUtility + rng() * 12 > 47) {
+      const before = activeTeams(world).length
+      foundTeam(world, ecology, region, at, seed)
+      if (activeTeams(world).length > before) activeTeamCount += 1
+    }
   }
 
   maybeFoundOperator(world, ecology, at, seed)
@@ -896,22 +1076,45 @@ const reviewPopulation = (world: WorldState, ecology: WorldEcologyState, at: str
   schedule(ecology, 'population-review', addDays(at, 28 + Math.floor(rng() * 8), 7))
 }
 
+const rangesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
+  aStart <= bEnd && bStart <= aEnd
+
 const selectCompetitionTeams = (
   world: WorldState,
+  ecology: WorldEcologyState,
   operator: TournamentOperatorAgent,
   tier: 1 | 2 | 3,
-  at: string,
+  startsAt: string,
+  endsAt: string,
   seed: number,
 ) => {
-  const rng = rngFor(seed, 'participants:' + operator.id + ':' + at)
+  const rng = rngFor(seed, 'participants:' + operator.id + ':' + startsAt)
+  const occupiedTeamIds = new Set(
+    activeCompetitions(ecology)
+      .filter((competition) => rangesOverlap(startsAt, endsAt, competition.startsAt, competition.endsAt))
+      .flatMap((competition) => competition.participantTeamIds),
+  )
   const teams = activeTeams(world)
+    .filter((team) => !occupiedTeamIds.has(team.id))
     .map((team) => {
       const strength = teamStrength(world, team)
       const prestige = clubPrestige(team)
-      const regional = (team.region ?? teamRegion(world, team)) === operator.region ? 12 : tier === 1 ? 0 : -8
-      const tierFit = tier === 1 ? prestige * .6 + strength * .45 : tier === 2 ? strength * .65 : (100 - prestige) * .12 + strength * .65
-      const scheduleNoise = rng() * 8
-      return { team, utility: tierFit + regional + scheduleNoise }
+      const personality = clubPersonality(team, seed)
+      const sameRegion = (team.region ?? teamRegion(world, team)) === operator.region
+      const regional = sameRegion ? 12 : tier === 1 ? 0 : -8
+      const tierFit = tier === 1
+        ? prestige * .6 + strength * .45
+        : tier === 2
+          ? strength * .65 + prestige * .2
+          : (100 - prestige) * .12 + strength * .65
+      const prizeValue = (tier === 1 ? 15 : tier === 2 ? 9 : 5) * (1 + (100 - prestige) / 180)
+      const fatigue = team.rosterKeys
+        .map((key) => world.players[key]?.fatigue ?? 0)
+        .reduce((sum, value) => sum + value, 0) / Math.max(1, team.rosterKeys.length)
+      const travelCost = sameRegion ? 0 : (100 - personality.travelTolerance) * .09
+      const fatigueCost = fatigue * .12
+      const riskFit = tier === 1 ? personality.risk * .03 : (100 - personality.risk) * .015
+      return { team, utility: tierFit + regional + prizeValue + riskFit + rng() * 6 - travelCost - fatigueCost }
     })
     .sort((a, b) => b.utility - a.utility)
   return teams.slice(0, 8).map((entry) => entry.team.id)
@@ -934,7 +1137,7 @@ const createCompetition = (
   const prizePool = Math.round(basePrize * (.75 + ecology.metrics.sponsorLiquidity / 160 + rng() * .22))
   const serial = operator.eventIds.length + 1
   const id = 'eco-event-' + operator.id + '-' + yearFor(at) + '-' + serial
-  const participants = selectCompetitionTeams(world, operator, tier, at, seed)
+  const participants = selectCompetitionTeams(world, ecology, operator, tier, startsAt, endsAt, seed)
   if (participants.length < 8) return
 
   const competition: AutonomousCompetition = {
@@ -952,6 +1155,7 @@ const createCompetition = (
     prestige: clamp(operator.reputation * .72 + (tier === 1 ? 24 : tier === 2 ? 12 : 3)),
     audience: 0,
     participantTeamIds: participants,
+    rosterSnapshots: {},
     matches: [],
     winnerTeamId: null,
     revenue: 0,
@@ -1011,9 +1215,61 @@ const planOperator = (world: WorldState, ecology: WorldEcologyState, operatorId:
   schedule(ecology, 'operator-plan', addDays(at, nextDays, 10), operator.id)
 }
 
-const startCompetition = (ecology: WorldEcologyState, competitionId: string) => {
+const startCompetition = (
+  world: WorldState,
+  ecology: WorldEcologyState,
+  competitionId: string,
+  at: string,
+) => {
   const competition = ecology.competitions[competitionId]
-  if (competition?.status === 'announced') competition.status = 'running'
+  if (!competition || competition.status !== 'announced') return
+
+  const existing = new Set<string>()
+  const participants = competition.participantTeamIds
+    .map((id) => world.teams.find((team) => team.id === id))
+    .filter((team): team is WorldTeam => team != null && team.active !== false && team.rosterKeys.length >= 5)
+
+  for (const team of participants) existing.add(team.id)
+  if (participants.length < 8) {
+    const replacements = activeTeams(world)
+      .filter((team) =>
+        !existing.has(team.id) &&
+        !activeCompetitions(ecology).some((other) =>
+          other.id !== competition.id &&
+          other.status === 'running' &&
+          other.participantTeamIds.includes(team.id),
+        ),
+      )
+      .sort((a, b) => a.vrsRank - b.vrsRank)
+      .slice(0, 8 - participants.length)
+    participants.push(...replacements)
+  }
+
+  if (participants.length < 8) {
+    competition.status = 'cancelled'
+    const operator = ecology.operators[competition.operatorId]
+    if (operator) {
+      operator.capital -= Math.round(competition.cost * .18)
+      operator.consecutiveLosses += 1
+    }
+    pushHistory(ecology, {
+      at,
+      kind: 'economic-shock',
+      importance: competition.tier === 1 ? 55 : 30,
+      actorIds: [competition.operatorId],
+      title: competition.name + ' cancelled',
+      detail: 'The event failed to secure eight eligible organizations at roster lock.',
+      causes: [competition.id],
+      data: { participants: participants.length },
+    })
+    return
+  }
+
+  competition.participantTeamIds = participants.slice(0, 8).map((team) => team.id)
+  competition.rosterSnapshots = Object.fromEntries(
+    participants.slice(0, 8).map((team) => [team.id, [...team.rosterKeys].slice(0, 5)]),
+  )
+  competition.status = 'running'
 }
 
 const simulateAutonomousSeries = (
@@ -1026,8 +1282,20 @@ const simulateAutonomousSeries = (
   seed: number,
 ): { match: AutonomousMatch; winner: WorldTeam; loser: WorldTeam } => {
   const rng = rngFor(seed, 'series:' + competition.id + ':' + round + ':' + index + ':' + teamA.id + ':' + teamB.id)
-  const strengthA = teamStrength(world, teamA) + ((teamA.form ?? 50) - 50) * .08
-  const strengthB = teamStrength(world, teamB) + ((teamB.form ?? 50) - 50) * .08
+  const snapshotStrength = (team: WorldTeam) => {
+    const keys = competition.rosterSnapshots?.[team.id]
+    if (!keys?.length) return teamStrength(world, team)
+    const players = keys
+      .map((key) => world.players[key])
+      .filter((player): player is WorldPlayer => Boolean(player))
+      .sort((a, b) => effectiveRating(b) - effectiveRating(a))
+      .slice(0, 5)
+    return players.length
+      ? clamp(players.reduce((sum, player) => sum + effectiveRating(player), 0) / players.length, 45, 99)
+      : teamStrength(world, team)
+  }
+  const strengthA = snapshotStrength(teamA) + ((teamA.form ?? 50) - 50) * .08
+  const strengthB = snapshotStrength(teamB) + ((teamB.form ?? 50) - 50) * .08
   const winProbabilityA = clamp(1 / (1 + Math.exp(-(strengthA - strengthB) / 5.2)), .08, .92)
   const aWins = rng() < winProbabilityA
   const closeSeries = rng() > Math.abs(winProbabilityA - .5) * 1.25
@@ -1064,17 +1332,9 @@ const finishCompetition = (
   if (!competition || competition.status === 'complete' || competition.status === 'cancelled') return
   const operator = ecology.operators[competition.operatorId]
   const rng = rngFor(seed, 'finish:' + competition.id)
-  let entrants = competition.participantTeamIds
+  const entrants = competition.participantTeamIds
     .map((id) => world.teams.find((team) => team.id === id))
-    .filter((team): team is WorldTeam => team != null && team.active !== false)
-  if (entrants.length < 8) {
-    const existing = new Set(entrants.map((team) => team.id))
-    const replacements = activeTeams(world)
-      .filter((team) => !existing.has(team.id))
-      .sort((a, b) => a.vrsRank - b.vrsRank)
-      .slice(0, 8 - entrants.length)
-    entrants = [...entrants, ...replacements]
-  }
+    .filter((team): team is WorldTeam => team != null)
   if (entrants.length < 8) {
     competition.status = 'cancelled'
     if (operator) {
@@ -1203,7 +1463,12 @@ export const advanceWorldEcology = (
     ...hydrated.ecology!,
     scheduled: hydrated.ecology!.scheduled.map((event) => ({ ...event })),
     operators: Object.fromEntries(Object.entries(hydrated.ecology!.operators).map(([id, operator]) => [id, { ...operator, eventIds: [...operator.eventIds] }])),
-    competitions: Object.fromEntries(Object.entries(hydrated.ecology!.competitions).map(([id, competition]) => [id, { ...competition, participantTeamIds: [...competition.participantTeamIds] }])),
+    competitions: Object.fromEntries(Object.entries(hydrated.ecology!.competitions).map(([id, competition]) => [id, {
+      ...competition,
+      participantTeamIds: [...competition.participantTeamIds],
+      rosterSnapshots: Object.fromEntries(Object.entries(competition.rosterSnapshots ?? {}).map(([teamId, keys]) => [teamId, [...keys]])),
+      matches: [...(competition.matches ?? [])],
+    }])),
     offers: hydrated.ecology!.offers.map((offer) => ({ ...offer })),
     history: hydrated.ecology!.history.map((event) => ({ ...event, actorIds: [...event.actorIds], causes: [...event.causes], data: event.data ? { ...event.data } : undefined })),
     retiredPlayerKeys: [...hydrated.ecology!.retiredPlayerKeys],
@@ -1212,11 +1477,11 @@ export const advanceWorldEcology = (
   world.ecology = ecology
 
   recalcMetrics(world, ecology)
-  ecology.scheduled.sort(eventSort)
+  queueHeapify(ecology.scheduled)
   let guard = 0
   while (ecology.scheduled.length && ecology.scheduled[0].at <= to && guard < 20000) {
     guard += 1
-    const event = ecology.scheduled.shift()!
+    const event = queuePop(ecology.scheduled)!
     if (event.at < ecology.processedUntil) continue
     ecology.processedUntil = event.at
 
@@ -1234,13 +1499,12 @@ export const advanceWorldEcology = (
         if (event.actorId) planOperator(world, ecology, event.actorId, event.at, seed)
         break
       case 'competition-start':
-        if (event.subjectId) startCompetition(ecology, event.subjectId)
+        if (event.subjectId) startCompetition(world, ecology, event.subjectId, event.at)
         break
       case 'competition-finish':
         if (event.subjectId) finishCompetition(world, ecology, event.subjectId, event.at, seed)
         break
     }
-    ecology.scheduled.sort(eventSort)
   }
 
   ecology.processedUntil = to

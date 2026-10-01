@@ -100,7 +100,7 @@
 
 .market-field > span b {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .market-field select {
@@ -150,7 +150,7 @@
 .market-field small,
 .market-term small {
   color: #707b89;
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -177,7 +177,7 @@
 .market-brief-preview p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .market-search {
@@ -196,7 +196,7 @@
 
 .market-database-note small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .market-report {
@@ -251,7 +251,7 @@
   max-width: 480px;
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .market-card-grid {
@@ -433,7 +433,7 @@
 }
 
 .market-card-name strong {
-  font-size: clamp(11px, 1.3vw, 16px);
+  font-size: clamp(14px, 1.3vw, 16px);
   text-transform: uppercase;
 }
 
@@ -463,7 +463,7 @@
 }
 
 .market-card-stats b {
-  font-size: 10px;
+  font-size: 13px;
   opacity: 1;
 }
 
@@ -486,7 +486,7 @@
   width: 100%;
   min-height: 36px !important;
   padding: 8px !important;
-  font-size: 9px !important;
+  font-size: 12px !important;
 }
 
 .market-negotiation-backdrop {
@@ -570,7 +570,7 @@
 .market-negotiation-player p {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .market-interest {
@@ -619,7 +619,7 @@
 
 .market-interest small {
   color: #8b96a3;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .market-terms-grid {
@@ -667,7 +667,7 @@
   background: rgba(216,127,131,.07);
   color: #dca0a3;
   padding: 11px 13px;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .market-negotiation-footer {
@@ -796,7 +796,7 @@
 }
 .market-shared-card .collectible-card-badge b{
   color:var(--orange-2);
-  font-size:11px;
+  font-size: 12px;
 }
 .market-candidate.tier-gold .market-shared-card .collectible-card-badge b,
 .market-candidate.tier-silver .market-shared-card .collectible-card-badge b{

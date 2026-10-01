@@ -221,6 +221,44 @@ const teamStrength = (world: WorldState, team: WorldTeam) => {
 const eventSort = (a: WorldScheduledEvent, b: WorldScheduledEvent) =>
   a.at.localeCompare(b.at) || a.sequence - b.sequence || a.id.localeCompare(b.id)
 
+const queuePush = (queue: WorldScheduledEvent[], event: WorldScheduledEvent) => {
+  queue.push(event)
+  let index = queue.length - 1
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2)
+    if (eventSort(queue[parent], queue[index]) <= 0) break
+    ;[queue[parent], queue[index]] = [queue[index], queue[parent]]
+    index = parent
+  }
+}
+
+const queuePop = (queue: WorldScheduledEvent[]) => {
+  if (!queue.length) return undefined
+  const root = queue[0]
+  const tail = queue.pop()!
+  if (queue.length) {
+    queue[0] = tail
+    let index = 0
+    while (true) {
+      const left = index * 2 + 1
+      const right = left + 1
+      let smallest = index
+      if (left < queue.length && eventSort(queue[left], queue[smallest]) < 0) smallest = left
+      if (right < queue.length && eventSort(queue[right], queue[smallest]) < 0) smallest = right
+      if (smallest === index) break
+      ;[queue[index], queue[smallest]] = [queue[smallest], queue[index]]
+      index = smallest
+    }
+  }
+  return root
+}
+
+const queueHeapify = (queue: WorldScheduledEvent[]) => {
+  const source = [...queue]
+  queue.length = 0
+  for (const event of source) queuePush(queue, event)
+}
+
 const pushHistory = (
   ecology: WorldEcologyState,
   event: Omit<WorldHistoryEvent, 'id'>,
@@ -241,7 +279,7 @@ const schedule = (
 ) => {
   const sequence = ecology.nextSequence
   ecology.nextSequence += 1
-  ecology.scheduled.push({
+  queuePush(ecology.scheduled, {
     id: 'scheduled-' + sequence + '-' + type,
     type,
     at,
@@ -1331,11 +1369,11 @@ export const advanceWorldEcology = (
   world.ecology = ecology
 
   recalcMetrics(world, ecology)
-  ecology.scheduled.sort(eventSort)
+  queueHeapify(ecology.scheduled)
   let guard = 0
   while (ecology.scheduled.length && ecology.scheduled[0].at <= to && guard < 20000) {
     guard += 1
-    const event = ecology.scheduled.shift()!
+    const event = queuePop(ecology.scheduled)!
     if (event.at < ecology.processedUntil) continue
     ecology.processedUntil = event.at
 
@@ -1359,7 +1397,6 @@ export const advanceWorldEcology = (
         if (event.subjectId) finishCompetition(world, ecology, event.subjectId, event.at, seed)
         break
     }
-    ecology.scheduled.sort(eventSort)
   }
 
   ecology.processedUntil = to

@@ -1274,11 +1274,29 @@ interface OpponentMatchProfile {
   clutchAlias?: string
 }
 
+interface OpponentSeriesCondition {
+  form: number
+  morale: number
+  baseFatigue: number
+  preparationBias: number
+}
+
+const createOpponentSeriesCondition = (
+  teamRatingValue: number,
+  rng: () => number,
+): OpponentSeriesCondition => ({
+  form: clamp(teamRatingValue + (rng() - .5) * 12),
+  morale: clamp(62 + (teamRatingValue - 65) * .18 + (rng() - .5) * 18),
+  baseFatigue: clamp(18 + rng() * 22),
+  preparationBias: (rng() - .5) * 10,
+})
+
 const buildOpponentMatchProfile = (
   roster: TournamentRosterPlayer[] | undefined,
   teamRatingValue: number,
   seriesRoundsPlayed: number,
   adaptation: number,
+  condition: OpponentSeriesCondition,
   rng: () => number,
 ): OpponentMatchProfile => {
   const players = (roster ?? []).slice(0, 5)
@@ -1291,14 +1309,16 @@ const buildOpponentMatchProfile = (
     player,
     stats: cardStatsForAlias(player.alias, player.role),
   }))
-  const form = clamp(averageRating + (rng() - .5) * 12)
-  const morale = clamp(62 + (averageRating - 65) * .18 + (rng() - .5) * 18)
-  const fatigue = clamp(18 + seriesRoundsPlayed * .24 + rng() * 30)
+  const form = condition.form
+  const morale = condition.morale
+  const fatigue = clamp(condition.baseFatigue + seriesRoundsPlayed * .24)
   const communication = clamp(
     38 + gameSense * .18 + leadership * .24 + morale * .17 - Math.max(0, fatigue - 50) * .28 + adaptation * 1.5,
   )
   const tactical = clamp(45 + (gameSense - 60) * .42 + (utility - 60) * .3 + (leadership - 60) * .22 + adaptation * 4)
-  const preparation = clamp(47 + (gameSense - 65) * .22 + (rng() - .5) * 18 + adaptation * 6)
+  const preparation = clamp(
+    47 + (gameSense - 65) * .22 + condition.preparationBias + (rng() - .5) * 6 + adaptation * 6,
+  )
   const vulnerable = [...enrichedPlayers].sort((a, b) =>
     (a.stats?.ovr ?? a.player.rating) - (b.stats?.ovr ?? b.player.rating),
   )[0]?.player
@@ -1379,6 +1399,7 @@ const simulateStoryMap = (
   continuity: number,
   ourAdaptation: number,
   opponentAdaptation: number,
+  opponentCondition: OpponentSeriesCondition,
   rng: () => number,
 ): MapResult => {
   const avgAim = averagePlayerStat(active, 'aim')
@@ -1406,7 +1427,14 @@ const simulateStoryMap = (
     (a.form - a.fatigue * .72 + a.gameSense * .16) - (b.form - b.fatigue * .72 + b.gameSense * .16),
   )[0] ?? active[0]
   const clutchPlayer = [...active].sort((a, b) => b.clutch - a.clutch || b.form - a.form)[0] ?? active[0]
-  const opponent = buildOpponentMatchProfile(opponentRoster, opponentRating, seriesRoundsPlayed, opponentAdaptation, rng)
+  const opponent = buildOpponentMatchProfile(
+    opponentRoster,
+    opponentRating,
+    seriesRoundsPlayed,
+    opponentAdaptation,
+    opponentCondition,
+    rng,
+  )
   const ourMapFit = lineupMapStyleFit(active, map)
   const opponentMapFit = opponentRosterMapStyleFit(opponentRoster, opponentRating, map)
   const mapEdge = clamp((ourMapFit - opponentMapFit) * .0022, -.05, .05)
@@ -1479,12 +1507,6 @@ const simulateStoryMap = (
       : 0
 
     let roundProbability = clamp(probability + mapEdge + momentum + tacticalEdge + clutchEdge, .10, .90)
-    const ourAntiStrat = preparation >= 62 && rng() < clamp((preparation - 55) * .012, .05, .27)
-    const theirAntiStrat = opponent.preparation >= 62 && rng() < clamp((opponent.preparation - 55) * .012, .05, .27)
-    const ourCommunicationBreak = communication < 60 && lateRound && rng() < clamp((64 - communication) * .012, .04, .24)
-    const theirCommunicationBreak = opponent.communication < 60 && lateRound && rng() < clamp((64 - opponent.communication) * .012, .04, .24)
-    const ourFatigueBreak = avgFatigue >= 56 && lateRound && rng() < clamp((avgFatigue - 48) * .01, .05, .28)
-    const theirFatigueBreak = opponent.fatigue >= 56 && lateRound && rng() < clamp((opponent.fatigue - 48) * .01, .05, .28)
     const ourMistakeChance = clamp(
       (55 - (vulnerable?.form ?? 55)) * .005 +
       (((vulnerable?.fatigue ?? 45) + seriesFatigueGain) - 55) * .0035,
@@ -1492,66 +1514,138 @@ const simulateStoryMap = (
       .24,
     )
     const theirMistakeChance = clamp((55 - opponent.form) * .0045 + (opponent.fatigue - 55) * .003, .025, .20)
-    const ourPlayerMistake = Boolean(vulnerable && rng() < ourMistakeChance)
-    const theirPlayerMistake = Boolean(opponent.vulnerableAlias && rng() < theirMistakeChance)
-    const clutchRound = closeScore && lateRound && rng() < .22
 
-    if (ourAntiStrat) roundProbability += .065
-    if (theirAntiStrat) roundProbability -= .065
-    if (ourCommunicationBreak) roundProbability -= .065
-    if (theirCommunicationBreak) roundProbability += .065
-    if (ourFatigueBreak) roundProbability -= .06
-    if (theirFatigueBreak) roundProbability += .06
-    if (ourPlayerMistake) roundProbability -= .055
-    if (theirPlayerMistake) roundProbability += .055
+    type RoundIncident = {
+      side: 'US' | 'THEM'
+      cause: Extract<MatchRoundCause, 'ANTI_STRAT' | 'COMMUNICATION' | 'FATIGUE' | 'PLAYER_ERROR'>
+      chance: number
+      delta: number
+      keyPlayer?: string
+      keyPlayerSide: 'US' | 'THEM'
+    }
+
+    const incidentCandidates: RoundIncident[] = []
+    if (preparation >= 62) {
+      incidentCandidates.push({
+        side: 'US',
+        cause: 'ANTI_STRAT',
+        chance: clamp((preparation - 55) * .012, .05, .27),
+        delta: .065,
+        keyPlayerSide: 'US',
+      })
+    }
+    if (opponent.preparation >= 62) {
+      incidentCandidates.push({
+        side: 'THEM',
+        cause: 'ANTI_STRAT',
+        chance: clamp((opponent.preparation - 55) * .012, .05, .27),
+        delta: -.065,
+        keyPlayerSide: 'THEM',
+      })
+    }
+    if (communication < 60 && lateRound) {
+      incidentCandidates.push({
+        side: 'THEM',
+        cause: 'COMMUNICATION',
+        chance: clamp((64 - communication) * .012, .04, .24),
+        delta: -.065,
+        keyPlayerSide: 'US',
+      })
+    }
+    if (opponent.communication < 60 && lateRound) {
+      incidentCandidates.push({
+        side: 'US',
+        cause: 'COMMUNICATION',
+        chance: clamp((64 - opponent.communication) * .012, .04, .24),
+        delta: .065,
+        keyPlayerSide: 'THEM',
+      })
+    }
+    if (avgFatigue >= 56 && lateRound) {
+      incidentCandidates.push({
+        side: 'THEM',
+        cause: 'FATIGUE',
+        chance: clamp((avgFatigue - 48) * .01, .05, .28),
+        delta: -.06,
+        keyPlayer: vulnerable?.alias,
+        keyPlayerSide: 'US',
+      })
+    }
+    if (opponent.fatigue >= 56 && lateRound) {
+      incidentCandidates.push({
+        side: 'US',
+        cause: 'FATIGUE',
+        chance: clamp((opponent.fatigue - 48) * .01, .05, .28),
+        delta: .06,
+        keyPlayer: opponent.vulnerableAlias,
+        keyPlayerSide: 'THEM',
+      })
+    }
+    if (vulnerable) {
+      incidentCandidates.push({
+        side: 'THEM',
+        cause: 'PLAYER_ERROR',
+        chance: ourMistakeChance,
+        delta: -.055,
+        keyPlayer: vulnerable.alias,
+        keyPlayerSide: 'US',
+      })
+    }
+    if (opponent.vulnerableAlias) {
+      incidentCandidates.push({
+        side: 'US',
+        cause: 'PLAYER_ERROR',
+        chance: theirMistakeChance,
+        delta: .055,
+        keyPlayer: opponent.vulnerableAlias,
+        keyPlayerSide: 'THEM',
+      })
+    }
+
+    const totalIncidentWeight = incidentCandidates.reduce((sum, candidate) => sum + candidate.chance, 0)
+    const incidentChance = Math.min(.40, totalIncidentWeight * .62)
+    let incident: RoundIncident | undefined
+    if (incidentCandidates.length && rng() < incidentChance) {
+      let cursor = rng() * totalIncidentWeight
+      for (const candidate of incidentCandidates) {
+        cursor -= candidate.chance
+        if (cursor <= 0) {
+          incident = candidate
+          break
+        }
+      }
+      incident ??= incidentCandidates[incidentCandidates.length - 1]
+    }
+
+    if (incident) roundProbability += incident.delta
     roundProbability = clamp(roundProbability, .06, .94)
 
     const winner: 'US' | 'THEM' = rng() < roundProbability ? 'US' : 'THEM'
     let cause: MatchRoundCause = 'AIM'
     let keyPlayer: string | undefined
     let keyPlayerSide: 'US' | 'THEM' | undefined
+    const incidentConverted = incident && incident.side === winner
 
-    if (winner === 'US' && theirPlayerMistake) {
-      cause = 'PLAYER_ERROR'
-      keyPlayer = opponent.vulnerableAlias
-      keyPlayerSide = 'THEM'
-    } else if (winner === 'THEM' && ourPlayerMistake) {
-      cause = 'PLAYER_ERROR'
-      keyPlayer = vulnerable?.alias
-      keyPlayerSide = 'US'
-    } else if (winner === 'US' && theirFatigueBreak) {
-      cause = 'FATIGUE'
-      keyPlayer = opponent.vulnerableAlias
-      keyPlayerSide = 'THEM'
-    } else if (winner === 'THEM' && ourFatigueBreak) {
-      cause = 'FATIGUE'
-      keyPlayer = vulnerable?.alias
-      keyPlayerSide = 'US'
-    } else if (winner === 'US' && theirCommunicationBreak) {
-      cause = 'COMMUNICATION'
-      keyPlayerSide = 'THEM'
-    } else if (winner === 'THEM' && ourCommunicationBreak) {
-      cause = 'COMMUNICATION'
-      keyPlayerSide = 'US'
-    } else if (winner === 'US' && ourAntiStrat) {
-      cause = 'ANTI_STRAT'
-      keyPlayerSide = 'US'
-    } else if (winner === 'THEM' && theirAntiStrat) {
-      cause = 'ANTI_STRAT'
-      keyPlayerSide = 'THEM'
-    } else if (clutchRound) {
-      cause = 'CLUTCH'
-      keyPlayer = winner === 'US' ? clutchPlayer?.alias : opponent.clutchAlias
-      keyPlayerSide = winner
-    } else if (Math.abs(tacticalEdge) >= .018 && ((tacticalEdge > 0) === (winner === 'US'))) {
-      cause = 'TACTICAL_EDGE'
-      keyPlayerSide = winner
-    } else if (Math.abs(momentum) >= .02 && ((momentum > 0) === (winner === 'US'))) {
-      cause = 'MOMENTUM'
-      keyPlayerSide = winner
+    if (incidentConverted && incident) {
+      cause = incident.cause
+      keyPlayer = incident.keyPlayer
+      keyPlayerSide = incident.keyPlayerSide
+    } else {
+      const clutchRound = closeScore && lateRound && rng() < .22
+      if (clutchRound) {
+        cause = 'CLUTCH'
+        keyPlayer = winner === 'US' ? clutchPlayer?.alias : opponent.clutchAlias
+        keyPlayerSide = winner
+      } else if (Math.abs(tacticalEdge) >= .018 && ((tacticalEdge > 0) === (winner === 'US'))) {
+        cause = 'TACTICAL_EDGE'
+        keyPlayerSide = winner
+      } else if (Math.abs(momentum) >= .02 && ((momentum > 0) === (winner === 'US'))) {
+        cause = 'MOMENTUM'
+        keyPlayerSide = winner
+      }
     }
 
-    appendRound(winner, cause, keyPlayer, keyPlayerSide, clutchRound && cause === 'CLUTCH')
+    appendRound(winner, cause, keyPlayer, keyPlayerSide, cause === 'CLUTCH')
   }
 
   // The simulation must never hand a tied map to the opponent because of a guard.
@@ -2241,6 +2335,10 @@ export const playMatch = (
     1.28,
   )
   const opponentBaseSkills = opponentRosterSkillProfile(opponent.roster, opponent.rating)
+  const opponentCondition = createOpponentSeriesCondition(
+    opponent.rating,
+    mulberry32(hashSeed(matchSeed + ':opponent-condition')),
+  )
   const opponentAdaptationRate = clamp(
     (opponentBaseSkills.gameSense * .55 + opponentBaseSkills.leadership * .45) / 70,
     .72,
@@ -2277,6 +2375,7 @@ export const playMatch = (
       state.lineupContinuity,
       ourAdaptation,
       opponentAdaptation,
+      opponentCondition,
       mapRng,
     )
     maps.push(mapResult)

@@ -2743,7 +2743,7 @@ export const playMatch = (
   })
 
   const result: MatchResult = {
-    id: 'm-' + state.season + '-' + state.history.length + '-' + state.now.replace(/[^0-9]/g, ''),
+    id: resultId,
     season: state.season,
     week: state.week,
     mode: effectiveMode,
@@ -2769,28 +2769,8 @@ export const playMatch = (
     vrsDelta: isPractice ? 0 : matchVrs + tournamentVrs,
   }
 
-  const contractNews: NewsItem[] = roster.some((player) => player.contractWeeks <= 2)
-    ? [{
-        id: 'contracts-warning-' + result.id,
-        week: state.week,
-        kind: 'contract' as const,
-        title: 'Контрактное давление растёт',
-        body: 'До окончания контрактов осталось не больше двух недель: ' + roster.filter((player) => player.contractWeeks <= 2).map((player) => player.alias).join(', ') + '.',
-      }]
-    : []
-
-  const financeNews: NewsItem[] = reward > 0
-    ? [{
-        id: 'finance-' + result.id,
-        week: state.week,
-        kind: 'finance' as const,
-        title: event ? 'Турнир выплатил призовые' : 'Доход от матча',
-        body: 'Доход: +' + reward + ' кр.',
-      }]
-    : []
-
   const nextWeek = Math.min(state.seasonLength, gameWeekForDate(state.seasonStart, matchEnd))
-  const nextActiveTournament = event
+  const rawNextActiveTournament = event
     ? (resolvedRun && !tournamentFinished ? resolvedRun : null)
     : state.activeTournament
       ? advanceTournamentTo(state.activeTournament, matchEnd, state.seed + state.season)
@@ -2808,13 +2788,20 @@ export const playMatch = (
     matchEnd,
     state.seed + state.history.length * 43,
   )
+  const clubKeysAfterMatch = new Set(
+    clubWorldRosterProjection(roster)
+      .map((player) => player.playerKey ?? worldPlayerByAlias(updatedWorld, player.alias)?.key)
+      .filter((key): key is string => Boolean(key)),
+  )
+  const nextActiveTournament = rawNextActiveTournament
+    ? refreshTournamentTeamsFromWorld(rawNextActiveTournament, updatedWorld, clubKeysAfterMatch)
+    : null
 
-  const next: GameState = {
+  let next: GameState = {
     ...state,
     world: updatedWorld,
     now: matchEnd,
     week: nextWeek,
-    credits: state.credits + reward,
     fans: Math.max(0, state.fans + fansDelta),
     reputation: isPractice ? state.reputation : clamp(state.reputation + (won ? (effectiveMode === 'cup' ? 5 : 3) : -1)),
     wins: state.wins + (!isPractice && won ? 1 : 0),
@@ -2832,12 +2819,6 @@ export const playMatch = (
           sharpness: clamp((state.training?.sharpness ?? 55) - 3),
         },
     history: [result, ...state.history].slice(0, 80),
-    news: [
-      { id: 'news-' + result.id, week: state.week, kind: 'match' as const, title: story.headline, body: story.detail + (result.vrsDelta ? ' · VRS +' + result.vrsDelta : '') },
-      ...financeNews,
-      ...contractNews,
-      ...state.news,
-    ].slice(0, 80),
     managerXp: state.managerXp + (isPractice ? 15 : (effectiveMode === 'cup' ? 100 : effectiveMode === 'showmatch' ? 75 : 55) + (won ? 35 : 10)),
     packTokens: state.packTokens + (isPractice ? 0 : won ? (effectiveMode === 'cup' ? 55 : effectiveMode === 'showmatch' ? 40 : 25) : 10),
     activeEventId: nextActiveTournament?.eventId ?? null,
@@ -2849,6 +2830,79 @@ export const playMatch = (
         ? (tournamentFinished ? weeklyDecision(state, won) : null)
         : weeklyDecision(state, won),
     lastWeekNet: reward,
+  }
+
+  const matchFinanceId = reward > 0 ? 'match-income-' + result.id : null
+  if (reward > 0) {
+    next = postClubFinance(next, {
+      id: matchFinanceId!,
+      at: matchEnd,
+      week: nextWeek,
+      amount: reward,
+      account: event ? 'prize' : 'operating',
+      title: event ? 'Турнирные призовые' : 'Доход от матча',
+      description: event ? (event.name + ' · выплата по итогам серии.') : ('Матч против ' + opponent.name + '.'),
+      sourceType: event ? 'tournament' : 'match',
+      sourceId: result.id,
+      eventId: 'match-event-' + result.id,
+    })
+  }
+
+  next = recordClubEvent(next, {
+    id: 'match-event-' + result.id,
+    at: matchEnd,
+    week: nextWeek,
+    kind: 'match',
+    title: story.headline,
+    detail: story.detail + (result.vrsDelta ? ' · VRS +' + result.vrsDelta : ''),
+    importance: event?.circuitTier === 1 ? 95 : event?.circuitTier === 2 ? 78 : isPractice ? 25 : 60,
+    actorIds: roster.filter((player) => activeIds.has(player.id)).map((player) => player.playerKey ?? player.id),
+    teamIds: [PLAYER_CLUB_WORLD_ID, ...(opponent.teamId ? [opponent.teamId] : [])],
+    sourceId: result.id,
+    financeEntryIds: matchFinanceId ? [matchFinanceId] : [],
+    data: {
+      matchSnapshot: result,
+      opponent: opponent.name,
+      opponentRating: opponent.rating,
+      vrsDelta: result.vrsDelta ?? 0,
+      tournamentId: event?.id ?? null,
+      tier: ratingTier,
+      environment: ratingEnvironment,
+    },
+  })
+
+  const expiring = roster.filter((player) => player.contractWeeks <= 2)
+  if (expiring.length) {
+    next = recordClubEvent(next, {
+      id: 'contracts-warning-' + result.id,
+      at: matchEnd,
+      week: nextWeek,
+      kind: 'contract',
+      title: 'Контрактное давление растёт',
+      detail: 'До окончания контрактов осталось не больше двух недель: ' + expiring.map((player) => player.alias).join(', ') + '.',
+      importance: 55,
+      actorIds: expiring.map((player) => player.playerKey ?? player.id),
+      teamIds: [PLAYER_CLUB_WORLD_ID],
+      sourceId: result.id,
+    })
+  }
+
+  if (tournamentFinished && resolvedRun && event) {
+    next = recordClubEvent(next, {
+      id: 'tournament-finish-' + resolvedRun.id,
+      at: matchEnd,
+      week: nextWeek,
+      kind: 'tournament',
+      title: event.name + ' · ' + (resolvedRun.placement ?? resolvedRun.status).toUpperCase(),
+      detail: (tournamentPrize > 0 ? 'Призовые: ' + tournamentPrize + ' кр.' : 'Без призовых.') +
+        (tournamentVrs > 0 ? ' · VRS +' + tournamentVrs : ''),
+      importance: event.circuitTier === 1 ? 98 : event.circuitTier === 2 ? 82 : 62,
+      actorIds: roster.map((player) => player.playerKey ?? player.id),
+      teamIds: [PLAYER_CLUB_WORLD_ID],
+      sourceId: resolvedRun.id,
+      financeEntryIds: matchFinanceId ? [matchFinanceId] : [],
+      data: { placement: resolvedRun.placement, prize: tournamentPrize, vrsDelta: tournamentVrs },
+    })
   }
 
   const seasonWeekAfterMatch = gameWeekForDate(next.seasonStart, next.now)

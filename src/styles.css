@@ -4291,9 +4291,9 @@ button.primary:hover,
   stroke-width: 3px;
   stroke-linejoin: round;
 }
-.world-marker.tier-1 > circle:first-child { fill: #ff7d48; }
-.world-marker.tier-2 > circle:first-child { fill: #a67cff; }
-.world-marker.tier-3 > circle:first-child { fill: #21dced; }
+.world-marker.tier-1 > circle:first-child { fill: var(--ui-warn); }
+.world-marker.tier-2 > circle:first-child { fill: var(--ui-accent-2); }
+.world-marker.tier-3 > circle:first-child { fill: var(--ui-accent); }
 .world-marker.online > circle:first-child {
   stroke: #fff;
   stroke-width: 2;
@@ -4340,9 +4340,9 @@ button.primary:hover,
   border-radius: 50%;
   background: #929db8;
 }
-.world-map-legend i.tier1 { background: #ff7d48; }
-.world-map-legend i.tier2 { background: #a67cff; }
-.world-map-legend i.tier3 { background: #21dced; }
+.world-map-legend i.tier1 { background: var(--ui-warn); }
+.world-map-legend i.tier2 { background: var(--ui-accent-2); }
+.world-map-legend i.tier3 { background: var(--ui-accent); }
 .world-map-legend i.online { background: #11162f; border: 2px solid #fff; }
 .world-map-empty {
   position: absolute;
@@ -4819,8 +4819,8 @@ button.primary:hover,
 .match-radar-feed div {
   min-width: 230px;
 }
-.match-radar-feed b.our { color: #4ba7ff; }
-.match-radar-feed b.their { color: #f2a04b; }
+.match-radar-feed b.our { color: var(--ui-accent); }
+.match-radar-feed b.their { color: var(--ui-warn); }
 .match-radar-result {
   z-index: 10;
 }
@@ -5148,9 +5148,9 @@ button.primary:hover,
   color: #a8b2cb;
   font: 800 7px/1.1 Arial,sans-serif;
 }
-.calendar-event.t1 { border-color: #ff7d48; }
-.calendar-event.t2 { border-color: #a67cff; }
-.calendar-event.t3 { border-color: #21dced; }
+.calendar-event.t1 { border-color: var(--ui-warn); }
+.calendar-event.t2 { border-color: var(--ui-accent-2); }
+.calendar-event.t3 { border-color: var(--ui-accent); }
 .calendar-event.online::before { content: '● '; color: #fff; }
 .calendar-event.active {
   background: rgb(var(--ui-accent-rgb) / .12);
@@ -5202,9 +5202,9 @@ button.primary:hover,
   color: #fff;
   font: 1000 12px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
 }
-.calendar-tier.tier-1 { border-color: #ff7d48; color: #ff9b70; }
-.calendar-tier.tier-2 { border-color: #a67cff; color: #bd9aff; }
-.calendar-tier.tier-3 { border-color: #21dced; color: #49e9f7; }
+.calendar-tier.tier-1 { border-color: var(--ui-warn); color: var(--ui-warn); }
+.calendar-tier.tier-2 { border-color: var(--ui-accent-2); color: #bba783; }
+.calendar-tier.tier-3 { border-color: var(--ui-accent); color: var(--ui-accent); }
 .calendar-event-copy,
 .calendar-event-state {
   display: grid;
@@ -5500,9 +5500,9 @@ button.primary:hover,
 .world-marker:focus-visible text {
   opacity: 1;
 }
-.world-marker.tier-1 .world-marker-dot { fill: #ff7d48; }
-.world-marker.tier-2 .world-marker-dot { fill: #a67cff; }
-.world-marker.tier-3 .world-marker-dot { fill: #21dced; }
+.world-marker.tier-1 .world-marker-dot { fill: var(--ui-warn); }
+.world-marker.tier-2 .world-marker-dot { fill: var(--ui-accent-2); }
+.world-marker.tier-3 .world-marker-dot { fill: var(--ui-accent); }
 .world-marker.online .world-marker-dot {
   stroke: #fff;
   stroke-width: 2.5;

@@ -2125,22 +2125,35 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   const effectiveTarget = mandatoryMatch && compareGameTime(target, mandatoryMatch.scheduledAt) > 0
     ? mandatoryMatch.scheduledAt
     : target
-  const preparedTournament = state.activeTournament
-    ? advanceTournamentTo(state.activeTournament, effectiveTarget, state.seed + state.season)
-    : null
-
   const previousWeek = gameWeekForDate(state.seasonStart, state.now)
   const nextWeekRaw = gameWeekForDate(state.seasonStart, effectiveTarget)
   const payrollCycles = Math.max(0, nextWeekRaw - previousWeek)
   const payrollPerWeek = weeklyPayroll(state)
   const payrollCost = payrollPerWeek * payrollCycles
   const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, effectiveTarget) / 24))
+  const updatedRoster = state.roster.map((player) => ({
+    ...player,
+    fatigue: clamp(player.fatigue - Math.min(18, elapsedDays * 2)),
+    contractWeeks: Math.max(0, player.contractWeeks - payrollCycles),
+  }))
 
   const ecologySeed = state.seed + previousWeek * 4099 + state.season * 131
   let advancedWorld = advanceWorldEcology(state.world, state.now, effectiveTarget, ecologySeed)
   if (payrollCycles > 0) {
     advancedWorld = advanceWorldWeeks(advancedWorld, payrollCycles, ecologySeed, effectiveTarget)
   }
+  advancedWorld = repairWorldIntegrity(advancedWorld, clubWorldRosterProjection(updatedRoster))
+  const clubKeys = new Set(
+    clubWorldRosterProjection(updatedRoster)
+      .map((player) => player.playerKey ?? worldPlayerByAlias(advancedWorld, player.alias)?.key)
+      .filter((key): key is string => Boolean(key)),
+  )
+  const refreshedTournament = state.activeTournament
+    ? refreshTournamentTeamsFromWorld(state.activeTournament, advancedWorld, clubKeys)
+    : null
+  const preparedTournament = refreshedTournament
+    ? advanceTournamentTo(refreshedTournament, effectiveTarget, state.seed + state.season)
+    : null
   const worldEvents = worldEventsSince(advancedWorld, state.now, 28).slice(0, 24)
 
   let next: GameState = {
@@ -2149,7 +2162,6 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
     activeTournament: preparedTournament,
     now: effectiveTarget,
     week: Math.min(state.seasonLength, nextWeekRaw),
-    credits: Math.max(0, state.credits - payrollCost),
     staffEnergy: payrollCycles > 0 ? 3 : state.staffEnergy,
     training: payrollCycles > 0
       ? {
@@ -2165,51 +2177,57 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
           ),
         }
       : state.training,
-    roster: state.roster.map((player) => ({
-      ...player,
-      fatigue: clamp(player.fatigue - Math.min(18, elapsedDays * 2)),
-      contractWeeks: Math.max(0, player.contractWeeks - payrollCycles),
-    })),
+    roster: updatedRoster,
     lastPayroll: payrollCycles > 0 ? payrollPerWeek : state.lastPayroll,
     lastWeekNet: payrollCycles > 0 ? -payrollPerWeek : state.lastWeekNet,
   }
 
-  const worldNewsKind = (event: WorldHistoryEvent): NewsItem['kind'] =>
-    event.kind === 'transfer-completed' || event.kind === 'transfer-offer' || event.kind === 'contract-expired'
-      ? 'contract'
-      : event.kind === 'tournament-completed' || event.kind === 'tournament-created'
-        ? 'match'
-        : 'media'
-
-  const ecologyNews: NewsItem[] = worldEvents
-    .filter((event) => worldEventTouchesPlayerClub(state, event))
-    .map((event) => ({
-      id: 'ecology-' + event.id,
+  if (payrollCycles > 0) {
+    const payrollEventId = 'payroll-event-' + effectiveTarget
+    next = postClubFinance(next, {
+      id: 'payroll-' + effectiveTarget,
+      at: effectiveTarget,
       week: next.week,
-      kind: worldNewsKind(event),
-      title: event.title,
-      body: event.detail,
-      scope: 'club' as const,
-      // Ecology currently has no player-facing resolver for offers/invitations.
-      // Keep these informative until a real decision flow exists.
-      attention: 'info' as const,
-    }))
+      amount: -payrollCost,
+      account: 'salary',
+      title: 'Недельный payroll',
+      description: 'Зарплаты состава · циклов: ' + payrollCycles + '.',
+      sourceType: 'payroll',
+      sourceId: String(next.week),
+      eventId: payrollEventId,
+    })
+    next = recordClubEvent(next, {
+      id: payrollEventId,
+      at: effectiveTarget,
+      week: next.week,
+      kind: 'finance',
+      title: 'Недельный расчёт клуба',
+      detail: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
+      importance: 35,
+      actorIds: updatedRoster.map((player) => player.playerKey ?? player.id),
+      teamIds: [PLAYER_CLUB_WORLD_ID],
+      financeEntryIds: ['payroll-' + effectiveTarget],
+    })
+  }
 
-  if (payrollCycles > 0 || ecologyNews.length > 0) {
-    next = {
-      ...next,
-      news: [
-        ...ecologyNews,
-        ...(payrollCycles > 0 ? [{
-          id: 'payroll-' + effectiveTarget,
-          week: next.week,
-          kind: 'finance' as const,
-          title: 'Недельный расчёт клуба',
-          body: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
-        }] : []),
-        ...next.news,
-      ].slice(0, 80),
-    }
+  for (const event of worldEvents.filter((candidate) => worldEventTouchesPlayerClub(state, candidate))) {
+    next = recordClubEvent(next, {
+      id: 'world-' + event.id,
+      at: event.at,
+      week: next.week,
+      kind: event.kind === 'transfer-completed' || event.kind === 'transfer-offer' || event.kind === 'contract-expired'
+        ? 'contract'
+        : event.kind === 'tournament-completed' || event.kind === 'tournament-created'
+          ? 'tournament'
+          : 'media',
+      title: event.title,
+      detail: event.detail,
+      importance: event.importance,
+      actorIds: event.actorIds,
+      teamIds: event.actorIds.filter((id) => advancedWorld.teams.some((team) => team.id === id)),
+      sourceId: event.id,
+      data: event.data,
+    })
   }
 
   if (next.activeTournament) {

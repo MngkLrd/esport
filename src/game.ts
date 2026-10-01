@@ -570,6 +570,7 @@ export const playerFromPackCard = (card: PackCard, index: number): Player => {
             ? ['Первый контакт', 'Темп']
             : ['Рифлер', 'Гибкий'],
     bio: (card.realName ?? card.alias) + ' · ' + (card.country ?? 'страна неизвестна') + ' · ' + card.team + '.',
+    ratingV2: buildPlayerRatingV2({ aim, gameSense, utility, clutch, leadership }, role),
   }
 }
 
@@ -724,6 +725,9 @@ const normalizePlayers = (players: Player[], packs: PackState): Player[] => play
     firstName: player.firstName && player.firstName !== player.alias ? player.firstName : identity?.realName ?? player.firstName,
     country: player.country && player.country !== 'Неизвестно' ? player.country : identity?.country ?? player.country,
     age: player.age ?? identity?.age ?? null,
+    ratingV2: player.ratingV2?.version === 2
+      ? player.ratingV2
+      : buildPlayerRatingV2(playerRatingSkills(player), player.role),
   }
 })
 

@@ -2708,7 +2708,7 @@ body{
   width:38px;height:38px;border:1px solid var(--sim-line);background:var(--ui-panel);color:var(--ui-text)
 }
 .market-negotiation .market-segmented button.active,.market-negotiation .market-contract-options button.active,.market-negotiation .market-role-promise button.active{
-  border-color:var(--sim-cyan);background:rgb(var(--ui-accent-rgb) / .08);color:#fff
+  border-color:var(--sim-cyan);background:rgb(var(--ui-accent-rgb) / .08);color:var(--ui-text)
 }
 .market-negotiation input[type=range]{accent-color:var(--sim-cyan)}
 .market-negotiation .market-term>b{color:var(--sim-cyan)}

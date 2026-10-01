@@ -958,3 +958,232 @@
   :where(button,select,input):disabled{
   color:var(--ui-muted)!important;
 }
+
+
+/* Unified player identity */
+.player-identity{
+  min-width:0;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+}
+.player-identity-photo{
+  --player-id-size:38px;
+  width:var(--player-id-size);
+  height:var(--player-id-size);
+  overflow:hidden;
+  display:grid;
+  place-items:end center;
+  border:1px solid rgb(var(--ui-line-rgb) / .18);
+  background:
+    radial-gradient(circle at 50% 35%,rgb(var(--ui-accent-rgb) / .08),transparent 66%),
+    rgb(255 255 255 / .018);
+}
+.player-identity-sm .player-identity-photo{--player-id-size:30px}
+.player-identity-lg .player-identity-photo{--player-id-size:50px}
+.player-identity-photo img,
+.player-identity-photo .player-portrait-fallback{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center bottom;
+}
+.player-identity-copy{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.player-identity-copy>strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--ui-text);
+  font:1000 11px/1 'Cyril UI','Noto Sans',system-ui,sans-serif;
+}
+.player-identity-copy>small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--ui-muted);
+  font:800 8px/1 Arial,sans-serif;
+}
+.player-identity-copy>em{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--ui-soft);
+  font:800 8px/1 Arial,sans-serif;
+  font-style:normal;
+}
+.player-identity-trailing{justify-self:end}
+
+/* Match player cards: identity first, metrics second. */
+.match-lobby-player{
+  display:grid!important;
+  grid-template-rows:auto auto!important;
+  gap:7px!important;
+  padding:7px 9px!important;
+}
+.match-lobby-player-identity{min-height:42px}
+.match-lobby-player-stats{
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:1px!important;
+  border-top:1px solid rgb(var(--ui-line-rgb) / .07)!important;
+}
+.match-lobby-player-stats>span{
+  min-height:31px!important;
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  gap:3px!important;
+  background:transparent!important;
+}
+.match-lobby-player-ovr{
+  display:grid!important;
+  justify-items:end!important;
+  gap:2px!important;
+}
+.match-lobby-player-ovr small{color:var(--ui-soft)!important;font:900 7px/1 Arial,sans-serif!important}
+.match-lobby-player-ovr b{color:var(--ui-text)!important;font:1000 15px/1 'Cyril UI','Noto Sans',system-ui,sans-serif!important}
+
+/* VRS table uses the same team identity primitive and acts as navigation. */
+.vrs-row{
+  width:100%;
+  min-width:0;
+  border-left:0!important;
+  border-right:0!important;
+  border-top:0!important;
+  background:transparent!important;
+  color:var(--ui-text)!important;
+  cursor:pointer;
+  text-align:left;
+}
+.vrs-row:hover{background:rgb(var(--ui-accent-rgb) / .035)!important}
+.vrs-team{
+  min-width:0;
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+}
+.vrs-team>span{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.vrs-team strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Tournament screens share one visual language instead of modal/banner/table forks. */
+.sim-event-banner,
+.tournament-bracket-modal,
+.tournament-group,
+.bracket-column,
+.bracket-match{
+  border-color:rgb(var(--ui-line-rgb) / .16)!important;
+  background-color:rgb(var(--ui-panel-rgb) / .88)!important;
+}
+.sim-event-banner{
+  background:
+    linear-gradient(90deg,rgb(var(--ui-accent-rgb) / .045),transparent 38%),
+    rgb(var(--ui-panel-rgb) / .92)!important;
+}
+.tournament-bracket-modal{
+  background:
+    radial-gradient(circle at 18% 0%,rgb(var(--ui-accent-rgb) / .055),transparent 30%),
+    var(--ui-bg-1)!important;
+}
+.tournament-bracket-modal-head{
+  border-bottom:1px solid rgb(var(--ui-line-rgb) / .12)!important;
+}
+.tournament-groups,
+.tournament-bracket-grid{gap:8px!important}
+.tournament-group,
+.bracket-column{box-shadow:none!important}
+.bracket-match{
+  border-left:2px solid rgb(var(--ui-line-rgb) / .16)!important;
+}
+.bracket-match.is-player{
+  border-left-color:var(--ui-accent)!important;
+  background:rgb(var(--ui-accent-rgb) / .035)!important;
+}
+.bracket-match .winner{
+  color:var(--ui-positive)!important;
+}
+
+/* Old collectible details no longer leak the retired blue modal styling. */
+.card-detail-hero.card-detail-hero-shared{
+  background:
+    radial-gradient(circle at 24% 35%,rgb(var(--ui-accent-rgb) / .10),transparent 40%),
+    linear-gradient(180deg,var(--ui-panel-raised),var(--ui-panel))!important;
+}
+.card-detail-hero-shared .card-detail-edition{color:var(--ui-accent)!important}
+.card-detail-content{background:var(--ui-bg-1)!important;color:var(--ui-text)!important}
+.card-detail-content :where(h3,b){color:var(--ui-text)}
+.card-detail-content :where(p,span){border-color:rgb(var(--ui-line-rgb) / .10)}
+
+/* Main-screen hierarchy: one primary action, calmer secondary chrome. */
+.fifa-home-continue,
+.sim-primary-action,
+.match-lobby-primary{
+  min-height:42px!important;
+  border-color:rgb(var(--ui-accent-rgb) / .40)!important;
+  background:
+    linear-gradient(90deg,rgb(var(--ui-accent-rgb) / .13),rgb(var(--ui-accent-rgb) / .05))!important;
+  color:var(--ui-text)!important;
+}
+.fifa-home-continue:hover:not(:disabled),
+.sim-primary-action:hover:not(:disabled),
+.match-lobby-primary:hover:not(:disabled){
+  border-color:var(--ui-accent)!important;
+  background:rgb(var(--ui-accent-rgb) / .17)!important;
+}
+.sim-world-filters,
+.sim-segmented,
+.sim-subnav{
+  box-shadow:none!important;
+}
+.sim-world-filters button:not(.active),
+.sim-segmented button:not(.active),
+.sim-subnav button:not(.active){
+  background:transparent!important;
+  color:var(--ui-muted)!important;
+}
+
+/* Internal scroll only: page shell stays fixed like a game screen. */
+@media (min-width:901px){
+  .sim-world,
+  .sim-world-vrs,
+  .sim-matchday,
+  .sim-packs,
+  .sim-market,
+  .sim-profile,
+  .sim-calendar,
+  .sim-roster-v2,
+  .training-ground,
+  .newsroom{
+    height:100%!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  .world-vrs-panel,
+  .vrs-table-scroll,
+  .sim-market-body,
+  .sim-collection-scroll,
+  .newsroom-feed,
+  .newsroom-inbox-list,
+  .newsroom-editorial,
+  .team-profile-main,
+  .team-profile-side,
+  .player-profile-body>main,
+  .player-profile-body>aside{
+    min-height:0;
+    overflow:auto;
+    scrollbar-width:thin;
+  }
+}

@@ -8,7 +8,6 @@ import {
   negotiateProspect,
   playMatch,
   scout,
-  type GameState,
 } from '../src/game'
 import { rollWelcomePack } from '../src/welcomePack'
 import { applyWelcomePack } from '../src/game'
@@ -277,11 +276,11 @@ describe('manager architecture v2', () => {
   })
 
   it('migrates existing saves into v13 finance event and transfer domains', () => {
-    const legacy = createInitialState() as unknown as GameState & { version: number }
+    const legacy = createInitialState() as unknown as Record<string, unknown>
     legacy.version = 12
-    delete (legacy as Partial<GameState>).finance
-    delete (legacy as Partial<GameState>).clubEvents
-    delete (legacy as Partial<GameState>).transferCases
+    delete legacy.finance
+    delete legacy.clubEvents
+    delete legacy.transferCases
 
     const migrated = migrateState(JSON.parse(JSON.stringify(legacy)))
     expect(migrated.version).toBe(13)

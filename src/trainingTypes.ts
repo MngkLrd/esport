@@ -86,6 +86,25 @@ export const createTrainingState = (): TrainingState => ({
   development: {},
 })
 
+export const trainingPreparationModifier = (
+  training: TrainingState,
+  map: string,
+  opponentTeamId: string | null,
+) => {
+  const mapPrep = TRAINING_MAPS.includes(map as TrainingMap)
+    ? training.mapPreparation[map as TrainingMap]
+    : 50
+  const knowledge = opponentTeamId ? training.opponentKnowledge[opponentTeamId] ?? 0 : 0
+  const raw =
+    (training.readiness - 55) * 0.035 +
+    (training.tacticalCohesion - 50) * 0.022 +
+    (training.sharpness - 55) * 0.018 +
+    (mapPrep - 50) * 0.028 +
+    (knowledge - 30) * 0.012
+
+  return Math.max(-3.2, Math.min(3.2, raw))
+}
+
 const validSessionType = (value: unknown): value is TrainingSessionType =>
   value === 'team' || value === 'scrim' || value === 'map' || value === 'anti-strat' ||
   value === 'utility' || value === 'mechanics' || value === 'recovery' || value === 'match-prep'

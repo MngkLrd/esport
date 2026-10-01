@@ -31,6 +31,7 @@ export function SeasonCalendar({
   displayNow,
   timeAnimating = false,
   onAdvance,
+  onContinue,
   onAdvanceToMatch,
   onOpenMatch,
   onOpenWorld,
@@ -40,6 +41,7 @@ export function SeasonCalendar({
   displayNow?: string
   timeAnimating?: boolean
   onAdvance: (target: string) => void
+  onContinue: () => void
   onAdvanceToMatch: () => void
   onOpenMatch: () => void
   onOpenWorld: (eventId?: string) => void
@@ -138,7 +140,7 @@ export function SeasonCalendar({
 
       <div className="sim-calendar-controls">
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameHours(state.now, 6))}>+6 HOURS</button>
-        <button className="next-day" disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 1, 9))}>NEXT DAY <span>→</span></button>
+        <button className="next-day" disabled={timeBlocked} onClick={onContinue}>CONTINUE <span>→</span></button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 3, 9))}>+3 DAYS</button>
         <button disabled={timeBlocked} onClick={() => onAdvance(addGameDays(state.now, 7, 9))}>+7 DAYS</button>
         {state.pendingDecision && <span className="sim-calendar-blocked">DECISION REQUIRED · INBOX</span>}

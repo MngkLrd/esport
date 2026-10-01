@@ -432,8 +432,11 @@ const recentClubPressure = (ecology: WorldEcologyState, teamId: string, at: stri
   const cutoff = addDays(at, -90)
   let losses = 0
   let wins = 0
-  for (const competition of Object.values(ecology.competitions)) {
-    if (competition.status !== 'complete' || competition.endsAt < cutoff || !competition.participantTeamIds.includes(teamId)) continue
+  const competitions = Object.values(ecology.competitions)
+  for (let index = competitions.length - 1; index >= 0; index -= 1) {
+    const competition = competitions[index]
+    if (competition.endsAt < cutoff) break
+    if (competition.status !== 'complete' || !competition.participantTeamIds.includes(teamId)) continue
     for (const match of competition.matches) {
       if (match.winnerTeamId === teamId) wins += 1
       if (match.loserTeamId === teamId) losses += 1
@@ -1086,11 +1089,13 @@ const selectCompetitionTeams = (
   seed: number,
 ) => {
   const rng = rngFor(seed, 'participants:' + operator.id + ':' + startsAt)
+  const occupiedTeamIds = new Set(
+    activeCompetitions(ecology)
+      .filter((competition) => rangesOverlap(startsAt, endsAt, competition.startsAt, competition.endsAt))
+      .flatMap((competition) => competition.participantTeamIds),
+  )
   const teams = activeTeams(world)
-    .filter((team) => !activeCompetitions(ecology).some((competition) =>
-      competition.participantTeamIds.includes(team.id) &&
-      rangesOverlap(startsAt, endsAt, competition.startsAt, competition.endsAt),
-    ))
+    .filter((team) => !occupiedTeamIds.has(team.id))
     .map((team) => {
       const strength = teamStrength(world, team)
       const prestige = clubPrestige(team)

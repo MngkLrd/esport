@@ -106,19 +106,23 @@ const usePersistentSet = (key: string) => {
 }
 
 function StoryArt({ story, hero = false }: { story: NewsStory; hero?: boolean }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const imageSrc = imageFailed ? null : story.image.src
+
   return (
     <div
       className={'newsroom-art art-' + story.category + ' art-v' + story.image.variant + (hero ? ' is-hero' : '')}
-      aria-label={story.image.alt || undefined}
-      aria-hidden={story.image.alt ? undefined : true}
+      aria-label={imageSrc ? story.image.alt : undefined}
+      aria-hidden={imageSrc ? undefined : true}
     >
       <div className="newsroom-art-grid" />
-      {story.image.src ? (
+      {imageSrc ? (
         <img
-          src={story.image.src}
+          src={imageSrc}
           alt={story.image.alt}
           loading={hero ? 'eager' : 'lazy'}
           decoding="async"
+          onError={() => setImageFailed(true)}
           className={'newsroom-art-image image-' + story.image.kind}
         />
       ) : (

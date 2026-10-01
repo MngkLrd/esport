@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatGameDateTime, humanTimeUntil } from './calendar'
 import { tournamentForId } from './events'
 import type { GameState } from './game'
+import { TeamBadge } from './TeamBadge'
 import {
   PLAYER_TEAM_ID,
   groupStandings,
@@ -29,12 +30,12 @@ function MatchCard({ run, match }: { run: TournamentRun; match: TournamentMatch 
         <small>{formatGameDateTime(match.scheduledAt)}</small>
       </div>
       <div className={(match.winnerId === match.teamAId ? ' winner' : '')}>
-        <span>{teamName(run, match.teamAId)}</span>
-        <b>{complete ? match.scoreA : '—'}</b>
+        <span className="bracket-team"><TeamBadge name={teamName(run, match.teamAId)} size="sm" /><b>{teamName(run, match.teamAId)}</b></span>
+        <strong>{complete ? match.scoreA : '—'}</strong>
       </div>
       <div className={(match.winnerId === match.teamBId ? ' winner' : '')}>
-        <span>{teamName(run, match.teamBId)}</span>
-        <b>{complete ? match.scoreB : '—'}</b>
+        <span className="bracket-team"><TeamBadge name={teamName(run, match.teamBId)} size="sm" /><b>{teamName(run, match.teamBId)}</b></span>
+        <strong>{complete ? match.scoreB : '—'}</strong>
       </div>
     </article>
   )
@@ -48,7 +49,7 @@ function GroupTable({ run, group }: { run: TournamentRun; group: 'A' | 'B' }) {
       {table.map((row, index) => (
         <div key={row.teamId} className={row.teamId === PLAYER_TEAM_ID ? 'is-player' : ''}>
           <i>{index + 1}</i>
-          <span>{teamName(run, row.teamId)}</span>
+          <span className="tournament-group-team"><TeamBadge name={teamName(run, row.teamId)} size="sm" /><b>{teamName(run, row.teamId)}</b></span>
           <b>{row.wins}-{row.losses}</b>
           <small>{row.mapDiff >= 0 ? '+' : ''}{row.mapDiff}</small>
         </div>
@@ -120,7 +121,7 @@ export function TournamentHub({
             <span>{currentMatch ? 'CURRENT CLUB MATCH' : 'NEXT CLUB MATCH'}</span>
             {next ? (
               <>
-                <strong>{teamName(run, next.teamAId)} <i>VS</i> {teamName(run, next.teamBId)}</strong>
+                <strong className="sim-event-team-matchup"><span><TeamBadge name={teamName(run, next.teamAId)} size="sm" />{teamName(run, next.teamAId)}</span><i>VS</i><span>{teamName(run, next.teamBId)}<TeamBadge name={teamName(run, next.teamBId)} size="sm" /></span></strong>
                 <small>{next.label} · {formatGameDateTime(next.scheduledAt)} · {humanTimeUntil(state.now, next.scheduledAt)}</small>
               </>
             ) : (

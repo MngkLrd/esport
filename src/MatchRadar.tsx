@@ -421,7 +421,7 @@ export function MatchRadar({
   const lastFrameRef = useRef<number | null>(null)
   const finishedRef = useRef(false)
   const [elapsed, setElapsed] = useState(0)
-  const [speed, setSpeed] = useState<1 | 2>(1)
+  const [speed, setSpeed] = useState<1 | 2 | 4 | 8>(1)
   const [paused, setPaused] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(starters[0]?.id ?? null)
   const [imageReady, setImageReady] = useState(false)
@@ -494,7 +494,7 @@ export function MatchRadar({
   const seriesProgress = totalDuration ? Math.min(1, elapsed / totalDuration) : 0
   const roundProgress = activeRound ? Math.min(1, localTime / activeRound.duration) : 0
   const timer = Math.max(0, 115 - Math.floor(roundProgress * 115))
-  const finalPhase = seriesProgress > .965
+  const finalPhase = Boolean(playback && totalDuration > 0 && elapsed >= totalDuration)
 
   useEffect(() => {
     if (!round) return
@@ -582,9 +582,12 @@ export function MatchRadar({
   const homePlayers = frame?.players.filter((player) => !player.id.startsWith('away-')) ?? []
   const awayPlayers = frame?.players.filter((player) => player.id.startsWith('away-')) ?? []
 
-  const completedMaps = result.maps.slice(0, currentRoundIndex)
+  const activeMapIndex = activeRound
+    ? Math.max(0, result.maps.findIndex((map) => map.map === activeRound.map))
+    : 0
+  const completedMaps = result.maps.slice(0, activeMapIndex)
   const showCurrentScore = roundProgress > .92
-  const scoreMaps = showCurrentScore ? result.maps.slice(0, currentRoundIndex + 1) : completedMaps
+  const scoreMaps = showCurrentScore ? result.maps.slice(0, activeMapIndex + 1) : completedMaps
   const ourMaps = scoreMaps.filter((map) => map.us > map.them).length
   const theirMaps = scoreMaps.filter((map) => map.them > map.us).length
 
@@ -701,7 +704,7 @@ export function MatchRadar({
 
             <div className="radar-playback-controls">
               <button onClick={() => setPaused((value) => !value)}>{paused ? 'RESUME' : 'PAUSE'}</button>
-              <button onClick={() => setSpeed((value) => value === 1 ? 2 : 1)}>{speed}X</button>
+              <button onClick={() => setSpeed((value) => value === 1 ? 2 : value === 2 ? 4 : value === 4 ? 8 : 1)}>{speed}X</button>
               <button onClick={() => {
                 playbackElapsedCache.delete(simulationKey)
                 onSkip()

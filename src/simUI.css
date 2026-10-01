@@ -229,13 +229,13 @@ body{
   min-height:0;
   border:1px solid rgb(var(--ui-line-rgb) / .24);
   background:
-    radial-gradient(circle at 95% 0%,rgba(92,72,220,.16),transparent 34%),
-    rgba(12,17,43,.80);
+    radial-gradient(circle at 95% 0%,rgb(var(--ui-accent-rgb) / .09),transparent 34%),
+    rgb(var(--ui-panel-rgb) / .82);
   box-shadow:0 18px 44px rgba(0,0,0,.15);
 }
 .app-main-hq .fifa-mode-tile:hover,.app-main-hq .fifa-mode-tile:focus-visible{
   border-color:rgb(var(--ui-accent-rgb) / .70);
-  background-color:rgba(17,25,58,.92);
+  background-color:rgb(var(--ui-panel-raised-rgb) / .92);
 }
 .app-main-hq .fifa-mode-tile h2{font-size:clamp(23px,2vw,32px)}
 .app-main-hq .fifa-mode-tile p{font-size: 14px;line-height:1.35}

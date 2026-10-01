@@ -519,8 +519,16 @@ export const constrainRoundToNavigation = (
   const usedCausalCounterparts = new Set<string>()
   const pairKey = (actorId?: string, targetId?: string) => actorId && targetId ? actorId + '>' + targetId : ''
   const firstFramePlayers = frames[0]?.players ?? []
+  const causalExpectedSide = round.keyPlayerSide === 'US'
+    ? round.homeSide
+    : round.keyPlayerSide === 'THEM'
+      ? (round.homeSide === 'CT' ? 'T' : 'CT')
+      : undefined
   const causalPlayer = round.keyPlayer
-    ? firstFramePlayers.find((player) => player.name === round.keyPlayer)
+    ? firstFramePlayers.find((player) =>
+        player.name === round.keyPlayer &&
+        (causalExpectedSide == null || player.side === causalExpectedSide),
+      )
     : undefined
   const causalAsActor = round.cause === 'CLUTCH'
   const causalAsTarget = round.cause === 'PLAYER_ERROR' || round.cause === 'FATIGUE'
@@ -570,7 +578,12 @@ export const constrainRoundToNavigation = (
     }
 
     let fallback: { frame: SimRound['frames'][number]; counterpart: SimPlayerFrame } | null = null
-    for (const frame of nearbyFrames) {
+    const fallbackFrames = isCriticalPair
+      ? frames
+          .filter((frame) => frame.time >= minimumKillTime)
+          .sort((a, b) => Math.abs(a.time - event.time) - Math.abs(b.time - event.time))
+      : nearbyFrames
+    for (const frame of fallbackFrames) {
       const critical = frame.players.find((player) => player.id === causalPlayer.id)
       if (!critical?.alive) continue
       const candidates = frame.players.filter((player) =>
@@ -619,7 +632,7 @@ export const constrainRoundToNavigation = (
     lastResolvedKillTime = remap.time
   }
 
-  const navigatedEvents = round.events
+  const combatAdjustedEvents = round.events
     .filter((event) => {
       if (event.type !== 'shot' && event.type !== 'damage' && event.type !== 'kill') return true
       const key = pairKey(event.actorId, event.targetId)
@@ -646,6 +659,64 @@ export const constrainRoundToNavigation = (
         }
       }
       return event
+    })
+    .sort((a, b) => a.time - b.time)
+
+  const killedBefore = (playerId: string, time: number) =>
+    combatAdjustedEvents.some((event) =>
+      event.type === 'kill' &&
+      event.targetId === playerId &&
+      event.time < time,
+    )
+  const aliveActorForSide = (side: SimPlayerFrame['side'], time: number) =>
+    firstFramePlayers.find((player) =>
+      player.side === side &&
+      !killedBefore(player.id, time),
+    )
+
+  let validPlant = false
+  const navigatedEvents = combatAdjustedEvents
+    .flatMap((event) => {
+      if (event.type === 'plant') {
+        const actor = !killedBefore(event.actorId, event.time)
+          ? firstFramePlayers.find((player) => player.id === event.actorId)
+          : aliveActorForSide('T', event.time)
+        if (!actor) return []
+        validPlant = true
+        return [{
+          ...event,
+          actorId: actor.id,
+          actorName: actor.name,
+          side: 'T' as const,
+        }]
+      }
+
+      if (event.type === 'defuse') {
+        if (!validPlant) return []
+        const actor = !killedBefore(event.actorId, event.time)
+          ? firstFramePlayers.find((player) => player.id === event.actorId)
+          : aliveActorForSide('CT', event.time)
+        if (!actor) return []
+        return [{
+          ...event,
+          actorId: actor.id,
+          actorName: actor.name,
+          side: 'CT' as const,
+        }]
+      }
+
+      if (event.type === 'utility' && killedBefore(event.actorId, event.time)) {
+        const actor = aliveActorForSide(event.side, event.time)
+        return actor
+          ? [{
+              ...event,
+              actorId: actor.id,
+              actorName: actor.name,
+            }]
+          : []
+      }
+
+      return [event]
     })
     .sort((a, b) => a.time - b.time)
 

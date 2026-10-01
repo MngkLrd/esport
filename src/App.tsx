@@ -483,7 +483,7 @@ function HqStarterRow({ player, index, onOpen }: { player: Player; index: number
     <button type="button" className="hq-starter-row" onClick={onOpen} aria-label={'Открыть профиль ' + player.alias}>
       <span className="hq-starter-number">0{index + 1}</span>
       <span className="hq-starter-portrait"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} loading="lazy" /></span>
-      <span className="hq-starter-copy"><strong>{player.alias}</strong><small>{role} · {player.team}</small></span>
+      <span className="hq-starter-copy"><strong>{player.alias}</strong><small>{countryFlag(player.country)} {player.country} · {role} · {player.team}</small></span>
       <span className="hq-starter-form"><b>{overall(player)}</b><i style={{ width: player.form + '%' }} /><small>{player.form} F / {player.fatigue} T</small></span>
       <span className="hq-starter-arrow">↗</span>
     </button>

@@ -357,11 +357,6 @@ export function SquadWorkspace({
                 )
               })}
 
-              <aside className="squad-opt-staff">
-                <span>STAFF</span>
-                <div><b>◎</b><strong>HEAD COACH</strong><small>VACANT</small></div>
-                <button disabled>HIRE →</button>
-              </aside>
             </div>
           </section>
 

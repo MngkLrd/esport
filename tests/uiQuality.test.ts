@@ -16,6 +16,7 @@ const lobby = read('src/MatchLobby.tsx')
 const radar = read('src/MatchRadar.tsx')
 const packs = read('src/PacksView.tsx')
 const scout = read('src/ScoutMarket.tsx')
+const scoutCss = read('src/ScoutMarket.css')
 const roster = read('src/RosterBoard.tsx')
 
 describe('2026 UI quality pass', () => {
@@ -37,6 +38,10 @@ describe('2026 UI quality pass', () => {
     expect(simCss).not.toContain('background:rgba(12,18,43,.78)')
     expect(simCss).not.toContain('background:rgba(8,13,33,.88)')
     expect(simCss).not.toContain('background:rgba(9,14,35,.86)')
+    expect(simCss).not.toContain('rgba(12,17,43,.80)')
+    expect(simCss).not.toContain('rgba(17,25,58,.92)')
+    expect(scoutCss).not.toContain('rgba(8,13,29,.72)')
+    expect(scoutCss).toContain('background:rgb(var(--ui-panel-rgb) / .72)')
     expect(visual).toContain('Dark-theme contrast guard for interactive states.')
     expect(visual).toMatch(/:disabled\{[\s\S]*?color:var\(--ui-muted\)!important;/)
     expect(visual).toMatch(/:focus-visible\{[\s\S]*?outline:2px solid var\(--ui-accent\)/)

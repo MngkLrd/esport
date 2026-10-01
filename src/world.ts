@@ -1,6 +1,7 @@
 import { cardStatsForAlias } from './cardStats'
 import { REAL_PLAYERS, type RealPlayerRole, type RealPlayerSeed } from './players'
 import { VRS_RANKED_ROSTERS, VRS_SNAPSHOT_DATE } from './vrs'
+import { advanceWorldEcology, createWorldEcology, type EcologyRegion, type WorldEcologyState } from './worldEcology'
 
 export const WORLD_VERSION = 1
 export const PLAYER_CLUB_WORLD_ID = 'club'
@@ -20,6 +21,13 @@ export interface WorldPlayer {
   morale: number
   fatigue: number
   contractWeeks: number
+  generated?: boolean
+  potentialRating?: number
+  salary?: number
+  marketValue?: number
+  careerStartedAt?: string
+  retiredAt?: string | null
+  region?: EcologyRegion
 }
 
 export interface WorldTeam {
@@ -30,6 +38,14 @@ export interface WorldTeam {
   rosterKeys: string[]
   rating: number
   form: number
+  generated?: boolean
+  active?: boolean
+  region?: EcologyRegion
+  foundedYear?: number
+  cash?: number
+  prestige?: number
+  ambition?: number
+  fanbase?: number
 }
 
 export interface WorldTransfer {
@@ -50,6 +66,7 @@ export interface WorldState {
   teams: WorldTeam[]
   freeAgentKeys: string[]
   transferHistory: WorldTransfer[]
+  ecology?: WorldEcologyState
 }
 
 export interface VrsStanding {
@@ -257,7 +274,11 @@ export const createWorldState = (): WorldState => {
     transferHistory: [],
   }
 
-  return syncTeamRatings(world)
+  const rated = syncTeamRatings(world)
+  return {
+    ...rated,
+    ecology: createWorldEcology(rated, 271828, VRS_SNAPSHOT_DATE + 'T09:00:00'),
+  }
 }
 
 export const worldTeamById = (world: WorldState, teamId: string | null | undefined) =>
@@ -458,123 +479,55 @@ export const releaseWorldPlayerFromClub = (
   return syncTeamRatings(world)
 }
 
-const simulateAiTransfer = (source: WorldState, seed: number, date: string): WorldState => {
-  const rng = mulberry32(seed)
-  if (rng() > .48 || source.teams.length < 8) return source
-
-  const buyerPool = source.teams.filter((team) => team.rosterKeys.length >= 5)
-  if (!buyerPool.length) return source
-  const buyer = buyerPool[Math.floor(rng() * Math.min(40, buyerPool.length))]
-  const sellerPool = source.teams.filter((team) =>
-    team.id !== buyer.id &&
-    team.rosterKeys.length >= 5 &&
-    team.vrsRank > Math.max(1, buyer.vrsRank - 8),
-  )
-  if (!sellerPool.length) return source
-  const seller = sellerPool[Math.floor(rng() * sellerPool.length)]
-
-  const sellerPlayers = worldLineup(source, seller.id)
-    .filter((player) => player.teamId === seller.id)
-    .sort((a, b) => effectivePlayerRating(b) - effectivePlayerRating(a))
-  const candidate = sellerPlayers[Math.min(sellerPlayers.length - 1, Math.floor(rng() * Math.min(3, sellerPlayers.length)))]
-  if (!candidate) return source
-
-  const buyerPlayers = worldLineup(source, buyer.id)
-    .sort((a, b) => effectivePlayerRating(a) - effectivePlayerRating(b))
-  const released = buyerPlayers[0]
-  if (!released || released.key === candidate.key) return source
-
-  const players = { ...source.players }
-  players[candidate.key] = { ...candidate, teamId: buyer.id, morale: clamp(candidate.morale + 5), contractWeeks: 16 + Math.floor(rng() * 18) }
-  players[released.key] = { ...released, teamId: null, morale: clamp(released.morale - 5) }
-
-  const teams = source.teams.map((team) => {
-    if (team.id === seller.id) return { ...team, rosterKeys: team.rosterKeys.filter((key) => key !== candidate.key) }
-    if (team.id === buyer.id) {
-      return {
-        ...team,
-        rosterKeys: [...team.rosterKeys.filter((key) => key !== released.key), candidate.key].slice(0, 5),
-      }
-    }
-    return team
-  })
-
-  const transfer: WorldTransfer = {
-    id: 'ai-transfer-' + candidate.key + '-' + date,
-    date,
-    playerKey: candidate.key,
-    alias: candidate.alias,
-    fromTeamId: seller.id,
-    toTeamId: buyer.id,
-    kind: 'ai-transfer',
-  }
-  const freeAgentMove: WorldTransfer = {
-    id: 'ai-release-' + released.key + '-' + date,
-    date,
-    playerKey: released.key,
-    alias: released.alias,
-    fromTeamId: buyer.id,
-    toTeamId: null,
-    kind: 'ai-free-agent',
-  }
-
-  let world: WorldState = {
-    ...source,
-    players,
-    teams,
-    freeAgentKeys: uniqueFreeAgents({ ...source, players, teams }),
-    transferHistory: [transfer, freeAgentMove, ...source.transferHistory].slice(0, 120),
-  }
-
-  world = refillTeam(world, seller.id, seed ^ 0x7f4a7c15)
-  return syncTeamRatings(world)
-}
-
 export const advanceWorldWeeks = (
   source: WorldState,
   weeks: number,
   seed: number,
   date: string,
 ): WorldState => {
-  let world = source
+  if (weeks <= 0) return source
+
+  // Autonomous world systems own tournaments, transfers, entry/exit and VRS.
+  // This weekly pass only applies slow player-condition drift.
+  const from = source.ecology?.processedUntil ?? (() => {
+    const target = new Date(date.endsWith('Z') ? date : date + 'Z')
+    target.setUTCDate(target.getUTCDate() - weeks * 7)
+    return target.toISOString().slice(0, 19)
+  })()
+  let world = advanceWorldEcology(source, from, date, seed)
 
   for (let step = 0; step < weeks; step += 1) {
     const weekSeed = seed + (world.weeksSimulated + 1) * 7919
     const players: Record<string, WorldPlayer> = {}
+
     for (const player of Object.values(world.players)) {
+      if (player.retiredAt) {
+        players[player.key] = player
+        continue
+      }
       const rng = mulberry32(hashSeed(player.key + ':' + weekSeed))
       const isClub = player.teamId === PLAYER_CLUB_WORLD_ID
+      const age = player.age ?? 24
+      const potential = player.potentialRating ?? Math.max(player.baseRating, player.currentRating + 3)
+      const development = player.generated && age <= 23 && player.currentRating < potential && rng() > .62 ? 1 : 0
       players[player.key] = {
         ...player,
-        form: clamp(player.form + Math.round((rng() - .48) * 9)),
-        morale: clamp(player.morale + Math.round((rng() - .5) * 6)),
-        fatigue: isClub ? player.fatigue : clamp(player.fatigue + Math.round((rng() - .53) * 12)),
+        form: clamp(player.form + Math.round((rng() - .48) * 7)),
+        morale: clamp(player.morale + Math.round((rng() - .5) * 5)),
+        fatigue: isClub ? player.fatigue : clamp(player.fatigue + Math.round((rng() - .54) * 9)),
         currentRating: clamp(
-          player.baseRating + Math.round((player.form - 55) * .06) + Math.round((rng() - .5) * 2),
-          45,
+          player.currentRating + development + Math.round((player.form - 55) * .025) + Math.round((rng() - .5) * 1.2),
+          40,
           99,
         ),
-        contractWeeks: isClub ? player.contractWeeks : Math.max(1, player.contractWeeks - 1),
       }
     }
-
-    const teams = world.teams.map((team) => {
-      const rng = mulberry32(hashSeed('vrs:' + team.id + ':' + weekSeed))
-      const formSignal = (team.form - 50) * .06
-      const resultSwing = (rng() - .47) * 14
-      return {
-        ...team,
-        vrsPoints: Math.max(250, Math.round(team.vrsPoints + formSignal + resultSwing)),
-      }
-    })
 
     world = syncTeamRatings({
       ...world,
       players,
-      teams,
       weeksSimulated: world.weeksSimulated + 1,
     })
-    world = simulateAiTransfer(world, weekSeed, date)
   }
 
   return world

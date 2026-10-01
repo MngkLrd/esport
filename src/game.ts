@@ -5,6 +5,7 @@ import { tournamentEntryCost, tournamentForId, tournamentMode, type TournamentEv
 import { INITIAL_SEASON_START, addGameDays, addGameHours, compareGameTime, gameWeekForDate, hoursBetween } from './calendar'
 import { advanceTournamentTo, createTournamentRun, nextPlayerMatch, nextTournamentActionTime, opponentForPlayerMatch, refreshTournamentTeamsFromWorld, resolvePlayerTournamentMatch, tournamentIsFinished, tournamentPrizeForStatus, tournamentStartsAt, type TournamentPlayerTeamSeed, type TournamentRosterPlayer, type TournamentRun } from './tournamentEngine'
 import { PLAYER_CLUB_WORLD_ID, advanceWorldWeeks, awardWorldTeamVrs, claimWorldPlayersForClub, createWorldState, reconcileWorldWithClubRoster, refreshWorldIdentityMetadata, releaseWorldPlayerFromClub, worldLineup, worldPlayerByAlias, worldTeamForPlayer, type WorldPlayer, type WorldState } from './world'
+import { advanceWorldEcology, ensureWorldEcology, worldEventsSince, type WorldHistoryEvent } from './worldEcology'
 import { TRAINING_MAPS, createTrainingState, normalizeTrainingState, trainingPreparationModifier, type PlayerDevelopmentState, type TrainingMap, type TrainingState } from './trainingTypes'
 
 export type Role = 'IGL' | 'Entry' | 'Rifler' | 'AWP' | 'Support'
@@ -642,7 +643,9 @@ const normalizedWorld = (
   const source = raw && typeof raw === 'object' && (raw as { version?: number }).version === 1
     ? raw as WorldState
     : createWorldState()
-  return reconcileWorldWithClubRoster(refreshWorldIdentityMetadata(source), roster, now, seed)
+  const refreshed = refreshWorldIdentityMetadata(source)
+  const ecological = ensureWorldEcology(refreshed, seed, now)
+  return reconcileWorldWithClubRoster(ecological, roster, now, seed)
 }
 
 export const migrateState = (raw: unknown): GameState => {
@@ -1181,13 +1184,12 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
   const payrollCost = payrollPerWeek * payrollCycles
   const elapsedDays = Math.max(0, Math.floor(hoursBetween(state.now, effectiveTarget) / 24))
 
-  const advancedWorld = payrollCycles > 0
-    ? advanceWorldWeeks(state.world, payrollCycles, state.seed + previousWeek * 4099 + state.season * 131, effectiveTarget)
-    : state.world
-  const knownTransferIds = new Set(state.world.transferHistory.map((transfer) => transfer.id))
-  const newAiTransfers = advancedWorld.transferHistory
-    .filter((transfer) => !knownTransferIds.has(transfer.id) && transfer.kind === 'ai-transfer')
-    .slice(0, 4)
+  const ecologySeed = state.seed + previousWeek * 4099 + state.season * 131
+  let advancedWorld = advanceWorldEcology(state.world, state.now, effectiveTarget, ecologySeed)
+  if (payrollCycles > 0) {
+    advancedWorld = advanceWorldWeeks(advancedWorld, payrollCycles, ecologySeed, effectiveTarget)
+  }
+  const worldEvents = worldEventsSince(advancedWorld, state.now, 28).slice(0, 8)
 
   let next: GameState = {
     ...state,
@@ -1220,32 +1222,37 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
     lastWeekNet: payrollCycles > 0 ? -payrollPerWeek : state.lastWeekNet,
   }
 
-  if (payrollCycles > 0) {
-    const transferNews: NewsItem[] = newAiTransfers.map((transfer) => {
-      const from = advancedWorld.teams.find((team) => team.id === transfer.fromTeamId)?.name ?? 'Free Agents'
-      const to = advancedWorld.teams.find((team) => team.id === transfer.toTeamId)?.name ?? 'Free Agents'
-      return {
-        id: 'world-' + transfer.id,
-        week: next.week,
-        kind: 'contract' as const,
-        title: transfer.alias + ' меняет команду',
-        body: from + ' → ' + to + '. Составы AI-клубов обновлены в мировом пуле.',
-      }
-    })
+  const worldNewsKind = (event: WorldHistoryEvent): NewsItem['kind'] =>
+    event.kind === 'transfer-completed' || event.kind === 'contract-expired'
+      ? 'contract'
+      : event.kind === 'tournament-completed'
+        ? 'match'
+        : event.kind === 'team-founded' || event.kind === 'team-dissolved' || event.kind === 'operator-founded' || event.kind === 'operator-dissolved'
+          ? 'media'
+          : 'media'
 
+  const ecologyNews: NewsItem[] = worldEvents.map((event) => ({
+    id: 'ecology-' + event.id,
+    week: next.week,
+    kind: worldNewsKind(event),
+    title: event.title,
+    body: event.detail,
+  }))
+
+  if (payrollCycles > 0 || ecologyNews.length > 0) {
     next = {
       ...next,
       news: [
-        ...transferNews,
-        {
+        ...ecologyNews,
+        ...(payrollCycles > 0 ? [{
           id: 'payroll-' + effectiveTarget,
           week: next.week,
           kind: 'finance' as const,
           title: 'Недельный расчёт клуба',
           body: 'Зарплаты: ' + payrollCost + ' кр. · прошло недель: ' + payrollCycles + '.',
-        },
+        }] : []),
         ...next.news,
-      ].slice(0, 50),
+      ].slice(0, 80),
     }
   }
 
@@ -1419,14 +1426,11 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const event = mode === 'practice' ? null : tournamentForId(state.activeEventId)
   const effectiveMode = event ? tournamentMode(event) : mode
   const isPractice = effectiveMode === 'practice' && !event
-  const clubSeed = tournamentPlayerSeedFromRoster(state.roster, state.startingFive, state.lineupContinuity)
-  const clubPlayerKeys = new Set(clubSeed.roster.map((player) => player.playerKey))
   const preparedRun = event && state.activeTournament
-    ? advanceTournamentTo(
-        refreshTournamentTeamsFromWorld(state.activeTournament, state.world, clubPlayerKeys),
-        state.now,
-        state.seed + state.season,
-      )
+    // Tournament rosters are registration snapshots. The surrounding world keeps
+    // trading while the event is running, but an already registered opponent does
+    // not lose a player mid-bracket because of an external transfer.
+    ? advanceTournamentTo(state.activeTournament, state.now, state.seed + state.season)
     : null
   const tournamentMatch = preparedRun ? nextPlayerMatch(preparedRun) : null
   const tournamentOpponent = preparedRun ? opponentForPlayerMatch(preparedRun) : null

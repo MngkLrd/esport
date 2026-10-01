@@ -811,9 +811,9 @@
   color:#fff;
 }
 .market-candidate{
-  background:rgba(8,13,29,.72);
-  border-color:rgba(145,159,255,.16);
+  background:rgb(var(--ui-panel-rgb) / .72);
+  border-color:var(--ui-line);
 }
 .market-candidate:hover{
-  border-color:rgba(41,231,255,.30);
+  border-color:rgb(var(--ui-accent-rgb) / .38);
 }

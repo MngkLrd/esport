@@ -154,6 +154,7 @@ body{
   .app-main.app-main-roster,
   .app-main.app-main-packs,
   .app-main.app-main-scout,
+  .app-main.app-main-finance,
   .app-main.app-main-inbox,
   .app-main.app-main-profile{
     display:block !important;
@@ -198,6 +199,7 @@ body{
   .app-main.app-main-roster > .screen-back-button,
   .app-main.app-main-packs > .screen-back-button,
   .app-main.app-main-scout > .screen-back-button,
+  .app-main.app-main-finance > .screen-back-button,
   .app-main.app-main-inbox > .screen-back-button,
   .app-main.app-main-profile > .screen-back-button{
     position:absolute !important;

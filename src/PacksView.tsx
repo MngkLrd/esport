@@ -482,11 +482,6 @@ export function PacksView({
                     <button key={count} className={quantity === count ? 'active' : ''} onClick={() => setQuantity(count)}>×{count}</button>
                   ))}
                 </div>
-
-                <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
-                  {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
-                </button>
-
                 <div className="pack-purchase-cost">
                   <b>{(selectedPack.price * quantity).toLocaleString('ru-RU')}</b>
                   <span>PACK TOKENS</span>
@@ -518,6 +513,15 @@ export function PacksView({
                 </div>
               )}
             </div>
+
+            {!queue.length && (
+              <div className="pack-spin-launch">
+                <button className="pack-spin-button" disabled={preparing || packTokens < selectedPack.price * quantity} onClick={spin}>
+                  {preparing ? 'ПОДГОТОВКА' : 'КРУТИТЬ'}
+                </button>
+                <small>{quantity > 1 ? quantity + ' последовательных открытий' : 'Главное действие после spinbox'}</small>
+              </div>
+            )}
 
             {queue.length > 0 && (
               <div className="pack-spin-controls">

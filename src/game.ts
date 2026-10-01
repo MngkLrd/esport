@@ -87,12 +87,68 @@ export interface MapResult {
   them: number
   winChance: number
   topPerformer: string
+  story?: MapStory
 }
 
 export interface PlayerPerformance {
   playerId: string
   alias: string
   rating: number
+}
+
+export type MatchNarrativeTag =
+  | 'COMEBACK'
+  | 'STOMP'
+  | 'CHOKE'
+  | 'CLUTCH_HEAVY'
+  | 'TACTICAL_OUTPLAY'
+  | 'WEAK_MAP'
+  | 'PLAYER_COLLAPSE'
+  | 'ANTI_STRAT_SUCCESS'
+  | 'FATIGUE'
+  | 'COMMUNICATION_BREAKDOWN'
+
+export type MatchRoundCause =
+  | 'AIM'
+  | 'TACTICAL_EDGE'
+  | 'ANTI_STRAT'
+  | 'CLUTCH'
+  | 'PLAYER_ERROR'
+  | 'FATIGUE'
+  | 'COMMUNICATION'
+  | 'MOMENTUM'
+
+export interface MatchRoundStory {
+  round: number
+  winner: 'US' | 'THEM'
+  scoreUs: number
+  scoreThem: number
+  cause: MatchRoundCause
+  keyPlayer?: string
+  clutch?: boolean
+  note: string
+}
+
+export interface MapStory {
+  map: string
+  tags: MatchNarrativeTag[]
+  rounds: MatchRoundStory[]
+  turningPoint: string
+  explanation: string
+  factors: {
+    tactics: number
+    preparation: number
+    fatigue: number
+    communication: number
+    clutch: number
+    individual: number
+  }
+}
+
+export interface MatchStory {
+  tags: MatchNarrativeTag[]
+  summary: string
+  maps: MapStory[]
 }
 
 export interface MatchResult {
@@ -119,6 +175,7 @@ export interface MatchResult {
   opponentTeamId?: string | null
   opponentRoster?: TournamentRosterPlayer[]
   vrsDelta?: number
+  story?: MatchStory
 }
 
 export interface SeasonSummary {
@@ -997,50 +1054,312 @@ const tacticalModifier = (active: Player[], tactic: TacticalPlan) => {
   return 0
 }
 
-const mapScore = (won: boolean, winProbability: number, rng: () => number): [number, number] => {
-  // A rating gap should be visible in the actual scoreline, not only in a hidden
-  // probability. Expected wins can become dominant; major upsets stay close.
-  const winnerProbability = won ? winProbability : 1 - winProbability
-  const dominance = clamp((winnerProbability - 0.5) * 2, 0, 1)
-  const floor = dominance >= .72 ? 2 : dominance >= .48 ? 4 : dominance >= .24 ? 6 : 8
-  const ceiling = dominance >= .72 ? 7 : dominance >= .48 ? 9 : dominance >= .24 ? 11 : 12
-  const loser = Math.floor(floor + rng() * (ceiling - floor + 1))
-  return won ? [13, loser] : [loser, 13]
+const averagePlayerStat = (
+  active: Player[],
+  key: keyof Pick<Player, 'aim' | 'gameSense' | 'utility' | 'clutch' | 'leadership' | 'form' | 'morale' | 'fatigue'>,
+) => active.length ? active.reduce((sum, player) => sum + player[key], 0) / active.length : 50
+
+const roundCauseLabel: Record<MatchRoundCause, string> = {
+  AIM: 'чистая реализация дуэлей',
+  TACTICAL_EDGE: 'тактическое преимущество',
+  ANTI_STRAT: 'прочитанный паттерн соперника',
+  CLUTCH: 'клатч в концовке',
+  PLAYER_ERROR: 'индивидуальная ошибка',
+  FATIGUE: 'просадка из-за усталости',
+  COMMUNICATION: 'ошибка коммуникации',
+  MOMENTUM: 'серия выигранных раундов',
 }
 
-const narrative = (
-  state: GameState,
-  opponent: string,
+const scoreLeadBefore = (round: MatchRoundStory) =>
+  round.winner === 'US'
+    ? (round.scoreThem - (round.scoreUs - 1))
+    : ((round.scoreThem - 1) - round.scoreUs)
+
+export const deriveMapNarrativeTags = (
+  rounds: MatchRoundStory[],
+  factors: MapStory['factors'],
+): MatchNarrativeTag[] => {
+  if (!rounds.length) return []
+  const final = rounds[rounds.length - 1]
+  const usWon = final.scoreUs > final.scoreThem
+  let maxUsLead = 0
+  let maxThemLead = 0
+  let usTactical = 0
+  let themTactical = 0
+  let antiStratWins = 0
+  let fatigueLosses = 0
+  let communicationLosses = 0
+  let playerErrors = 0
+  let clutchRounds = 0
+
+  for (const round of rounds) {
+    const usBefore = round.scoreUs - (round.winner === 'US' ? 1 : 0)
+    const themBefore = round.scoreThem - (round.winner === 'THEM' ? 1 : 0)
+    maxUsLead = Math.max(maxUsLead, usBefore - themBefore)
+    maxThemLead = Math.max(maxThemLead, themBefore - usBefore)
+    if (round.cause === 'TACTICAL_EDGE') {
+      if (round.winner === 'US') usTactical += 1
+      else themTactical += 1
+    }
+    if (round.cause === 'ANTI_STRAT' && round.winner === 'US') antiStratWins += 1
+    if (round.cause === 'FATIGUE' && round.winner === 'THEM') fatigueLosses += 1
+    if (round.cause === 'COMMUNICATION' && round.winner === 'THEM') communicationLosses += 1
+    if (round.cause === 'PLAYER_ERROR' && round.winner === 'THEM') playerErrors += 1
+    if (round.clutch) clutchRounds += 1
+  }
+
+  const tags: MatchNarrativeTag[] = []
+  if (usWon && maxThemLead >= 5) tags.push('COMEBACK')
+  if (!usWon && maxUsLead >= 5) tags.push('CHOKE')
+  if (Math.min(final.scoreUs, final.scoreThem) <= 5) tags.push('STOMP')
+  if (clutchRounds >= 4) tags.push('CLUTCH_HEAVY')
+  if ((usWon && usTactical - themTactical >= 3) || (!usWon && themTactical - usTactical >= 3)) tags.push('TACTICAL_OUTPLAY')
+  if (!usWon && (factors.preparation <= 38 || final.scoreUs <= 7)) tags.push('WEAK_MAP')
+  if (playerErrors >= 3) tags.push('PLAYER_COLLAPSE')
+  if (antiStratWins >= 3) tags.push('ANTI_STRAT_SUCCESS')
+  if (fatigueLosses >= 3) tags.push('FATIGUE')
+  if (communicationLosses >= 3) tags.push('COMMUNICATION_BREAKDOWN')
+  return tags
+}
+
+const simulateStoryMap = (
+  active: Player[],
+  map: string,
+  mapIndex: number,
+  tactic: TacticalPlan,
+  probability: number,
+  tacticMod: number,
+  preparationMod: number,
+  continuity: number,
+  rng: () => number,
+): MapResult => {
+  const avgAim = averagePlayerStat(active, 'aim')
+  const avgGameSense = averagePlayerStat(active, 'gameSense')
+  const avgUtility = averagePlayerStat(active, 'utility')
+  const avgLeadership = averagePlayerStat(active, 'leadership')
+  const avgMorale = averagePlayerStat(active, 'morale')
+  const avgFatigue = averagePlayerStat(active, 'fatigue')
+  const avgClutch = averagePlayerStat(active, 'clutch')
+  const communication = clamp(
+    continuity * .42 + avgLeadership * .25 + avgMorale * .23 - Math.max(0, avgFatigue - 50) * .28 + 10,
+  )
+  const tacticalQuality = clamp(50 + tacticMod * 9 + preparationMod * 7 + (avgGameSense - 65) * .35 + (avgUtility - 65) * .25)
+  const preparation = clamp(50 + preparationMod * 10)
+  const fatigueFactor = clamp(100 - avgFatigue)
+  const clutchFactor = clamp(avgClutch)
+  const individual = clamp(avgAim * .58 + averagePlayerStat(active, 'form') * .42)
+  const vulnerable = [...active].sort((a, b) =>
+    (a.form - a.fatigue * .72 + a.gameSense * .16) - (b.form - b.fatigue * .72 + b.gameSense * .16),
+  )[0] ?? active[0]
+  const clutchPlayer = [...active].sort((a, b) => b.clutch - a.clutch || b.form - a.form)[0] ?? active[0]
+
+  const rounds: MatchRoundStory[] = []
+  let us = 0
+  let them = 0
+  let streak = 0
+  let lastWinner: 'US' | 'THEM' | null = null
+  let overtimeTarget = 13
+
+  const roundComplete = () => {
+    if (overtimeTarget === 13) {
+      if (us === 13 || them === 13) return true
+      if (us === 12 && them === 12) overtimeTarget = 16
+      return false
+    }
+    if ((us >= overtimeTarget || them >= overtimeTarget) && Math.abs(us - them) >= 2) return true
+    if (us === overtimeTarget - 1 && them === overtimeTarget - 1) overtimeTarget += 3
+    return false
+  }
+
+  for (let roundNumber = 1; roundNumber <= 42; roundNumber += 1) {
+    const lateRound = roundNumber >= 15
+    const closeScore = Math.abs(us - them) <= 2
+    const momentum = lastWinner === 'US'
+      ? Math.min(.055, streak * .012)
+      : lastWinner === 'THEM'
+        ? -Math.min(.055, streak * .012)
+        : 0
+    const fatiguePenalty = lateRound ? Math.max(0, avgFatigue - 52) * .0017 : 0
+    const communicationPenalty = lateRound && closeScore ? Math.max(0, 60 - communication) * .0018 : 0
+    const tacticalRoundEdge = clamp(tacticMod + preparationMod, -5, 5) * .012
+    const clutchEdge = closeScore && lateRound ? (avgClutch - 65) * .0012 : 0
+
+    let roundProbability = clamp(probability + momentum + tacticalRoundEdge + clutchEdge - fatiguePenalty - communicationPenalty, .08, .92)
+    const antiStratOpportunity = preparationMod >= 1.4 && rng() < .34
+    const communicationBreak = communication < 58 && lateRound && rng() < .28
+    const fatigueBreak = avgFatigue >= 58 && lateRound && rng() < .30
+    const mistakeChance = clamp((55 - (vulnerable?.form ?? 55)) * .006 + ((vulnerable?.fatigue ?? 45) - 55) * .004, .03, .30)
+    const playerMistake = Boolean(vulnerable && rng() < mistakeChance)
+    const clutchRound = closeScore && lateRound && rng() < .24
+
+    if (antiStratOpportunity) roundProbability += .075
+    if (communicationBreak) roundProbability -= .075
+    if (fatigueBreak) roundProbability -= .065
+    if (playerMistake) roundProbability -= .06
+    if (clutchRound) roundProbability += (avgClutch - 62) * .0018
+    roundProbability = clamp(roundProbability, .05, .95)
+
+    const winner: 'US' | 'THEM' = rng() < roundProbability ? 'US' : 'THEM'
+    if (winner === 'US') us += 1
+    else them += 1
+
+    let cause: MatchRoundCause = 'AIM'
+    let keyPlayer: string | undefined
+    if (winner === 'THEM' && playerMistake) {
+      cause = 'PLAYER_ERROR'
+      keyPlayer = vulnerable?.alias
+    } else if (winner === 'THEM' && fatigueBreak) {
+      cause = 'FATIGUE'
+      keyPlayer = vulnerable?.alias
+    } else if (winner === 'THEM' && communicationBreak) {
+      cause = 'COMMUNICATION'
+    } else if (winner === 'US' && antiStratOpportunity) {
+      cause = 'ANTI_STRAT'
+    } else if (clutchRound) {
+      cause = 'CLUTCH'
+      keyPlayer = winner === 'US' ? clutchPlayer?.alias : undefined
+    } else if (Math.abs(tacticalRoundEdge) >= .018 && ((tacticalRoundEdge > 0) === (winner === 'US'))) {
+      cause = 'TACTICAL_EDGE'
+    } else if (Math.abs(momentum) >= .024 && ((momentum > 0) === (winner === 'US'))) {
+      cause = 'MOMENTUM'
+    }
+
+    const note = winner === 'US'
+      ? (keyPlayer ? keyPlayer + ': ' : '') + roundCauseLabel[cause] + ' даёт раунд.'
+      : (keyPlayer ? keyPlayer + ': ' : '') + roundCauseLabel[cause] + ' отдаёт инициативу сопернику.'
+
+    rounds.push({
+      round: roundNumber,
+      winner,
+      scoreUs: us,
+      scoreThem: them,
+      cause,
+      keyPlayer,
+      clutch: clutchRound,
+      note,
+    })
+
+    if (lastWinner === winner) streak += 1
+    else {
+      lastWinner = winner
+      streak = 1
+    }
+    if (roundComplete()) break
+  }
+
+  const usWon = us > them
+  const tacticalWins = rounds.filter((round) => round.winner === 'US' && (round.cause === 'TACTICAL_EDGE' || round.cause === 'ANTI_STRAT')).length
+  const tacticalLosses = rounds.filter((round) => round.winner === 'THEM' && round.cause === 'TACTICAL_EDGE').length
+  const clutchWins = rounds.filter((round) => round.winner === 'US' && round.cause === 'CLUTCH').length
+  const errorCounts = new Map<string, number>()
+  for (const round of rounds) {
+    if (round.cause === 'PLAYER_ERROR' && round.keyPlayer) {
+      errorCounts.set(round.keyPlayer, (errorCounts.get(round.keyPlayer) ?? 0) + 1)
+    }
+  }
+
+  const factors: MapStory['factors'] = {
+    tactics: Math.round(tacticalQuality),
+    preparation: Math.round(preparation),
+    fatigue: Math.round(fatigueFactor),
+    communication: Math.round(communication),
+    clutch: Math.round(clutchFactor),
+    individual: Math.round(individual),
+  }
+  const tags = deriveMapNarrativeTags(rounds, factors)
+  const biggestSwing = rounds.reduce((best, round) => {
+    const lead = Math.abs(scoreLeadBefore(round))
+    return lead > best.lead ? { lead, round } : best
+  }, { lead: -1, round: rounds[0] })
+  const errors = [...errorCounts.entries()].sort((a, b) => b[1] - a[1])
+  const collapse = errors[0]
+  const explanationParts: string[] = []
+
+  if (tags.includes('COMEBACK')) explanationParts.push('Команда вернулась после крупного отставания и перевернула карту.')
+  if (tags.includes('CHOKE')) explanationParts.push('Преимущество было потеряно: соперник наказал за концовку карты.')
+  if (tags.includes('STOMP')) explanationParts.push('Карта быстро вышла из конкурентного состояния и закончилась разгромом.')
+  if (tags.includes('CLUTCH_HEAVY')) explanationParts.push('Исход слишком часто решался в клатчах и поздних ситуациях.')
+  if (tags.includes('TACTICAL_OUTPLAY')) explanationParts.push('Системное преимущество пришло из структуры раундов, а не только из стрельбы.')
+  if (tags.includes('ANTI_STRAT_SUCCESS')) explanationParts.push('Подготовка прочитала повторяющиеся паттерны соперника и дала бесплатные открытия.')
+  if (tags.includes('FATIGUE')) explanationParts.push('Поздние раунды просели из-за накопленной усталости.')
+  if (tags.includes('COMMUNICATION_BREAKDOWN')) explanationParts.push('В концовках возникли повторяющиеся ошибки коммуникации.')
+  if (tags.includes('WEAK_MAP')) explanationParts.push('Подготовка к карте не дала достаточной опоры, и карта стала слабым местом серии.')
+  if (tags.includes('PLAYER_COLLAPSE') && collapse) explanationParts.push(collapse[0] + ' допустил ' + collapse[1] + ' ключевые ошибки.')
+  if (!explanationParts.length) {
+    explanationParts.push(
+      usWon
+        ? 'Карта была выиграна за счёт более стабильной реализации ключевых раундов.'
+        : 'Соперник стабильнее реализовал ключевые раунды и не дал переломить темп.',
+    )
+  }
+
+  const topPerformer = [...active].sort((a, b) => {
+    const aErrors = errorCounts.get(a.alias) ?? 0
+    const bErrors = errorCounts.get(b.alias) ?? 0
+    const aImpact = a.form + a.clutch * .22 + a.aim * .18 - a.fatigue * .18 - aErrors * 9
+    const bImpact = b.form + b.clutch * .22 + b.aim * .18 - b.fatigue * .18 - bErrors * 9
+    return bImpact - aImpact
+  })[0] ?? active[0]
+
+  return {
+    map,
+    us,
+    them,
+    winChance: Math.round(probability * 100),
+    topPerformer: topPerformer?.alias ?? '—',
+    story: {
+      map,
+      tags,
+      rounds,
+      turningPoint: biggestSwing.round
+        ? 'R' + biggestSwing.round.round + ' · ' + biggestSwing.round.scoreUs + ':' + biggestSwing.round.scoreThem + ' · ' + biggestSwing.round.note
+        : 'Карта прошла без одного выраженного перелома.',
+      explanation: explanationParts.join(' '),
+      factors: {
+        ...factors,
+        tactics: clamp(factors.tactics + (tacticalWins - tacticalLosses) * 2),
+        clutch: clamp(factors.clutch + clutchWins * 2),
+      },
+    },
+  }
+}
+
+const matchStoryHeadline = (tags: MatchNarrativeTag[], won: boolean, mvp: Player) => {
+  if (tags.includes('COMEBACK')) return mvp.alias + ' ведёт команду через камбэк'
+  if (tags.includes('CHOKE')) return 'Преимущество рассыпалось в концовке серии'
+  if (tags.includes('STOMP')) return won ? 'Серия превращается в односторонний разгром' : 'Соперник не оставляет пространства для ответа'
+  if (tags.includes('TACTICAL_OUTPLAY')) return won ? 'План на игру переигрывает соперника' : 'Соперник выигрывает серию на уровне решений'
+  if (tags.includes('CLUTCH_HEAVY')) return 'Серию решили поздние раунды и клатчи'
+  return won ? mvp.alias + ' становится ключевой фигурой победы' : 'Ключевые раунды уходят сопернику'
+}
+
+const buildMatchStory = (
+  maps: MapResult[],
   won: boolean,
+  opponent: string,
   mvp: Player,
   mode: MatchMode,
-  tactic: TacticalPlan,
   net: number,
-  rng: () => number,
-) => {
-  const winHeads = [
-    mvp.alias + ' превращает подготовку в победу в серии',
-    'Стартовая пятёрка выдерживает проверку давлением',
-    'Цельный план на игру приносит убедительную серию',
-  ]
-  const lossHeads = [
-    'Серия вскрывает реальную проблему менеджмента',
-    'Хороших раундов недостаточно, чтобы удержать серию',
-    'Под давлением мелкие слабости состава превращаются в поражение',
-  ]
-  const financial = mode === 'practice'
-    ? ''
+  eventLabel?: string,
+): { headline: string; detail: string; story: MatchStory } => {
+  const mapStories = maps.flatMap((map) => map.story ? [map.story] : [])
+  const tags = [...new Set(mapStories.flatMap((story) => story.tags))]
+  const decisive = mapStories.find((story) => story.tags.length > 0) ?? mapStories[mapStories.length - 1]
+  const core = decisive?.explanation ?? (won
+    ? 'Команда стабильнее провела ключевые отрезки серии.'
+    : 'Соперник стабильнее провёл ключевые отрезки серии.')
+  const economy = mode === 'practice'
+    ? ' Пракк не влияет на рейтинг и призовые.'
     : net >= 0
-      ? ' Неделя завершилась на ' + net + ' кредитов выше зарплатных расходов.'
-      : ' Дохода от результата не хватило на зарплаты: дефицит ' + Math.abs(net) + ' кредитов.'
-  const detail = mode === 'practice'
-    ? 'Пракк против ' + opponent + ' прошёл без рейтинговых и финансовых ставок. Серия нужна для сыгранности и проверки текущей пятёрки.'
-    : won
-      ? 'Победа над ' + opponent + ' оправдала выбранный план. ' + mvp.alias + ' стал лучшим на сервере, а стабильность состава и состояние игроков повлияли на перевес между картами.'
-      : 'Поражение от ' + opponent + ' показало слабости выбранного плана. Штабу теперь нужно отделить тактическую ошибку от усталости, контрактных проблем и обычного разброса.'
+      ? ' Финансовый итог матча: +' + net + ' кр.'
+      : ' Финансовый итог матча: -' + Math.abs(net) + ' кр.'
+  const eventText = eventLabel ? ' · ' + eventLabel + '.' : ''
+  const summary = (won ? 'Победа над ' : 'Поражение от ') + opponent + '. ' + core
+
   return {
-    headline: pick(won ? winHeads : lossHeads, rng),
-    detail: detail + financial + ' Режим: ' + modeTuning[mode].label + '.',
+    headline: matchStoryHeadline(tags, won, mvp),
+    detail: summary + economy + eventText + ' Режим: ' + modeTuning[mode].label + '.',
+    story: { tags, summary, maps: mapStories },
   }
 }
 
@@ -1497,17 +1816,25 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     const mapFatigue = maps.length * (tactic === 'aggressive' ? 1.6 : tactic === 'structured' ? .7 : 1)
     const preparationMod = isPractice ? 0 : trainingPreparationModifier(state.training ?? createTrainingState(), map, opponent.teamId)
     const effectiveRating = baseRating + tacticMod + preparationMod + momentum - rolePenalty - mapFatigue
-    // OVR difference is the primary competitive signal. Keep some upset room,
-    // but make even a 5-10 point gap materially change the series.
+    // The map score is now an output of round history. Rating and preparation
+    // influence every round instead of selecting a finished scoreline up front.
     const ratingGap = effectiveRating - opponent.rating
     const volatility = tactic === 'aggressive' ? 4.6 : tactic === 'structured' ? 4.2 : 4.4
     const rawProbability = 1 / (1 + Math.exp(-ratingGap / volatility))
     const probability = clamp(rawProbability, .04, .96)
-    const wonMap = rng() < probability
-    const [us, them] = mapScore(wonMap, probability, rng)
-    const mapTop = [...active].sort((a, b) => performanceRating(b, wonMap, tactic, rng) - performanceRating(a, wonMap, tactic, rng))[0]
-    maps.push({ map, us, them, winChance: Math.round(probability * 100), topPerformer: mapTop.alias })
-    if (wonMap) {
+    const mapResult = simulateStoryMap(
+      active,
+      map,
+      maps.length,
+      tactic,
+      probability,
+      tacticMod,
+      preparationMod,
+      state.lineupContinuity,
+      rng,
+    )
+    maps.push(mapResult)
+    if (mapResult.us > mapResult.them) {
       ourMaps += 1
       momentum = Math.min(2.5, momentum + 1.2)
     } else {
@@ -1548,18 +1875,39 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
   const net = reward
   const fansDelta = isPractice ? 0 : Math.round(tune.fans * (won ? 1 : .25))
 
+  const storyErrors = new Map<string, number>()
+  const storyClutches = new Map<string, number>()
+  for (const map of maps) {
+    for (const round of map.story?.rounds ?? []) {
+      if (!round.keyPlayer) continue
+      if (round.cause === 'PLAYER_ERROR') storyErrors.set(round.keyPlayer, (storyErrors.get(round.keyPlayer) ?? 0) + 1)
+      if (round.cause === 'CLUTCH' && round.winner === 'US') storyClutches.set(round.keyPlayer, (storyClutches.get(round.keyPlayer) ?? 0) + 1)
+    }
+  }
   const performances = active
-    .map((player) => ({ playerId: player.id, alias: player.alias, rating: performanceRating(player, won, tactic, rng) }))
+    .map((player) => ({
+      playerId: player.id,
+      alias: player.alias,
+      rating: Math.round(clamp(
+        performanceRating(player, won, tactic, rng)
+        - (storyErrors.get(player.alias) ?? 0) * 3
+        + (storyClutches.get(player.alias) ?? 0) * 2,
+        35,
+        99,
+      )),
+    }))
     .sort((a, b) => b.rating - a.rating)
   const mvpPerf = performances[0]
   const mvp = active.find((player) => player.id === mvpPerf.playerId) ?? active[0]
-  const storyBase = narrative(state, opponent.name, won, mvp, effectiveMode, tactic, net, rng)
-  const story = event
-    ? {
-        ...storyBase,
-        detail: storyBase.detail + ' · ' + event.name + ' · ' + (tournamentMatch?.label ?? 'MATCH') + '.',
-      }
-    : storyBase
+  const story = buildMatchStory(
+    maps,
+    won,
+    opponent.name,
+    mvp,
+    effectiveMode,
+    net,
+    event ? event.name + ' · ' + (tournamentMatch?.label ?? 'MATCH') : undefined,
+  )
 
   const activeIds = new Set(active.map((player) => player.id))
   const roster = state.roster.map((player) => {
@@ -1602,6 +1950,7 @@ export const playMatch = (state: GameState, mode: MatchMode, tactic: TacticalPla
     fansDelta,
     headline: story.headline,
     detail: story.detail,
+    story: story.story,
     mvp: mvp.alias,
     playedAt: state.now,
     tournamentId: event?.id ?? null,

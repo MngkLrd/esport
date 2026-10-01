@@ -7,6 +7,8 @@ import {
   lineupWarnings,
   managerLevelProgress,
   modeInfo,
+  newsBelongsInInbox,
+  newsRequiresAction,
   overall,
   releasePlayer,
   renewContract,
@@ -140,22 +142,30 @@ const detectTimeProgressionStop = (before: GameState, after: GameState): TimePro
   }
 
   const knownNews = new Set(before.news.map((item) => item.id))
-  const actionableNews = after.news.find((item) => {
-    if (knownNews.has(item.id)) return false
-    const text = (item.title + ' ' + item.body).toLocaleLowerCase('ru-RU')
-    return /травм|injur|предлож|offer|приглаш|invite|обязательн|decision required/.test(text)
-  })
+  const actionableNews = after.news.find((item) =>
+    !knownNews.has(item.id) && newsRequiresAction(item),
+  )
   if (actionableNews) {
-    const text = (actionableNews.title + ' ' + actionableNews.body).toLocaleLowerCase('ru-RU')
-    const injury = /травм|injur/.test(text)
-    const transfer = /предлож|offer/.test(text)
-    const invitation = /приглаш|invite/.test(text)
+    const action =
+      actionableNews.kind === 'contract' || actionableNews.kind === 'lineup'
+        ? 'Roster' as const
+        : actionableNews.kind === 'scout'
+          ? 'Scout' as const
+          : actionableNews.kind === 'match'
+            ? 'World' as const
+            : 'Inbox' as const
+    const actionLabel =
+      action === 'Roster' ? 'ОТКРЫТЬ СОСТАВ'
+        : action === 'Scout' ? 'ОТКРЫТЬ СКАУТИНГ'
+          : action === 'World' ? 'ОТКРЫТЬ WORLD'
+            : 'ОТКРЫТЬ INBOX'
+
     return {
-      kind: injury ? 'injury' : transfer ? 'transfer' : invitation ? 'tournament' : 'message',
+      kind: actionableNews.kind === 'contract' ? 'contract' : actionableNews.kind === 'match' ? 'tournament' : 'message',
       title: actionableNews.title,
       detail: actionableNews.body,
-      action: injury ? 'Roster' : invitation ? 'World' : 'Inbox',
-      actionLabel: injury ? 'ОТКРЫТЬ СОСТАВ' : invitation ? 'ОТКРЫТЬ WORLD' : 'ОТКРЫТЬ INBOX',
+      action,
+      actionLabel,
     }
   }
 
@@ -443,7 +453,8 @@ function App() {
     (!bracketMatch || compareGameTime(state.now, bracketMatch.scheduledAt) < 0) &&
     !state.pendingDecision,
   )
-  const unreadNews = seenNewsId === state.news[0]?.id ? 0 : Math.min(state.news.length, 9)
+  const inboxNews = useMemo(() => state.news.filter(newsBelongsInInbox), [state.news])
+  const unreadNews = seenNewsId === inboxNews[0]?.id ? 0 : Math.min(inboxNews.length, 9)
   const unread = Math.min(9, unreadNews + (state.pendingDecision ? 1 : 0))
   const coachStep = useMemo(
     () => tutorialDismissed ? null : onboardingStep(state),
@@ -488,14 +499,14 @@ function App() {
     if (!transition) return
     const switchTimer = window.setTimeout(() => {
       setTab(transition.target)
-      if (transition.target === 'Inbox') setSeenNewsId(state.news[0]?.id ?? null)
+      if (transition.target === 'Inbox') setSeenNewsId(inboxNews[0]?.id ?? null)
     }, 180)
     const clearTimer = window.setTimeout(() => setTransition(null), 620)
     return () => {
       window.clearTimeout(switchTimer)
       window.clearTimeout(clearTimer)
     }
-  }, [transition, state.news])
+  }, [transition, inboxNews])
 
   useEffect(() => {
     if (!timeAdvance || timeAdvance.status !== 'running') return
@@ -996,7 +1007,7 @@ function App() {
                 <span>CLUB FEED · WEEK {state.week}</span>
                 <h1>INBOX</h1>
               </div>
-              <div className="sim-head-stat"><small>EVENTS</small><b>{state.news.length + (state.pendingDecision ? 1 : 0)}</b></div>
+              <div className="sim-head-stat"><small>EVENTS</small><b>{inboxNews.length + (state.pendingDecision ? 1 : 0)}</b></div>
             </div>
             {state.pendingDecision && (
               <article className={'sim-decision-card decision-' + state.pendingDecision.kind}>
@@ -1012,7 +1023,7 @@ function App() {
             <div className="sim-inbox-body">
               <div className="sim-inbox-season"><span>SEASON</span><b>{state.season}</b><small>WEEK {state.week}/{state.seasonLength}</small></div>
               <div className="sim-feed">
-                {state.news.map((item) => {
+                {inboxNews.map((item) => {
                   const target: Tab | null =
                     item.kind === 'contract' || item.kind === 'lineup' ? 'Roster' :
                     item.kind === 'scout' ? 'Scout' :

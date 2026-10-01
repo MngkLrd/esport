@@ -1,8 +1,7 @@
 import { useMemo } from 'react'
 import { formatGameDate } from './calendar'
 import { managerLevelProgress, overall, type GameState, type Player } from './game'
-import { PlayerPortrait } from './PlayerPortrait'
-import { countryFlag } from './playerVisuals'
+import { PlayerIdentity } from './PlayerIdentity'
 import { TeamBadge } from './TeamBadge'
 import { PLAYER_CLUB_WORLD_ID, type WorldPlayer, type WorldTeam } from './world'
 
@@ -61,6 +60,25 @@ export function TeamProfile({
   }, [state.world.transferHistory, team])
 
   const recentClubMatches = isClub ? state.history.slice(0, 6) : []
+  const recentWorldMatches = !isClub
+    ? competitions
+        .flatMap((competition) => competition.matches
+          .filter((match) => match.teamAId === team.id || match.teamBId === team.id)
+          .map((match) => {
+            const isA = match.teamAId === team.id
+            const opponentId = isA ? match.teamBId : match.teamAId
+            return {
+              id: competition.id + ':' + match.id,
+              at: competition.endsAt,
+              event: competition.name,
+              opponent: state.world.teams.find((candidate) => candidate.id === opponentId)?.name ?? opponentId,
+              us: isA ? match.scoreA : match.scoreB,
+              them: isA ? match.scoreB : match.scoreA,
+            }
+          }))
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, 6)
+    : []
 
   if (!team) return null
 
@@ -89,34 +107,43 @@ export function TeamProfile({
               <div className="team-profile-roster-list">
                 {isClub ? state.roster.map((player) => (
                   <button key={player.id} type="button" onClick={() => onOpenPlayer?.(player)}>
-                    <span className="team-profile-player-photo"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /></span>
-                    <span className="team-profile-player-copy"><strong>{player.alias}</strong><small>{countryFlag(player.country)} {player.country} · {player.role}</small></span>
-                    <span className="team-profile-player-ovr"><b>{overall(player)}</b><small>OVR</small></span>
+                    <PlayerIdentity
+                      alias={player.alias}
+                      realName={player.realName}
+                      country={player.country}
+                      team={player.team}
+                      role={player.role}
+                      profileId={player.profileId}
+                      size="lg"
+                      trailing={<span className="team-profile-player-ovr"><b>{overall(player)}</b><small>OVR</small></span>}
+                    />
                   </button>
                 )) : worldRoster.map((player) => (
                   <article key={player.key}>
-                    <span className="team-profile-player-photo"><PlayerPortrait alias={player.alias} playerId={player.profileId} alt={player.alias} /></span>
-                    <span className="team-profile-player-copy"><strong>{player.alias}</strong><small>{countryFlag(player.country ?? '')} {player.country ?? 'INT'} · {worldPlayerRole(player.role)}</small></span>
-                    <span className="team-profile-player-ovr"><b>{player.currentRating}</b><small>OVR</small></span>
+                    <PlayerIdentity
+                      alias={player.alias}
+                      realName={player.realName}
+                      country={player.country}
+                      team={team.name}
+                      role={worldPlayerRole(player.role)}
+                      profileId={player.profileId}
+                      size="lg"
+                      trailing={<span className="team-profile-player-ovr"><b>{player.currentRating}</b><small>OVR</small></span>}
+                    />
                   </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="team-profile-section">
-              <div className="team-profile-section-head"><span>RECENT MATCHES</span><b>{isClub ? recentClubMatches.length : 'WORLD'}</b></div>
-              {isClub && recentClubMatches.length ? (
+                ))}               </div>
+              ) : !isClub && recentWorldMatches.length ? (
                 <div className="team-profile-matches">
-                  {recentClubMatches.map((match) => (
+                  {recentWorldMatches.map((match) => (
                     <div key={match.id}>
-                      <span>{match.playedAt ? formatGameDate(match.playedAt) : 'WEEK ' + match.week}</span>
-                      <strong>YOUR CLUB <i>{match.maps.reduce((sum, map) => sum + (map.us > map.them ? 1 : 0), 0)}:{match.maps.reduce((sum, map) => sum + (map.them > map.us ? 1 : 0), 0)}</i> {match.opponent}</strong>
-                      <small>{match.mode.toUpperCase()}</small>
+                      <span>{formatGameDate(match.at)}</span>
+                      <strong>{team.name} <i>{match.us}:{match.them}</i> {match.opponent}</strong>
+                      <small>{match.event}</small>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="team-profile-empty">Полная match history для AI-команд пока хранится только внутри турниров мира.</div>
+                <div className="team-profile-empty">Матчей в истории пока нет.</div>
               )}
             </section>
 
@@ -141,7 +168,7 @@ export function TeamProfile({
               <div className="team-profile-staff-slot">
                 <span>◎</span>
                 <strong>HEAD COACH</strong>
-                <small>VACANT</small>
+                <small>{isClub ? 'VACANT' : 'STAFF DATA NOT TRACKED'}</small>
               </div>
               {isClub && (
                 <div className="team-profile-manager-slot">

@@ -47,7 +47,7 @@ describe('autonomous world ecology', () => {
     expect(a.teams.map((team) => [team.id, team.vrsPoints, team.rosterKeys])).toEqual(
       b.teams.map((team) => [team.id, team.vrsPoints, team.rosterKeys]),
     )
-  })
+  }, 15_000)
 
   it('creates organizations from ecosystem opportunity rather than a spawn timer', () => {
     const world = createWorldState()

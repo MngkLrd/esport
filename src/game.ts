@@ -2087,8 +2087,12 @@ export const playMatch = (
   for (const map of maps) {
     for (const round of map.story?.rounds ?? []) {
       if (!round.keyPlayer) continue
-      if (round.cause === 'PLAYER_ERROR') storyErrors.set(round.keyPlayer, (storyErrors.get(round.keyPlayer) ?? 0) + 1)
-      if (round.cause === 'CLUTCH' && round.winner === 'US') storyClutches.set(round.keyPlayer, (storyClutches.get(round.keyPlayer) ?? 0) + 1)
+      if (round.cause === 'PLAYER_ERROR' && round.keyPlayerSide !== 'THEM') {
+        storyErrors.set(round.keyPlayer, (storyErrors.get(round.keyPlayer) ?? 0) + 1)
+      }
+      if (round.cause === 'CLUTCH' && round.winner === 'US' && round.keyPlayerSide !== 'THEM') {
+        storyClutches.set(round.keyPlayer, (storyClutches.get(round.keyPlayer) ?? 0) + 1)
+      }
     }
   }
   const performances = active

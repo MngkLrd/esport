@@ -1208,7 +1208,7 @@ const buildOpponentMatchProfile = (
   }
 }
 
-const findTurningPoint = (rounds: MatchRoundStory[]) => {
+export const findTurningPoint = (rounds: MatchRoundStory[]) => {
   if (!rounds.length) return undefined
   const final = rounds[rounds.length - 1]
   const winner = final.scoreUs > final.scoreThem ? 'US' : 'THEM'

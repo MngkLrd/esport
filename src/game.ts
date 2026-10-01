@@ -2267,7 +2267,12 @@ export const advanceCareerTo = (state: GameState, target: string): GameState => 
       actorIds: event.actorIds,
       teamIds: event.actorIds.filter((id) => advancedWorld.teams.some((team) => team.id === id)),
       sourceId: event.id,
-      data: event.data,
+      data: {
+        ...event.data,
+        newsId: 'ecology-' + event.id,
+        newsScope: 'club',
+        newsAttention: 'info',
+      },
     })
   }
 

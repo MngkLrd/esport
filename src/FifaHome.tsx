@@ -6,7 +6,7 @@ import { compareGameTime, formatGameDate, formatGameTime } from './calendar'
 import { nextPlayerMatch, opponentForPlayerMatch } from './tournamentEngine'
 import { currentCareerObjectives } from './progression'
 
-type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Inbox' | 'Training' | 'Profile'
+type ModeKey = 'Play' | 'World' | 'Calendar' | 'Roster' | 'Scout' | 'Packs' | 'Finance' | 'Inbox' | 'Training' | 'Profile'
 
 export function FifaHome({
   state,
@@ -167,7 +167,10 @@ export function FifaHome({
       <div className="fifa-home-hints">
         <span><b>← → ↑ ↓</b> НАВИГАЦИЯ</span>
         <span><b>ENTER</b> ВЫБРАТЬ</span>
-        <button type="button" onClick={() => onOpen('Profile')}>MANAGER CAREER →</button>
+        <div className="fifa-home-hint-actions">
+          <button type="button" onClick={() => onOpen('Finance')}>FINANCES →</button>
+          <button type="button" onClick={() => onOpen('Profile')}>MANAGER CAREER →</button>
+        </div>
       </div>
     </section>
   )

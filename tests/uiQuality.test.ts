@@ -168,11 +168,16 @@ describe('2026 UI quality pass', () => {
     expect(visual).toContain('background:linear-gradient(180deg,rgb(var(--ui-panel-raised-rgb)')
   })
 
-  it('provides a reusable full-screen conversation system from player profiles', () => {
+  it('provides a reusable full-screen conversation system for players and club meetings', () => {
     expect(app).toContain('TALK TO PLAYER')
     expect(app).toContain('<ConversationScreen')
     expect(app).toContain('conversationChoicesForPlayer')
+    expect(app).toContain('resolvePlayerConversation')
+    expect(app).toContain('CLUB MEETING · BOARD')
+    expect(news).toContain('ПРОВЕСТИ ВСТРЕЧУ')
+    expect(news).not.toContain("onResolveDecision('a')")
     expect(conversation).toContain('export interface ConversationParticipant')
+    expect(conversation).toContain('onComplete?: (choice: ConversationChoice) => void')
     expect(conversation).toContain('conversation-choice-grid')
     expect(conversation).toContain('Выберите тон и позицию')
     expect(visual).toContain('/* FM-STYLE CONVERSATION SYSTEM')

@@ -3332,6 +3332,51 @@ export const evaluateNegotiation = (
   return { score, threshold, accepted, interest, askingFee, askingSalary, reason }
 }
 
+export const beginTransferCase = (state: GameState, playerId: string): GameState => {
+  const prospect = state.prospects.find((player) => player.id === playerId)
+  if (!prospect) return state
+  const current = activeTransferCaseForPlayer(state.transferCases ?? [], playerId)
+  if (current && current.status !== 'rejected') return state
+
+  const worldIdentity = (prospect.playerKey ? state.world.players[prospect.playerKey] : null) ?? worldPlayerByAlias(state.world, prospect.alias)
+  const sourceTeam = worldIdentity ? worldTeamForPlayer(state.world, worldIdentity.key) : null
+  const baseCase = createTransferCase({
+    id: 'transfer-' + playerId + '-' + state.now + '-' + state.scoutCycle,
+    playerId,
+    playerKey: worldIdentity?.key ?? prospect.playerKey ?? null,
+    alias: prospect.alias,
+    sourceTeamId: sourceTeam?.id ?? null,
+    destinationTeamId: PLAYER_CLUB_WORLD_ID,
+    at: state.now,
+  })
+  const interested = transitionTransferCase(
+    baseCase,
+    'interest',
+    state.now,
+    'Клуб подтвердил интерес и открыл переговорный процесс.',
+  )
+
+  const transferCases = [interested, ...(state.transferCases ?? []).filter((item) => item.id !== interested.id)].slice(0, 120)
+  return recordClubEvent({
+    ...state,
+    transferCases,
+  }, {
+    id: 'transfer-interest-' + interested.id,
+    at: state.now,
+    week: state.week,
+    kind: 'transfer',
+    title: 'Интерес к ' + prospect.alias,
+    detail: sourceTeam
+      ? 'Клуб открыл контакт по переходу из ' + sourceTeam.name + '.'
+      : 'Клуб открыл контакт со свободным агентом.',
+    importance: 25,
+    actorIds: [worldIdentity?.key ?? prospect.playerKey ?? prospect.id],
+    teamIds: [PLAYER_CLUB_WORLD_ID, ...(sourceTeam ? [sourceTeam.id] : [])],
+    sourceId: interested.id,
+    data: { status: interested.status },
+  }, false)
+}
+
 export const negotiateProspect = (
   state: GameState,
   playerId: string,
@@ -3347,61 +3392,155 @@ export const negotiateProspect = (
     return { state, evaluation: { ...evaluateNegotiation(state, dummy, terms), accepted: false, reason: 'Кандидат больше не доступен.' } }
   }
 
-  const evaluation = evaluateNegotiation(state, prospect, terms)
-  if (state.roster.length >= 8) {
-    return { state, evaluation: { ...evaluation, accepted: false, reason: 'В ростере нет свободного места.' } }
+  let working = beginTransferCase(state, playerId)
+  const evaluation = evaluateNegotiation(working, prospect, terms)
+  const normalizedTerms = {
+    fee: Math.max(0, Math.round(terms.fee)),
+    salary: Math.max(1, Math.round(terms.salary)),
+    contractWeeks: Math.round(clamp(terms.contractWeeks, 6, 16)),
+    squadRole: terms.squadRole === 'starter' ? 'starter' as const : 'rotation' as const,
   }
-  if (!evaluation.accepted) return { state, evaluation }
+  const currentCase = activeTransferCaseForPlayer(working.transferCases ?? [], playerId)
+  if (!currentCase) return { state: working, evaluation: { ...evaluation, accepted: false, reason: 'Не удалось открыть трансферный процесс.' } }
 
-  const worldIdentity = (prospect.playerKey ? state.world.players[prospect.playerKey] : null) ?? worldPlayerByAlias(state.world, prospect.alias)
-  if (worldIdentity?.teamId === PLAYER_CLUB_WORLD_ID) {
+  let lifecycle = transitionTransferCase(
+    currentCase,
+    'offer',
+    working.now,
+    'Клуб направил официальное предложение.',
+    normalizedTerms,
+  )
+  lifecycle = transitionTransferCase(
+    lifecycle,
+    'negotiation',
+    working.now,
+    'Стороны оценили сумму, зарплату, срок и роль игрока.',
+    normalizedTerms,
+  )
+
+  if (working.roster.length >= 8) {
+    const rejectedEvaluation = { ...evaluation, accepted: false, reason: 'В ростере нет свободного места.' }
+    lifecycle = transitionTransferCase(lifecycle, 'rejected', working.now, rejectedEvaluation.reason, normalizedTerms)
     return {
-      state,
-      evaluation: { ...evaluation, accepted: false, reason: 'Игрок уже принадлежит вашему клубу.' },
+      state: {
+        ...working,
+        transferCases: [lifecycle, ...working.transferCases.filter((item) => item.id !== lifecycle.id)].slice(0, 120),
+      },
+      evaluation: rejectedEvaluation,
     }
   }
 
-  const sourceTeam = worldIdentity ? worldTeamForPlayer(state.world, worldIdentity.key) : null
+  if (!evaluation.accepted) {
+    lifecycle = transitionTransferCase(lifecycle, 'rejected', working.now, evaluation.reason, normalizedTerms)
+    const rejectedState = recordClubEvent({
+      ...working,
+      transferCases: [lifecycle, ...working.transferCases.filter((item) => item.id !== lifecycle.id)].slice(0, 120),
+    }, {
+      id: 'transfer-rejected-' + lifecycle.id + '-' + lifecycle.transitions.length,
+      at: working.now,
+      week: working.week,
+      kind: 'transfer',
+      title: 'Предложение по ' + prospect.alias + ' отклонено',
+      detail: evaluation.reason,
+      importance: 20,
+      actorIds: [prospect.playerKey ?? prospect.id],
+      teamIds: [PLAYER_CLUB_WORLD_ID, ...(lifecycle.sourceTeamId ? [lifecycle.sourceTeamId] : [])],
+      sourceId: lifecycle.id,
+      data: { status: 'rejected', terms: normalizedTerms },
+    }, false)
+    return { state: rejectedState, evaluation }
+  }
+
+  const worldIdentity = (prospect.playerKey ? working.world.players[prospect.playerKey] : null) ?? worldPlayerByAlias(working.world, prospect.alias)
+  if (worldIdentity?.teamId === PLAYER_CLUB_WORLD_ID) {
+    const duplicateEvaluation = { ...evaluation, accepted: false, reason: 'Игрок уже принадлежит вашему клубу.' }
+    lifecycle = transitionTransferCase(lifecycle, 'rejected', working.now, duplicateEvaluation.reason, normalizedTerms)
+    return {
+      state: {
+        ...working,
+        transferCases: [lifecycle, ...working.transferCases.filter((item) => item.id !== lifecycle.id)].slice(0, 120),
+      },
+      evaluation: duplicateEvaluation,
+    }
+  }
+
+  const sourceTeam = worldIdentity ? worldTeamForPlayer(working.world, worldIdentity.key) : null
+  lifecycle = transitionTransferCase(lifecycle, 'accepted', working.now, 'Игрок и продавец приняли условия.', normalizedTerms)
+
   const signed: Player = {
     ...prospect,
     playerKey: worldIdentity?.key ?? prospect.playerKey,
     team: 'YOUR CLUB',
-    salary: Math.max(1, Math.round(terms.salary)),
-    contractWeeks: Math.round(clamp(terms.contractWeeks, 6, 16)),
-    morale: clamp(prospect.morale + (terms.squadRole === 'starter' ? 7 : 3)),
+    salary: normalizedTerms.salary,
+    contractWeeks: normalizedTerms.contractWeeks,
+    morale: clamp(prospect.morale + (normalizedTerms.squadRole === 'starter' ? 7 : 3)),
   }
-  const nextRoster = [...state.roster, signed]
-  const nextWorld = claimWorldPlayersForClub(
-    state.world,
+  const nextRoster = [...working.roster, signed]
+  let nextWorld = claimWorldPlayersForClub(
+    working.world,
     [signed.playerKey ?? 'alias:' + signed.alias.toLocaleLowerCase('en-US')],
-    state.now,
-    state.seed + state.scoutCycle * 97,
+    working.now,
+    working.seed + working.scoutCycle * 97,
   )
+  nextWorld = repairWorldIntegrity(nextWorld, clubWorldRosterProjection(nextRoster))
   const clubKeys = new Set(
     nextRoster
       .map((player) => player.playerKey ?? worldPlayerByAlias(nextWorld, player.alias)?.key)
       .filter((key): key is string => Boolean(key)),
   )
+  lifecycle = transitionTransferCase(lifecycle, 'completed', working.now, 'Регистрация игрока завершена, ростеры и бюджеты обновлены.', normalizedTerms)
 
   let next: GameState = {
-    ...state,
+    ...working,
     world: nextWorld,
-    activeTournament: state.activeTournament
-      ? refreshTournamentTeamsFromWorld(state.activeTournament, nextWorld, clubKeys)
+    activeTournament: working.activeTournament
+      ? refreshTournamentTeamsFromWorld(working.activeTournament, nextWorld, clubKeys)
       : null,
-    credits: state.credits - Math.max(0, Math.round(terms.fee)),
     roster: nextRoster,
-    prospects: state.prospects.filter((player) => player.id !== playerId && player.playerKey !== signed.playerKey),
-    news: [{
-      id: 'sign-' + playerId + '-' + state.week,
-      week: state.week,
-      kind: 'contract' as const,
-      title: prospect.alias + ' подписывает контракт',
-      body: (sourceTeam ? 'Переход из ' + sourceTeam.name + '. ' : 'Переход свободного агента. ') + 'Трансфер: ' + Math.round(terms.fee) + ' кр. Зарплата: ' + Math.round(terms.salary) + ' кр./нед. Срок: ' + Math.round(terms.contractWeeks) + ' нед. Роль: ' + (terms.squadRole === 'starter' ? 'основа' : 'ротация') + '.',
-    }, ...state.news].slice(0, 50),
+    prospects: working.prospects.filter((player) => player.id !== playerId && player.playerKey !== signed.playerKey),
+    transferCases: [lifecycle, ...working.transferCases.filter((item) => item.id !== lifecycle.id)].slice(0, 120),
   }
 
-  if (terms.squadRole === 'starter') {
+  const transferEventId = 'transfer-completed-' + lifecycle.id
+  if (normalizedTerms.fee > 0) {
+    next = postClubFinance(next, {
+      id: 'transfer-fee-' + lifecycle.id,
+      at: working.now,
+      week: working.week,
+      amount: -normalizedTerms.fee,
+      account: 'transfer',
+      title: 'Трансфер ' + prospect.alias,
+      description: sourceTeam ? 'Выплата клубу ' + sourceTeam.name + '.' : 'Подписной платёж свободному агенту.',
+      sourceType: 'transfer',
+      sourceId: lifecycle.id,
+      eventId: transferEventId,
+    })
+  }
+
+  next = recordClubEvent(next, {
+    id: transferEventId,
+    at: working.now,
+    week: working.week,
+    kind: 'transfer',
+    title: prospect.alias + ' подписывает контракт',
+    detail: (sourceTeam ? 'Переход из ' + sourceTeam.name + '. ' : 'Переход свободного агента. ') +
+      'Трансфер: ' + normalizedTerms.fee + ' кр. Зарплата: ' + normalizedTerms.salary +
+      ' кр./нед. Срок: ' + normalizedTerms.contractWeeks + ' нед. Роль: ' +
+      (normalizedTerms.squadRole === 'starter' ? 'основа' : 'ротация') + '.',
+    importance: 85,
+    actorIds: [signed.playerKey ?? signed.id],
+    teamIds: [PLAYER_CLUB_WORLD_ID, ...(sourceTeam ? [sourceTeam.id] : [])],
+    sourceId: lifecycle.id,
+    financeEntryIds: normalizedTerms.fee > 0 ? ['transfer-fee-' + lifecycle.id] : [],
+    data: {
+      status: lifecycle.status,
+      terms: normalizedTerms,
+      fromTeamId: sourceTeam?.id ?? null,
+      toTeamId: PLAYER_CLUB_WORLD_ID,
+    },
+  })
+
+  if (normalizedTerms.squadRole === 'starter') {
     const bestSlot = [...LINEUP_SLOTS].sort((a, b) => lineupFitScore(signed, b) - lineupFitScore(signed, a))[0]
     next = assignLineupSlot(next, bestSlot, signed.id)
   }

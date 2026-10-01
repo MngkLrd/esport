@@ -3556,61 +3556,104 @@ export const signProspect = (state: GameState, playerId: string): GameState => {
 }
 
 export const renewContract = (state: GameState, playerId: string): GameState => {
-  const player = state.roster.find((p) => p.id === playerId)
+  const player = state.roster.find((candidate) => candidate.id === playerId)
   if (!player) return state
   const cost = player.salary * 4
   if (state.credits < cost) return state
-  return {
-    ...state,
-    credits: state.credits - cost,
-    roster: state.roster.map((p) =>
-      p.id === playerId ? { ...p, contractWeeks: p.contractWeeks + 6, morale: clamp(p.morale + 3) } : p,
-    ),
-    news: [{
-      id: 'renew-' + playerId + '-' + state.week,
-      week: state.week,
-      kind: 'contract' as const,
-      title: player.alias + ' продлевает контракт на шесть недель',
-      body: 'Стоимость продления: ' + cost + ' кр. Недельная зарплата остаётся ' + player.salary + ' кр.',
-    }, ...state.news].slice(0, 50),
-  }
+
+  const roster = state.roster.map((candidate) =>
+    candidate.id === playerId
+      ? { ...candidate, contractWeeks: candidate.contractWeeks + 6, morale: clamp(candidate.morale + 3) }
+      : candidate,
+  )
+  const nextWorld = repairWorldIntegrity(state.world, clubWorldRosterProjection(roster))
+  let next: GameState = { ...state, roster, world: nextWorld }
+  const eventId = 'contract-renewed-' + playerId + '-' + state.now
+  next = postClubFinance(next, {
+    id: 'contract-renewal-' + playerId + '-' + state.now,
+    at: state.now,
+    week: state.week,
+    amount: -cost,
+    account: 'salary',
+    title: 'Продление ' + player.alias,
+    description: 'Контракт продлён на 6 недель.',
+    sourceType: 'contract',
+    sourceId: playerId,
+    eventId,
+  })
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'contract',
+    title: player.alias + ' продлевает контракт',
+    detail: 'Срок +6 недель · стоимость ' + cost + ' кр. · зарплата ' + player.salary + ' кр./нед.',
+    importance: 50,
+    actorIds: [player.playerKey ?? player.id],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    financeEntryIds: ['contract-renewal-' + playerId + '-' + state.now],
+  })
 }
 
 export const releasePlayer = (state: GameState, playerId: string): GameState => {
   if (state.roster.length <= 5) return state
-  const player = state.roster.find((p) => p.id === playerId)
+  const player = state.roster.find((candidate) => candidate.id === playerId)
   if (!player) return state
   const severance = player.contractWeeks <= 0 ? 0 : player.salary
   if (state.credits < severance) return state
-  const nextRoster = state.roster.filter((p) => p.id !== playerId)
-  const nextWorld = releaseWorldPlayerFromClub(state.world, player.playerKey, player.alias, state.now)
+
+  const nextRoster = state.roster.filter((candidate) => candidate.id !== playerId)
+  let nextWorld = releaseWorldPlayerFromClub(state.world, player.playerKey, player.alias, state.now)
+  nextWorld = repairWorldIntegrity(nextWorld, clubWorldRosterProjection(nextRoster))
   const clubKeys = new Set(
     nextRoster
       .map((candidate) => candidate.playerKey ?? worldPlayerByAlias(nextWorld, candidate.alias)?.key)
       .filter((key): key is string => Boolean(key)),
   )
 
-  return {
+  let next: GameState = {
     ...state,
     world: nextWorld,
     activeTournament: state.activeTournament
       ? refreshTournamentTeamsFromWorld(state.activeTournament, nextWorld, clubKeys)
       : null,
-    credits: state.credits - severance,
     roster: nextRoster,
     startingFive: state.startingFive.filter((id) => id !== playerId),
     lineupSlots: Object.fromEntries(
       LINEUP_SLOTS.map((slot) => [slot, currentLineupSlots(state)[slot] === playerId ? null : currentLineupSlots(state)[slot]]),
     ) as LineupSlots,
     lineupContinuity: clamp(state.lineupContinuity - (state.startingFive.includes(playerId) ? 12 : 4)),
-    news: [{
-      id: 'release-' + playerId + '-' + state.week,
-      week: state.week,
-      kind: 'contract' as const,
-      title: player.alias + ' покидает проект',
-      body: 'Компенсация: ' + severance + ' кр. Зарплатная нагрузка состава снижается сразу.',
-    }, ...state.news].slice(0, 50),
   }
+
+  const eventId = 'player-release-' + playerId + '-' + state.now
+  if (severance > 0) {
+    next = postClubFinance(next, {
+      id: 'severance-' + playerId + '-' + state.now,
+      at: state.now,
+      week: state.week,
+      amount: -severance,
+      account: 'transfer',
+      title: 'Компенсация ' + player.alias,
+      description: 'Выплата при расторжении контракта.',
+      sourceType: 'contract',
+      sourceId: playerId,
+      eventId,
+    })
+  }
+
+  return recordClubEvent(next, {
+    id: eventId,
+    at: state.now,
+    week: state.week,
+    kind: 'transfer',
+    title: player.alias + ' покидает проект',
+    detail: 'Игрок освобождён. Компенсация: ' + severance + ' кр. Зарплатная нагрузка снижается сразу.',
+    importance: 60,
+    actorIds: [player.playerKey ?? player.id],
+    teamIds: [PLAYER_CLUB_WORLD_ID],
+    financeEntryIds: severance > 0 ? ['severance-' + playerId + '-' + state.now] : [],
+    data: { status: 'released', severance },
+  })
 }
 
 export const modeInfo: Record<MatchMode, { name: string; description: string; risk: string }> = {

@@ -1,0 +1,74 @@
+name: Deploy Template Remix Preview
+
+on:
+  push:
+    branches:
+      - redesign/template-remix
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}preview/
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: redesign/template-remix
+          path: preview-site
+
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-site
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ''
+
+      - name: Build main site
+        working-directory: main-site
+        run: |
+          npm install
+          npm run build
+
+      - name: Build redesign preview
+        working-directory: preview-site
+        env:
+          VITE_BASE_PATH: /esport/preview/
+        run: |
+          npm install
+          npm run build
+
+      - name: Compose Pages artifact
+        run: |
+          mkdir -p pages-root/preview
+          cp -R main-site/dist/. pages-root/
+          cp -R preview-site/dist/. pages-root/preview/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages-root
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

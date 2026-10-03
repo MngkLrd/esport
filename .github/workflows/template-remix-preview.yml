@@ -18,7 +18,7 @@ concurrency:
 jobs:
   deploy:
     environment:
-      name: github-pages
+      name: template-remix-preview
       url: ${{ steps.deployment.outputs.page_url }}preview/
     runs-on: ubuntu-latest
 

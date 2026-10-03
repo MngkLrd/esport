@@ -61,6 +61,7 @@ import { WorldPortal } from './WorldPortal'
 import { nextPlannedTrainingSession, processTrainingSessionsThrough } from './trainingSystem'
 import { FinanceView } from './FinanceView'
 import { eventsForPlayer } from './clubEvents'
+import { TemplateHeader, TemplateSidebar } from './TemplateChrome'
 
 const CardDetails = lazy(() => import('./CardDetails').then((module) => ({ default: module.CardDetails })))
 
@@ -963,43 +964,24 @@ function App() {
           onStopAction={handleTimeProgressionStop}
         />
       )}
-      <header className="fifa-topbar">
-        <button
-          className="fifa-brand fifa-screen-title"
-          onClick={() => openTab('HQ')}
-          aria-label={tab === 'HQ' ? 'Home' : 'Вернуться на главную'}
-        >
-          {tab !== 'HQ' && <span className="fifa-screen-back-mark" aria-hidden="true">←</span>}
-          <strong>{SCREEN_TITLES[tab]}</strong>
-        </button>
-        {currentFixtureDue ? (
-          <button className="fifa-topbar-center fifa-current-match-button" onClick={() => openTab('Play')}>
-            <span>CURRENT MATCH</span>
-            <b className="fifa-current-match-teams">
-              <span><TeamBadge name="YOUR CLUB" size="sm" />YOUR CLUB</span>
-              <em>VS</em>
-              <span>{bracketOpponent?.name ?? 'OPPONENT'}<TeamBadge name={bracketOpponent?.name ?? 'OPPONENT'} size="sm" /></span>
-            </b>
-            <i />
-            <strong>PLAY →</strong>
-          </button>
-        ) : (
-          <button className="fifa-topbar-center fifa-clock-button" onClick={() => openTab('Calendar')}>
-            <span>{formatGameDate(visualNow)}</span>
-            <b>{formatGameTime(visualNow)}</b>
-            <i />
-            <span>{activeEvent ? 'NEXT · ' + activeEvent.name.toUpperCase() : 'OPEN CALENDAR'}</span>
-          </button>
-        )}
-        <div className="fifa-wallets">
-          <button onClick={() => openTab('Inbox')} className={unread > 0 ? 'has-unread' : ''}><span>INBOX</span><b>{unread > 0 ? unread + ' NEW' : 'CLEAR'}</b></button>
-          <button onClick={() => openTab('Profile')}><span>MANAGER LVL {managerProgress.level}</span><b>{managerProgress.percent}%</b></button>
-          <button onClick={() => openTab('Finance')}><span>CLUB CASH</span><b>{format.format(state.credits)}</b></button>
-          <div><span>PACK TOKENS</span><b>{format.format(state.packTokens)}</b></div>
-        </div>
-      </header>
-
-
+      <TemplateSidebar active={tab} unread={unread} onOpen={openTab} />
+      <div className="template-app-body">
+        <TemplateHeader
+          title={SCREEN_TITLES[tab]}
+          date={formatGameDate(visualNow)}
+          time={formatGameTime(visualNow)}
+          statusTitle={currentFixtureDue ? 'CURRENT MATCH' : 'NEXT ACTION'}
+          statusDetail={currentFixtureDue ? 'VS ' + (bracketOpponent?.name ?? 'OPPONENT') : activeEvent ? activeEvent.name : 'OPEN CALENDAR'}
+          unread={unread}
+          managerLevel={managerProgress.level}
+          managerPercent={managerProgress.percent}
+          credits={format.format(state.credits)}
+          packTokens={format.format(state.packTokens)}
+          onStatus={() => openTab(currentFixtureDue ? 'Play' : 'Calendar')}
+          onInbox={() => openTab('Inbox')}
+          onProfile={() => openTab('Profile')}
+          onFinance={() => openTab('Finance')}
+        />
 
       <main className={'app-main app-main-' + tab.toLowerCase()}>
         {tab !== 'HQ' && !pendingMatch && (
@@ -1203,6 +1185,7 @@ function App() {
           <b>{progressToast.reward}</b>
         </div>
       )}
+      </div>
     </div>
   )
 }

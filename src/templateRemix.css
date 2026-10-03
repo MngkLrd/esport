@@ -1,0 +1,662 @@
+/* ==========================================================================
+   TEMPLATE REMIX LAYER
+   Presentation-only shell adapted from open-source MIT dashboard patterns:
+   - Flowbite React Admin Dashboard
+   - TailAdmin React
+   - TailAdminLTE React / AdminLTE
+   Existing game DOM, routes, state and tile positions are intentionally untouched.
+   ========================================================================== */
+
+:root{
+  --tpl-radius:10px;
+  --tpl-radius-sm:7px;
+  --tpl-surface:rgb(17 19 22 / .92);
+  --tpl-surface-2:rgb(23 26 30 / .94);
+  --tpl-surface-3:rgb(12 14 16 / .96);
+  --tpl-border:rgb(var(--ui-line-rgb) / .24);
+  --tpl-border-strong:rgb(var(--ui-line-rgb) / .42);
+  --tpl-hover:rgb(255 255 255 / .035);
+  --tpl-accent-soft:rgb(var(--ui-accent-rgb) / .10);
+  --tpl-accent-border:rgb(var(--ui-accent-rgb) / .46);
+  --tpl-shadow:0 14px 38px rgb(0 0 0 / .30);
+  --tpl-shadow-lg:0 26px 70px rgb(0 0 0 / .42);
+}
+
+body{
+  letter-spacing:-.005em;
+  background:var(--ui-bg-0);
+}
+body::before{
+  opacity:.36;
+  filter:blur(22px) saturate(.72) contrast(1.04);
+}
+button,input,select,textarea{font-family:inherit}
+button{transition:border-color .16s ease,background-color .16s ease,transform .16s ease,box-shadow .16s ease,color .16s ease}
+button:active:not(:disabled){transform:translateY(1px)}
+::selection{background:rgb(var(--ui-accent-rgb) / .28);color:var(--ui-text)}
+
+/* App shell / header: Flowbite + AdminLTE style application chrome */
+.fifa-topbar{
+  height:74px;
+  padding:0 18px;
+  gap:14px;
+  border-bottom:1px solid var(--tpl-border);
+  background:rgb(9 11 13 / .88);
+  box-shadow:0 1px 0 rgb(255 255 255 / .02),0 12px 38px rgb(0 0 0 / .22);
+  backdrop-filter:blur(18px) saturate(1.15);
+}
+.fifa-screen-title{
+  min-width:0;
+  padding:0 10px;
+  border-radius:var(--tpl-radius-sm);
+}
+.fifa-screen-title:hover{background:var(--tpl-hover)}
+.fifa-screen-title strong{
+  color:var(--ui-text);
+  font-size:clamp(18px,1.35vw,25px);
+  letter-spacing:-.025em;
+}
+.fifa-topbar-center{
+  min-height:44px;
+  border:1px solid var(--tpl-border);
+  border-radius:var(--tpl-radius-sm);
+  background:rgb(255 255 255 / .018);
+}
+.fifa-topbar-center:hover{
+  border-color:var(--tpl-border-strong);
+  background:var(--tpl-hover);
+}
+.fifa-current-match-button{
+  border-color:rgb(var(--ui-positive-rgb) / .28);
+  background:rgb(var(--ui-positive-rgb) / .055);
+}
+.fifa-wallets{gap:6px}
+.fifa-wallets>div,.fifa-wallets>button{
+  min-height:44px;
+  border:1px solid var(--tpl-border);
+  border-radius:var(--tpl-radius-sm);
+  background:rgb(255 255 255 / .018);
+  box-shadow:none;
+}
+.fifa-wallets>button:hover{
+  border-color:var(--tpl-accent-border);
+  background:var(--tpl-accent-soft);
+}
+.fifa-wallets span{color:var(--ui-soft);font-weight:800;letter-spacing:.055em}
+.fifa-wallets b{color:var(--ui-text)}
+.screen-back-button{
+  top:11px;
+  left:18px;
+  height:32px;
+  border:1px solid var(--tpl-border);
+  border-radius:var(--tpl-radius-sm);
+  background:rgb(9 11 13 / .86);
+  box-shadow:0 8px 24px rgb(0 0 0 / .22);
+}
+.screen-back-button:hover{
+  border-color:var(--tpl-accent-border);
+  background:var(--tpl-accent-soft);
+}
+
+/* Home dashboard: original six-tile geometry remains exactly the same */
+.app-main-hq .fifa-home-screen{
+  width:min(1660px,100%);
+  margin:0 auto;
+  padding:14px 18px 12px;
+  gap:10px;
+}
+.fifa-home-status{
+  gap:8px;
+}
+.fifa-home-status>div,
+.fifa-home-continue,
+.fifa-level-strip{
+  border:1px solid var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(14 16 18 / .80)!important;
+  box-shadow:none!important;
+}
+.fifa-home-continue:hover:not(:disabled),
+.fifa-level-button:hover{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+}
+.app-main-hq .fifa-mode-grid{
+  grid-template-columns:minmax(330px,1.18fr) repeat(3,minmax(190px,.82fr));
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.app-main-hq .fifa-mode-hero{grid-column:1;grid-row:1 / span 2}
+.app-main-hq .fifa-practice-tile{grid-column:span 2}
+.app-main-hq .fifa-mode-tile{
+  min-height:0;
+  overflow:hidden;
+  border:1px solid var(--tpl-border)!important;
+  border-radius:var(--tpl-radius)!important;
+  box-shadow:var(--tpl-shadow)!important;
+  transform:translateZ(0);
+}
+.app-main-hq .fifa-mode-tile:hover,
+.app-main-hq .fifa-mode-tile:focus-visible{
+  border-color:var(--tpl-accent-border)!important;
+  box-shadow:0 18px 48px rgb(0 0 0 / .38),0 0 0 1px rgb(var(--ui-accent-rgb) / .08)!important;
+  transform:translateY(-2px);
+}
+.app-main-hq .fifa-mode-copy,
+.app-main-hq .fifa-tile-kicker,
+.app-main-hq .fifa-mode-tile>h2,
+.app-main-hq .fifa-mode-tile>strong,
+.app-main-hq .fifa-mode-tile>p{
+  position:relative;
+  z-index:2;
+}
+.app-main-hq .fifa-mode-tile h1,
+.app-main-hq .fifa-mode-tile h2{
+  color:#fff;
+  text-shadow:0 2px 18px rgb(0 0 0 / .42);
+}
+.app-main-hq .fifa-tile-kicker,
+.app-main-hq .fifa-mode-copy>span{
+  color:#e6c18a;
+  letter-spacing:.10em;
+}
+.app-main-hq .fifa-mode-tile>strong{
+  padding:8px 10px;
+  border-radius:6px;
+  background:rgb(6 8 10 / .48);
+  backdrop-filter:blur(8px);
+}
+.fifa-home-hints{
+  color:var(--ui-soft);
+}
+.fifa-home-hint-actions button{
+  border:0;
+  border-radius:5px;
+  background:transparent;
+}
+.fifa-home-hint-actions button:hover{
+  color:var(--ui-text);
+  background:var(--tpl-hover);
+}
+
+/* Common screen contract: TailAdmin-like density, cards and spacing */
+.sim-screen,
+.training-ground,
+.newsroom{
+  width:min(1660px,100%);
+  max-width:1660px;
+  margin:0 auto;
+}
+.sim-screen{
+  padding:45px 18px 14px;
+}
+.sim-screen-head,
+.training-ground-head,
+.newsroom-head{
+  border-bottom-color:rgb(var(--ui-line-rgb) / .14)!important;
+}
+.sim-screen-head h1,
+.training-ground-title h1,
+.newsroom-head h1{
+  letter-spacing:-.035em;
+}
+.sim-head-stat,
+.sim-market-budget,
+.training-ground-kpis>div,
+.newsroom-context>div{
+  border-radius:var(--tpl-radius-sm);
+}
+
+/* Reusable surfaces */
+:is(
+  .sim-world-map,
+  .world-vrs-panel,
+  .sim-event-dossier,
+  .sim-team-deck,
+  .sim-match-actions,
+  .sim-match-recap,
+  .sim-calendar-body,
+  .sim-month,
+  .sim-squad-stage,
+  .sim-player-pool,
+  .sim-planner-board,
+  .sim-planner-analysis,
+  .sim-planner-inspector,
+  .sim-market-brief,
+  .sim-market-results,
+  .sim-pack-hero,
+  .sim-pack-store,
+  .sim-profile-overview,
+  .sim-profile-stats,
+  .sim-manager-career,
+  .training-ground-workspace,
+  .training-side,
+  .training-editor,
+  .training-report,
+  .newsroom-feed-panel,
+  .newsroom-editorial,
+  .newsroom-inbox-side,
+  .newsroom-inbox-list,
+  .match-lobby-shell,
+  .match-radar-shell-canvas,
+  .player-profile-v2,
+  .team-profile,
+  .pack-purchase-modal,
+  .market-negotiation
+){
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius)!important;
+  background-color:var(--tpl-surface)!important;
+  box-shadow:var(--tpl-shadow)!important;
+}
+
+/* Toolbars / segmented controls */
+:is(
+  .sim-segmented,
+  .sim-subnav,
+  .sim-world-filters,
+  .sim-pool-filters,
+  .sim-roster-mode-tabs,
+  .market-segmented,
+  .newsroom-tabs,
+  .newsroom-toolbar,
+  .training-report-nav
+){
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(12 14 16 / .74)!important;
+  box-shadow:none!important;
+  overflow:hidden;
+}
+:is(
+  .sim-segmented,
+  .sim-subnav,
+  .sim-world-filters,
+  .sim-pool-filters,
+  .sim-roster-mode-tabs,
+  .market-segmented,
+  .newsroom-tabs,
+  .training-report-nav
+) button{
+  border-color:rgb(var(--ui-line-rgb) / .12)!important;
+  border-radius:5px!important;
+}
+:is(
+  .sim-segmented,
+  .sim-subnav,
+  .sim-world-filters,
+  .sim-pool-filters,
+  .sim-roster-mode-tabs,
+  .market-segmented,
+  .newsroom-tabs,
+  .training-report-nav
+) button:hover:not(:disabled){
+  background:var(--tpl-hover)!important;
+}
+:is(
+  .sim-segmented,
+  .sim-subnav,
+  .sim-world-filters,
+  .sim-pool-filters,
+  .sim-roster-mode-tabs,
+  .market-segmented,
+  .newsroom-tabs,
+  .training-report-nav
+) button.active{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+  color:var(--ui-text)!important;
+  box-shadow:none!important;
+}
+
+/* Tables and lists: flatter template rhythm instead of nested boxes */
+:is(
+  .vrs-table-scroll,
+  .sim-schedule-scroll,
+  .sim-market-results,
+  .newsroom-inbox-list,
+  .newsroom-feed,
+  .world-portal-feed,
+  .training-development-list
+){
+  scrollbar-width:thin;
+  scrollbar-color:rgb(var(--ui-line-rgb) / .50) transparent;
+}
+.vrs-row,
+.sim-event-row,
+.newsroom-inbox-list>article,
+.newsroom-story-card,
+.market-candidate,
+.training-development-list>article{
+  border-left:0!important;
+  border-right:0!important;
+  border-top:0!important;
+  border-bottom-color:rgb(var(--ui-line-rgb) / .12)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.vrs-row:hover,
+.sim-event-row:hover,
+.newsroom-inbox-list>article:hover,
+.newsroom-story-card:hover,
+.market-candidate:hover{
+  background:var(--tpl-hover)!important;
+}
+.vrs-table-head,
+.sim-market-results-head{
+  background:rgb(255 255 255 / .018)!important;
+  border-bottom:1px solid var(--tpl-border)!important;
+}
+
+/* Event/world cards */
+.sim-event-carousel{gap:8px}
+.sim-event-carousel button{
+  height:58px;
+  border:1px solid var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm);
+  background:var(--tpl-surface-3)!important;
+  box-shadow:none!important;
+}
+.sim-event-carousel button:hover,
+.sim-event-carousel button.selected{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+}
+.sim-event-banner{
+  border:1px solid var(--tpl-border)!important;
+  border-radius:var(--tpl-radius)!important;
+  background:var(--tpl-surface)!important;
+  box-shadow:var(--tpl-shadow)!important;
+}
+.sim-world-map{
+  overflow:hidden;
+}
+
+/* Matchday / lobby */
+.sim-match-stage{gap:10px}
+.sim-team-deck{
+  border:1px solid var(--tpl-border)!important;
+}
+.sim-team-home{border-top-color:var(--tpl-accent-border)!important}
+.sim-match-actions{
+  border:1px solid var(--tpl-border)!important;
+}
+.sim-primary-action,
+.match-lobby-primary,
+.fifa-primary-cta{
+  min-height:42px!important;
+  border:1px solid var(--tpl-accent-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:var(--ui-accent)!important;
+  color:#12100c!important;
+  box-shadow:0 8px 22px rgb(var(--ui-accent-rgb) / .12)!important;
+}
+.sim-primary-action:hover:not(:disabled),
+.match-lobby-primary:hover:not(:disabled),
+.fifa-primary-cta:hover:not(:disabled){
+  background:#e7ad5d!important;
+  border-color:#efc27f!important;
+  color:#0d0d0c!important;
+}
+.match-lobby-shell{
+  overflow:hidden;
+}
+.match-lobby-player,
+.match-lobby-map,
+.match-lobby-tactics{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+}
+
+/* Squad */
+.sim-squad-kpis>div,
+.sim-squad-slot,
+.sim-pool-card-shell,
+.sim-planner-player,
+.sim-planner-candidate-select,
+.sim-bench-card{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+  box-shadow:none!important;
+}
+.sim-squad-slot:hover,
+.sim-pool-card-shell:hover,
+.sim-planner-candidate-select:hover{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+}
+
+/* Transfers / negotiations */
+.market-search,
+.market-field input,
+.market-field select,
+.market-term input,
+.market-contract-options button,
+.market-role-promise button{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(7 9 11 / .72)!important;
+}
+.market-search:focus-within,
+.market-field input:focus,
+.market-field select:focus{
+  border-color:var(--tpl-accent-border)!important;
+  box-shadow:0 0 0 3px rgb(var(--ui-accent-rgb) / .08)!important;
+}
+.market-candidate{
+  padding-left:12px!important;
+  padding-right:12px!important;
+}
+.market-negotiate{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+
+/* Packs */
+.sim-pack-selector,
+.sim-pack-sale-card,
+.sim-pack-featured-buy,
+.sim-pack-odds,
+.pack-purchase-toolbar{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+  box-shadow:none!important;
+}
+.sim-pack-selector:hover,
+.sim-pack-sale-card:hover{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+}
+
+/* Calendar */
+.sim-month{
+  overflow:hidden;
+}
+.sim-day{
+  border-color:rgb(var(--ui-line-rgb) / .12)!important;
+  background:rgb(255 255 255 / .012)!important;
+}
+.sim-day:hover{background:var(--tpl-hover)!important}
+.sim-day-event{
+  border-radius:5px!important;
+}
+
+/* Training */
+.training-day,
+.training-slot,
+.training-recommendations article,
+.training-prep,
+.training-staff,
+.training-map{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+  box-shadow:none!important;
+}
+.training-slot:hover,
+.training-recommendations article:hover{
+  border-color:var(--tpl-accent-border)!important;
+  background:var(--tpl-accent-soft)!important;
+}
+.training-save,
+.training-auto{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+
+/* Newsroom */
+.newsroom{
+  padding-left:18px!important;
+  padding-right:18px!important;
+}
+.newsroom-story-grid{gap:8px!important}
+.newsroom-story-card{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+.newsroom-decision,
+.newsroom-focus,
+.newsroom-subscriptions,
+.newsroom-standings{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+}
+.newsroom-load-more,
+.newsroom-reset{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+
+/* Profiles / modal language */
+.player-profile-backdrop,
+.market-negotiation-backdrop,
+.pack-purchase-backdrop,
+.match-lobby-overlay{
+  backdrop-filter:blur(10px);
+  background:rgb(0 0 0 / .70)!important;
+}
+.player-profile-v2,
+.team-profile,
+.market-negotiation,
+.pack-purchase-modal{
+  overflow:hidden;
+}
+.player-profile-head,
+.team-profile-head{
+  background:rgb(12 14 16 / .96)!important;
+  border-bottom:1px solid var(--tpl-border)!important;
+}
+.player-profile-state>div,
+.player-rating-v2-grid>div,
+.player-profile-contract>div,
+.team-profile-staff-slot,
+.team-profile-manager-slot{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius-sm)!important;
+  background:rgb(255 255 255 / .018)!important;
+}
+.player-profile-actions>button,
+.player-profile-close,
+.market-negotiation-close,
+.pack-purchase-close{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+
+/* World portal */
+.world-portal{
+  width:min(1660px,100%);
+  margin:0 auto;
+}
+.world-portal-hero,
+.world-portal-context,
+.world-portal-economy,
+.world-portal-health,
+.world-portal-events,
+.world-portal-standings,
+.world-portal-club-feed,
+.world-portal-decision{
+  border-color:var(--tpl-border)!important;
+  border-radius:var(--tpl-radius)!important;
+  background:var(--tpl-surface)!important;
+  box-shadow:var(--tpl-shadow)!important;
+}
+
+/* Inputs / actions shared across old and new screens */
+:where(.sim-screen,.training-ground,.newsroom,.world-portal,.player-profile-v2,.team-profile,.match-lobby-shell,.market-negotiation,.pack-purchase-modal)
+  :where(input,select,textarea){
+  border-color:var(--tpl-border);
+  border-radius:var(--tpl-radius-sm);
+  background:rgb(7 9 11 / .72);
+  color:var(--ui-text);
+}
+:where(.sim-screen,.training-ground,.newsroom,.world-portal,.player-profile-v2,.team-profile,.match-lobby-shell,.market-negotiation,.pack-purchase-modal)
+  :where(input,select,textarea):focus{
+  outline:none;
+  border-color:var(--tpl-accent-border);
+  box-shadow:0 0 0 3px rgb(var(--ui-accent-rgb) / .08);
+}
+
+/* Accessibility and interaction */
+:where(button,[role="button"]):focus-visible{
+  outline:2px solid rgb(var(--ui-accent-rgb) / .88)!important;
+  outline-offset:2px!important;
+}
+:where(button,input,select,textarea):disabled{
+  filter:saturate(.65);
+}
+
+/* Responsive shell borrowed from dashboard-template breakpoints */
+@media (max-width:1280px){
+  .fifa-topbar{
+    grid-template-columns:minmax(190px,.7fr) minmax(280px,1fr) minmax(350px,1fr);
+  }
+  .fifa-wallets>div,.fifa-wallets>button{min-width:84px}
+  .app-main-hq .fifa-mode-grid{
+    grid-template-columns:minmax(300px,1.1fr) repeat(2,minmax(180px,.9fr));
+  }
+  .app-main-hq .fifa-mode-hero{grid-column:1;grid-row:1 / span 2}
+  .app-main-hq .fifa-practice-tile{grid-column:auto}
+}
+@media (max-width:1000px){
+  .fifa-topbar{
+    grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);
+  }
+  .fifa-wallets{display:none}
+  .app-main-hq .fifa-mode-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:minmax(260px,1.2fr) repeat(3,minmax(150px,1fr));
+    overflow:auto;
+    padding-right:4px;
+  }
+  .app-main-hq .fifa-mode-hero{grid-column:1 / -1;grid-row:auto}
+  .app-main-hq .fifa-practice-tile{grid-column:1 / -1}
+}
+@media (max-width:700px){
+  .fifa-topbar{
+    grid-template-columns:1fr;
+    height:60px;
+  }
+  .fifa-topbar-center{display:none}
+  .app-main{height:calc(100dvh - 60px)!important}
+  .app-main-hq{height:calc(100dvh - 60px)!important}
+  .fifa-screen-title{justify-content:center}
+  .app-main-hq .fifa-home-screen{
+    padding:10px;
+    grid-template-rows:auto minmax(0,1fr) auto;
+  }
+  .fifa-home-status{
+    grid-template-columns:1fr!important;
+    height:auto!important;
+  }
+  .fifa-home-status>div:first-child,
+  .fifa-level-strip{display:none!important}
+  .app-main-hq .fifa-mode-grid{
+    grid-template-columns:1fr;
+    grid-template-rows:260px repeat(5,150px);
+  }
+  .app-main-hq .fifa-mode-hero,
+  .app-main-hq .fifa-practice-tile{grid-column:1}
+  .fifa-home-hints{display:none!important}
+  .sim-screen{padding-left:10px;padding-right:10px}
+}

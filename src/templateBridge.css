@@ -1,0 +1,305 @@
+/* Integration layer only: Tabler supplies the visual system.
+   This file only adapts the existing game viewport and artwork to Tabler's
+   ready-made page/navbar/card primitives without replacing game logic. */
+
+html[data-bs-theme="dark"] {
+  --tblr-primary: #dda04a;
+  --tblr-primary-rgb: 221, 160, 74;
+}
+
+body {
+  background: var(--tblr-body-bg) !important;
+}
+
+.template-app-shell {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--tblr-body-bg);
+}
+
+.template-sidebar {
+  position: relative !important;
+  inset: auto !important;
+  width: 232px;
+  min-width: 232px;
+  height: 100dvh;
+  flex: 0 0 232px;
+  z-index: 150;
+  border-right: 1px solid var(--tblr-border-color);
+}
+
+.template-sidebar .container-fluid {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.template-sidebar .navbar-collapse {
+  min-height: 0;
+  flex: 1;
+  display: flex !important;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.template-sidebar .navbar-brand {
+  width: 100%;
+  margin: 0;
+  padding: 14px 0;
+}
+
+.template-sidebar .nav-link {
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+.template-app-body {
+  min-width: 0;
+  height: 100dvh;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-header {
+  min-height: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-bottom: 1px solid var(--tblr-border-color);
+}
+
+.template-header .page-title {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.template-header .page-pretitle {
+  font-size: .68rem;
+}
+
+.template-app-body .app-main,
+.template-app-body .app-main-hq,
+.template-app-body .app-main.app-main-world,
+.template-app-body .app-main.app-main-calendar,
+.template-app-body .app-main.app-main-play,
+.template-app-body .app-main.app-main-training,
+.template-app-body .app-main.app-main-roster,
+.template-app-body .app-main.app-main-packs,
+.template-app-body .app-main.app-main-scout,
+.template-app-body .app-main.app-main-finance,
+.template-app-body .app-main.app-main-inbox,
+.template-app-body .app-main.app-main-profile {
+  width: 100%;
+  max-width: none;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 1 1 auto;
+  margin: 0;
+  overflow: hidden !important;
+  position: relative;
+}
+
+/* Homepage keeps the exact six-tile placement, but each tile is now a Tabler card. */
+.template-home {
+  width: min(1500px, 100%);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto !important;
+  gap: 10px;
+  padding: 12px 14px 10px !important;
+}
+
+.template-home-status {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: minmax(190px, .8fr) minmax(220px, .9fr) minmax(300px, 1.3fr);
+  gap: 8px;
+}
+
+.template-home-status > .card,
+.template-home-status > button.card {
+  margin: 0;
+  min-width: 0;
+  min-height: 58px;
+}
+
+.template-home-status button.card {
+  color: inherit;
+  cursor: pointer;
+}
+
+.template-home-status button.card:hover:not(:disabled) {
+  border-color: rgba(var(--tblr-primary-rgb), .55);
+}
+
+.template-home .fifa-mode-grid,
+.template-home .template-mode-grid {
+  min-height: 0;
+  display: grid !important;
+  grid-template-columns: minmax(300px, 1.18fr) repeat(3, minmax(180px, .82fr)) !important;
+  grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.template-home .fifa-mode-hero {
+  grid-column: 1 !important;
+  grid-row: 1 / span 2 !important;
+}
+
+.template-home .fifa-practice-tile {
+  grid-column: span 2 !important;
+}
+
+.template-home .fifa-mode-tile {
+  min-width: 0;
+  min-height: 0;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  overflow: hidden;
+  border: 1px solid var(--tblr-border-color) !important;
+  border-radius: var(--tblr-border-radius-lg) !important;
+  color: var(--tblr-body-color) !important;
+  box-shadow: var(--tblr-box-shadow-card) !important;
+}
+
+.template-home .fifa-mode-tile:hover,
+.template-home .fifa-mode-tile:focus-visible {
+  border-color: rgba(var(--tblr-primary-rgb), .7) !important;
+  transform: translateY(-1px);
+}
+
+.template-home .fifa-mode-tile .card-body,
+.template-home .fifa-mode-tile .card-footer {
+  position: relative;
+  z-index: 4;
+}
+
+.template-home .fifa-mode-tile .card-body {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(10, 12, 15, .08), rgba(10, 12, 15, .78));
+}
+
+.template-home .fifa-mode-tile .card-footer {
+  width: 100%;
+  border-top-color: rgba(255,255,255,.08);
+  background: rgba(10, 12, 15, .82);
+  color: var(--tblr-secondary-color);
+}
+
+.template-home .fifa-mode-tile .card-title {
+  color: #fff;
+}
+
+.template-home .fifa-mode-hero .card-title {
+  font-size: clamp(2.2rem, 3.8vw, 4.3rem);
+  line-height: .92;
+  max-width: 9ch;
+}
+
+.template-home .template-player-avatar {
+  overflow: hidden;
+}
+
+.template-home .template-player-avatar img,
+.template-home .template-player-avatar .player-portrait-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.template-home-footer {
+  min-height: 30px;
+}
+
+.template-app-body .screen-back-button {
+  top: 10px !important;
+  left: 14px !important;
+}
+
+@media (max-width: 1180px) {
+  .template-sidebar {
+    width: 190px;
+    min-width: 190px;
+    flex-basis: 190px;
+  }
+
+  .template-home .fifa-mode-grid,
+  .template-home .template-mode-grid {
+    grid-template-columns: minmax(280px, 1.1fr) repeat(2, minmax(170px, .9fr)) !important;
+  }
+
+  .template-home .fifa-practice-tile {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .template-sidebar {
+    display: none !important;
+  }
+
+  .template-header {
+    min-height: 58px;
+    height: 58px;
+    flex-basis: 58px;
+  }
+
+  .template-home-status {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .template-manager-card {
+    display: none !important;
+  }
+
+  .template-home .fifa-mode-grid,
+  .template-home .template-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: minmax(240px, 1.2fr) repeat(3, minmax(150px, 1fr)) !important;
+    overflow-y: auto;
+  }
+
+  .template-home .fifa-mode-hero {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+  }
+
+  .template-home .fifa-practice-tile {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .template-home-status {
+    grid-template-columns: 1fr;
+  }
+
+  .template-home-status > .card:first-child {
+    display: none;
+  }
+
+  .template-home .fifa-mode-grid,
+  .template-home .template-mode-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 250px repeat(5, 150px) !important;
+  }
+
+  .template-home .fifa-mode-hero,
+  .template-home .fifa-practice-tile {
+    grid-column: 1 !important;
+  }
+
+  .template-home-footer {
+    display: none !important;
+  }
+}

@@ -1,0 +1,281 @@
+/* ==========================================================================
+   TABLER TEMPLATE ADAPTER
+   Visual shell only. Existing React screens, routing and game logic remain intact.
+   Template source: Tabler 1.6.x (MIT), loaded from jsDelivr in index.html.
+   ========================================================================== */
+
+:root{
+  --tpl-radius:var(--tblr-border-radius-lg,12px);
+  --tpl-radius-sm:var(--tblr-border-radius,8px);
+  --tpl-surface:var(--tblr-bg-surface,#15191d);
+  --tpl-surface-2:var(--tblr-bg-surface-secondary,#1b2024);
+  --tpl-deep:var(--tblr-bg-surface-dark,#0e1114);
+  --tpl-border:var(--tblr-border-color,rgba(255,255,255,.10));
+  --tpl-shadow:var(--tblr-box-shadow-lg,0 1rem 3rem rgba(0,0,0,.28));
+  --tpl-shadow-sm:var(--tblr-box-shadow-sm,0 .125rem .25rem rgba(0,0,0,.18));
+}
+
+html,body,#root{min-height:100%;background:var(--ui-bg-0)}
+body{
+  color:var(--ui-text);
+  font-family:var(--tblr-font-sans-serif,Inter,system-ui,-apple-system,"Segoe UI",sans-serif);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Global Tabler-like control treatment without changing behavior */
+button,input,select,textarea{font:inherit}
+button{transition:border-color .14s ease,background-color .14s ease,box-shadow .14s ease,transform .14s ease}
+input,select,textarea{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+  background:color-mix(in srgb,var(--tpl-surface) 92%,transparent)!important;
+  color:var(--ui-text)!important;
+}
+input:focus,select:focus,textarea:focus{
+  outline:0!important;
+  border-color:rgb(var(--ui-accent-rgb) / .65)!important;
+  box-shadow:0 0 0 3px rgb(var(--ui-accent-rgb) / .12)!important;
+}
+
+/* App shell / navbar */
+.fifa-topbar{
+  border-bottom:1px solid var(--tpl-border)!important;
+  background:color-mix(in srgb,var(--tpl-deep) 92%,transparent)!important;
+  box-shadow:var(--tpl-shadow-sm)!important;
+  backdrop-filter:blur(18px) saturate(120%)!important;
+}
+.fifa-brand-mark{
+  border-radius:var(--tpl-radius-sm)!important;
+  box-shadow:0 0 0 1px rgb(var(--ui-accent-rgb) / .18),0 8px 24px rgb(0 0 0 / .24)!important;
+}
+.fifa-topbar-center,
+.fifa-wallets>div,
+.fifa-wallets>button{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+}
+.fifa-wallets>div,
+.fifa-wallets>button{
+  background:color-mix(in srgb,var(--tpl-surface) 88%,transparent)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.fifa-wallets>button:hover{
+  border-color:rgb(var(--ui-accent-rgb) / .48)!important;
+  background:var(--tpl-surface-2)!important;
+}
+
+/* HOME. Grid placement intentionally untouched. */
+.app-main-hq .fifa-home-screen{max-width:1720px;margin:0 auto}
+.app-main-hq .fifa-mode-grid{gap:12px!important}
+.app-main-hq .fifa-mode-tile{
+  overflow:hidden;
+  border-radius:var(--tpl-radius)!important;
+  border:1px solid var(--tpl-border)!important;
+  box-shadow:var(--tpl-shadow-sm)!important;
+  isolation:isolate;
+}
+.app-main-hq .fifa-mode-tile::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.025),transparent 35%,rgba(0,0,0,.16));
+}
+.app-main-hq .fifa-mode-tile:hover,
+.app-main-hq .fifa-mode-tile:focus-visible{
+  transform:translateY(-2px);
+  border-color:rgb(var(--ui-accent-rgb) / .62)!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.30)!important;
+}
+.app-main-hq .fifa-mode-tile:focus-visible{
+  outline:0!important;
+  box-shadow:0 0 0 3px rgb(var(--ui-accent-rgb) / .16),0 14px 34px rgba(0,0,0,.30)!important;
+}
+.app-main-hq .fifa-mode-copy,
+.app-main-hq .fifa-tile-kicker,
+.app-main-hq .fifa-mode-tile>h2,
+.app-main-hq .fifa-mode-tile>strong,
+.app-main-hq .fifa-mode-tile>p{position:relative;z-index:2}
+.app-main-hq .fifa-tile-kicker,
+.app-main-hq .fifa-mode-copy>span{
+  display:inline-flex;
+  width:max-content;
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(8,9,11,.55);
+  border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(8px);
+}
+.app-main-hq .fifa-home-status{
+  border-radius:var(--tpl-radius-sm);
+}
+.app-main-hq .fifa-home-continue,
+.app-main-hq .fifa-level-button{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+.app-main-hq .fifa-home-continue:not(:disabled):hover{transform:translateY(-1px)}
+
+/* Screen headers */
+.sim-screen-head{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+  background:color-mix(in srgb,var(--tpl-surface) 92%,transparent)!important;
+  box-shadow:var(--tpl-shadow-sm)!important;
+}
+.sim-screen-head>div:first-child>span,
+.sim-screen-head .eyebrow,
+.sim-head-stat small{color:var(--ui-accent)!important}
+
+/* Common cards / panels */
+.panel,
+.sim-world-map,
+.sim-event-dossier,
+.sim-month,
+.sim-schedule,
+.sim-event-banner,
+.sim-match-stage,
+.sim-practice-squad,
+.sim-practice-console,
+.sim-squad-stage,
+.sim-player-inspector,
+.sim-market-body,
+.sim-pack-selector,
+.sim-profile-body,
+.sim-profile-stats,
+.sim-inbox-season,
+.sim-feed,
+.match-lobby,
+.player-profile-v2,
+.team-profile{
+  border-radius:var(--tpl-radius)!important;
+  border-color:var(--tpl-border)!important;
+  box-shadow:var(--tpl-shadow-sm)!important;
+}
+.sim-event-dossier,
+.sim-practice-console,
+.sim-player-inspector,
+.sim-pack-selector,
+.sim-inbox-season{
+  background:color-mix(in srgb,var(--tpl-surface) 95%,transparent)!important;
+}
+
+/* Tabs / filters / chips */
+.sim-segmented,
+.sim-world-filters,
+.sim-subnav{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+  overflow:hidden;
+}
+.sim-segmented button,
+.sim-subnav button,
+.sim-world-filters button{transition:background .14s ease,color .14s ease,border-color .14s ease}
+.sim-segmented button.active,
+.sim-subnav button.active,
+.sim-world-filters button.active{
+  background:rgb(var(--ui-accent-rgb) / .12)!important;
+  color:var(--ui-text)!important;
+}
+
+/* Event cards keep their current data/behavior, but use template card geometry. */
+.sim-event-carousel button{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+  background:color-mix(in srgb,var(--tpl-surface) 94%,transparent)!important;
+  box-shadow:var(--tpl-shadow-sm)!important;
+}
+.sim-event-carousel button:hover,
+.sim-event-carousel button.selected{
+  transform:translateY(-1px);
+  border-color:rgb(var(--ui-accent-rgb) / .55)!important;
+  background:var(--tpl-surface-2)!important;
+}
+
+/* Tables and dense lists */
+table{border-collapse:separate;border-spacing:0}
+table thead th{
+  background:color-mix(in srgb,var(--tpl-surface-2) 88%,transparent);
+  color:var(--ui-muted);
+  border-bottom-color:var(--tpl-border)!important;
+}
+table tbody tr{transition:background-color .12s ease}
+table tbody tr:hover{background:rgba(255,255,255,.025)}
+.roster-player-row,
+.sim-feed>article,
+.sim-event-row,
+.team-profile-matches>div,
+.team-profile-tournaments>div,
+.team-profile-transfers>div{
+  border-color:var(--tpl-border)!important;
+}
+
+/* Buttons that already act as primary actions */
+.primary-button,
+.pack-spin-button,
+.sim-roster-market-action,
+.sim-market button[type="submit"],
+.player-profile-actions>button,
+.newsroom-club-profile{
+  border-radius:var(--tpl-radius-sm)!important;
+}
+.primary-button:hover,
+.pack-spin-button:hover,
+.sim-roster-market-action:hover{box-shadow:0 8px 20px rgb(var(--ui-accent-rgb) / .13)}
+
+/* Modals / profile overlays */
+.player-profile-backdrop,
+.team-profile-backdrop{
+  background:rgba(3,4,5,.78)!important;
+  backdrop-filter:blur(10px) saturate(115%)!important;
+}
+.player-profile-v2,
+.team-profile{
+  background:color-mix(in srgb,var(--tpl-surface) 96%,transparent)!important;
+  box-shadow:var(--tpl-shadow)!important;
+}
+.player-profile-close,
+.team-profile-close{
+  border-radius:var(--tpl-radius-sm)!important;
+  border-color:var(--tpl-border)!important;
+}
+
+/* Keep current artwork; only normalize image rendering. */
+.fifa-mode-tile img,
+.team-badge img,
+.player-portrait img,
+.player-profile-portrait img,
+.team-profile-player-photo img{
+  image-rendering:auto;
+}
+
+/* Scrollbars closer to the source template's restrained chrome. */
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:999px}
+*::-webkit-scrollbar-track{background:transparent}
+
+/* Responsive: preserve the tile concept, only collapse cleanly. */
+@media (max-width:1100px){
+  .app-main-hq .fifa-mode-grid{
+    grid-template-columns:minmax(300px,1.2fr) repeat(2,minmax(180px,.8fr))!important;
+  }
+  .app-main-hq .fifa-practice-tile{grid-column:span 1!important}
+}
+@media (max-width:760px){
+  .app-main-hq{overflow:auto!important}
+  .app-main-hq .fifa-home-screen{height:auto!important;min-height:100%!important}
+  .app-main-hq .fifa-mode-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:none!important;
+  }
+  .app-main-hq .fifa-mode-hero,
+  .app-main-hq .fifa-practice-tile{
+    grid-column:auto!important;
+    grid-row:auto!important;
+    min-height:260px!important;
+  }
+  .app-main-hq .fifa-mode-tile:not(.fifa-mode-hero){min-height:180px!important}
+}

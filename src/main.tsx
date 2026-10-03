@@ -8,6 +8,7 @@ import './siteBackground.css'
 import './worldMapBackground.css'
 import './menuArtwork.css'
 import './visualHierarchy.css'
+import './horizon.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

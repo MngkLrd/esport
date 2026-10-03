@@ -973,6 +973,16 @@ function App() {
         level={managerProgress.level}
         credits={format.format(state.credits)}
         tokens={format.format(state.packTokens)}
+        statusNode={currentFixtureDue ? (
+          <b className="fifa-current-match-teams">
+            <span><TeamBadge name="YOUR CLUB" size="sm" />YOUR CLUB</span>
+            <em>VS</em>
+            <span>{bracketOpponent?.name ?? 'OPPONENT'}<TeamBadge name={bracketOpponent?.name ?? 'OPPONENT'} size="sm" /></span>
+          </b>
+        ) : (
+          <span>LVL {managerProgress.level} · {format.format(state.credits)} CR</span>
+        )}
+        onStatus={() => openTab(currentFixtureDue ? 'Play' : 'Calendar')}
         onOpen={openTab}
       >
         <main className={'app-main app-main-' + tab.toLowerCase()}>

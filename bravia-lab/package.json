@@ -1,0 +1,7 @@
+{
+  "name": "bravia-home-offline-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Scope original Sony Linux BRAVIA research CommonJS tests away from esport root ESM settings.",
+  "type": "commonjs"
+}

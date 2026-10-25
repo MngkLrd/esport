@@ -39,6 +39,7 @@ static int emit(UiCanvas *canvas,UiMetrics *metrics,UiOp op,int x,int y,int w,in
  if(cmd.h==0)cmd.h=1;
  cmd.font_px=font_size(font_px,canvas->width,canvas->height);
  cmd.color=color;cmd.text=text;cmd.emphasized=strong;
+ cmd.image_id=-1;cmd.image_variant=0;
  if(cmd.x<0||cmd.y<0||cmd.w<=0||cmd.h<=0||cmd.x+cmd.w>canvas->width||cmd.y+cmd.h>canvas->height){
   metrics->errors++;return -1;
  }
@@ -51,6 +52,26 @@ static int emit(UiCanvas *canvas,UiMetrics *metrics,UiOp op,int x,int y,int w,in
 #define RECT(x,y,w,h,c) emit(canvas,metrics,UI_RECT,x,y,w,h,c,0,0,0)
 #define STROKE(x,y,w,h,c) emit(canvas,metrics,UI_STROKE,x,y,w,h,c,0,0,0)
 #define TXT(x,y,w,h,c,s,z,b) emit(canvas,metrics,UI_TEXT,x,y,w,h,c,s,z,b)
+static int draw_logo(UiCanvas *canvas,UiMetrics *metrics,int id,int x,int y,
+                     int w,int h,AppAvailability status){
+ /* One preblurred image command REPLACES a giant text mark (stable 94 ops).
+    Logo-absent Sony hosts retain a text fallback using cmd.text. */
+ UiCommand cmd;
+ if(id<0||id>=10)return -1;
+ cmd.op=UI_LOGO;
+ cmd.x=scale_x(x,canvas->width);cmd.y=scale_y(y,canvas->height);
+ cmd.w=scale_x(x+w,canvas->width)-cmd.x;
+ cmd.h=scale_y(y+h,canvas->height)-cmd.y;
+ if(cmd.w<1)cmd.w=1;
+ if(cmd.h<1)cmd.h=1;
+ cmd.font_px=font_size(id==3?45:(id==0||id==1?33:27),canvas->width,canvas->height);
+ cmd.color=BRAND_TEXT[id];cmd.text=MARKS[id];cmd.emphasized=1;
+ cmd.image_id=id;cmd.image_variant=(int)status;
+ if(cmd.x<0||cmd.y<0||cmd.x+cmd.w>canvas->width||
+    cmd.y+cmd.h>canvas->height){metrics->errors++;return -1;}
+ if(!canvas->emit(canvas->context,&cmd)){metrics->errors++;return -1;}
+ metrics->texts++;return 0;
+}
 static void outline(UiCanvas *canvas,UiMetrics *metrics,int x,int y,int w,int h){
  const UiColor blue={116,181,226};
  STROKE(x,y,w,h,blue);STROKE(x+3,y+3,w-6,h-6,FOCUS);
@@ -124,7 +145,7 @@ int ui_render(UiCanvas *canvas,const HomeState *state,UiMetrics *metrics){
   RECT(x,y,216,130,BRAND[i]);
   /* Precision strips and icon blocks: native primitives only. */
   RECT(x,y,216,4,BRAND_TEXT[i]);
-  TXT(x+15,y+25,188,55,BRAND_TEXT[i],MARKS[i],i==3?45:(i==0||i==1?33:27),1);
+  draw_logo(canvas,metrics,i,x+36,y+13,144,75,state->availability[i]);
   RECT(x+15,y+94,186,1,TILE_DIV);
   TXT(x+15,y+102,173,24,titleColor,NAMES[i],16,1);
   TXT(x+181,y+101,19,24,signal,badge,16,1);
@@ -142,6 +163,6 @@ int ui_render(UiCanvas *canvas,const HomeState *state,UiMetrics *metrics){
   if(state->area==AREA_DOCK&&state->focus==i)outline(canvas,metrics,x,y,280,58);
  }
  TXT(56,681,790,23,MUTED,"← ↑ ↓ →  Навигация     OK  Выбор     BACK  Назад",15,0);
- TXT(962,681,267,20,MUTED,"ЛОКАЛЬНАЯ СБОРКА  ·  v14",12,0);
+ TXT(962,681,267,20,MUTED,"ЛОКАЛЬНАЯ СБОРКА  ·  v17",12,0);
  return metrics->errors?-1:0;
 }

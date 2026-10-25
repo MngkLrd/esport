@@ -8,6 +8,10 @@ typedef struct {
  /* Fonts preloaded by the verified native host, sizes ~14,18,22,28,38,52px. */
  IDirectFBFont *regular[6];
  IDirectFBFont *bold[6];
+ /* Caller-owned preblurred RGBA PNG DirectFB textures. May be NULL:
+    fallback mark text remains visible, with no dynamic network loading.
+    [id][0=unknown,1=ready,2=unavailable]. */
+ IDirectFBSurface *logos[10][3];
  int flip; /* Must be explicitly enabled only when host owns this surface. */
  int last_error;
 } BraviaDfb;

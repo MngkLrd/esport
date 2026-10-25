@@ -5,6 +5,9 @@ typedef int DFBResult;
 #define DFB_OK 0
 #define DSFLIP_NONE 0
 #define DSTF_TOPLEFT 0
+#define DSBLIT_BLEND_ALPHACHANNEL 1
+#define DSBLIT_NOFX 0
+typedef struct {int x,y,w,h;} DFBRectangle;
 typedef struct {int x1,y1,x2,y2;} DFBRegion;
 typedef struct IDirectFBFont {int slot;} IDirectFBFont;
 typedef struct IDirectFBSurface IDirectFBSurface;
@@ -17,5 +20,7 @@ struct IDirectFBSurface{
  DFBResult (*SetClip)(IDirectFBSurface*,const DFBRegion*);
  DFBResult (*DrawString)(IDirectFBSurface*,const char*,int,int,int,int);
  DFBResult (*Flip)(IDirectFBSurface*,const DFBRegion*,int);
+ DFBResult (*SetBlittingFlags)(IDirectFBSurface*,int);
+ DFBResult (*StretchBlit)(IDirectFBSurface*,IDirectFBSurface*,const DFBRectangle*,const DFBRectangle*);
 };
 #endif

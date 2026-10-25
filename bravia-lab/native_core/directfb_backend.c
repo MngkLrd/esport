@@ -25,6 +25,20 @@ static int emit_to_dfb(void *data,const UiCommand *cmd){
  switch(cmd->op){
  case UI_RECT:e=s->FillRectangle(s,cmd->x,cmd->y,cmd->w,cmd->h);break;
  case UI_STROKE:e=s->DrawRectangle(s,cmd->x,cmd->y,cmd->w,cmd->h);break;
+ case UI_LOGO:{
+  IDirectFBSurface *logo=NULL;
+  if(cmd->image_id>=0&&cmd->image_id<10&&cmd->image_variant>=0&&cmd->image_variant<3)
+   logo=a->logos[cmd->image_id][cmd->image_variant];
+  if(logo){
+   DFBRectangle rect={cmd->x,cmd->y,cmd->w,cmd->h};
+   e=s->SetBlittingFlags(s,DSBLIT_BLEND_ALPHACHANNEL);
+   if(e==DFB_OK)e=s->StretchBlit(s,logo,NULL,&rect);
+   if(s->SetBlittingFlags(s,DSBLIT_NOFX)!=DFB_OK)return 0;
+   break;
+  }
+  /* Texture unavailable: preserve the old legible wordmark fallback. */
+ }
+ /* FALLTHROUGH */
  case UI_TEXT:{
   IDirectFBFont *f=(cmd->emphasized?a->bold:a->regular)[font_bucket(cmd->font_px)];
   if(!f)return 0; /* No fonts: fail instead of pretending render succeeded. */

@@ -16,7 +16,7 @@ static int write_cmd(void *unused,const UiCommand *cmd){
  (void)unused;
  printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,",(int)cmd->op,cmd->x,cmd->y,cmd->w,cmd->h,cmd->color.r,cmd->color.g,cmd->color.b,cmd->font_px);
  if(cmd->text)json_text(cmd->text);else fputs("null",stdout);
- printf(",%d]\n",cmd->emphasized);
+ printf(",%d,%d,%d]\n",cmd->emphasized,cmd->image_id,cmd->image_variant);
  return 1;
 }
 int main(int argc,char **argv){

@@ -37,6 +37,74 @@ jobs:
       - name: Run all Stage15 executable and safety tests
         working-directory: bravia-lab
         run: python3 -m unittest -v stage15/test_demo.py
+      - name: Stage16 simulated Sony host and 100k remote stress tests
+        run: |
+          make -C bravia-lab/stage16 test sanitize arm
+          sh bravia-lab/stage16/build_arm.sh
+          python3 -m unittest -v bravia-lab/stage16/test_cli.py
+      - name: Stage16 execute simulator on real ARM ISA in QEMU
+        run: |
+          printf 'hsdddobq' | qemu-arm bravia-lab/stage16/build/bravia-stage16-simulator-armv7-linux-elf | tee /tmp/stage16-arm.log
+          grep -q 'SIM owner=app' /tmp/stage16-arm.log
+          grep -q 'SIM owner=home' /tmp/stage16-arm.log
+          grep -q 'last=3' /tmp/stage16-arm.log
+          grep -q '^EXIT
+        run: |
+          make -C bravia-lab/stage10 test
+          make -C bravia-lab/stage11 test arm
+          make -C bravia-lab/stage12 test fragment-test arm
+      - name: Regenerate Stage14 native-command preview and ARM relocatable component
+        run: |
+          sh bravia-lab/stage14/build_arm.sh
+          python3 bravia-lab/stage14/build_preview.py
+          python3 bravia-lab/stage14/test_artifacts.py
+      - name: Publish off-device Linux research executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: bravia-home-stage15-linux-research
+          path: |
+            bravia-lab/stage15/build/bravia-home-linux-x86_64
+            bravia-lab/stage15/build/bravia-home-armv7-linux-elf
+            bravia-lab/stage16/build/bravia-stage16-simulator-armv7-linux-elf
+          retention-days: 14
+          if-no-files-found: error
+      - name: Confirm not a Sony firmware updater
+        run: |
+          file bravia-lab/stage15/build/bravia-home-armv7-linux-elf
+          readelf -h bravia-lab/stage15/build/bravia-home-armv7-linux-elf | grep -E 'Type:|Machine:|Flags:'
+          echo "No Sony firmware, DRM, tuner hardware, device calls, or flashing."
+
+  javascript:
+    name: Sony mock adapter and D-pad regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify navigation and Sony JS API mocks
+        working-directory: bravia-lab
+        run: node --test tests/test_*.cjs
+
+  offline-python:
+    name: Offline firmware test tools (no OEM files)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run repository-only Python firmware tests
+        working-directory: bravia-lab
+        run: |
+          python -m unittest -v tests/test_firmware_lab.py tests/test_firmware_extended.py tests/test_audit_bloat.py tests/test_real_firmware_pipeline.py
+      - name: Declare physical Sony checks intentionally omitted
+        run: echo 'Physical Sony TV, licensed native loader, proprietary ELF and full recovery remain unverified.'
+ /tmp/stage16-arm.log
+      - name: Measure simulator-only event loop (not Sony TV hardware)
+        run: make -C bravia-lab/stage16 bench
       - name: Run Stage10, Stage11, Stage12 standalone native IPC-observer tests
         run: |
           make -C bravia-lab/stage10 test

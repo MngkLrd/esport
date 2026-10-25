@@ -45,6 +45,8 @@ jobs:
           tail -n 1 /tmp/bravia-arm16.log | grep -q EXIT
       - name: Stage16 address and undefined behavior sanitizer test
         run: make -C bravia-lab/stage16 sanitize
+      - name: Stage16 deterministic 250k-event randomized input/render audit
+        run: make -C bravia-lab/stage16 fuzz fuzz-sanitize
       - name: Benchmark native simulation only, not Sony TV
         run: make -C bravia-lab/stage16 bench
       - name: Stage10-12 lifecycle and offline IPC observer unit tests

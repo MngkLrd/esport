@@ -231,3 +231,11 @@ All updated C99 source and tests are in [native_core](native_core), with a repro
 **Read the [GitHub CI re-audit report](CI_REAUDIT_2026-10-25.md)** before quoting any test numbers. The branch now has a real GitHub Actions workflow [BRAVIA Offline CI](../../.github/workflows/bravia-offline-ci.yml). Hosted runs **failed before runner assignment**, with `runner_id=0` and no executed job steps. **GitHub CI is NOT green**. Independently, **390 archived-source Python/JS/Chromium tests passed locally** along with native C99, mock DirectFB, Stage9-12 IPC, ARM ET_REL builds and sanitizer checks; these are not equivalent to a passed GitHub-hosted CI or actual Sony TV hardware support.
 
 Fixed Stage14 clean-checkout paths, absent preview output directory, non-executable shell invocation; restored Stage9 lifecycle regression test. The original manufacturer firmware and private Sony binaries remain outside GitHub.
+
+## Stage 17 — proportional blurred service-logo tiles (2026-10-26)
+
+[Product specification and real CI](STAGE17_LOGO_BLUR_PRODUCT.md). All ten 216×130 tiles now emit a single **UI_LOGO** draw command over their brand surface, fitted to 144×75 (66.7% width), using **preblurred RGBA PNG** variants for UNKNOWN, READY and UNAVAILABLE. The badge, application name, focus indication and **94 native UI commands** remain unchanged. The DirectFB adapter can consume caller-provided preloaded bitmap surfaces via `StretchBlit` and safely falls back to the former readable text mark if no image is available.
+
+[Stage17 source and preview generator](stage17) prepare 30 offline image textures, source-provenanced Simple Icons silhouettes (Kinopoisk, Netflix, YouTube) and seven explicitly custom typographic wordmark placeholders. Full native C99 source, test/mock changes, responsive C-command previews, embedded-image HTML demo and an independent downloadable ZIP are provided. CI includes Python image tests and no network icon loading at TV runtime.
+
+No claim of real media-service availability, Sony hardware execution or a signed installable package.

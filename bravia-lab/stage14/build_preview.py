@@ -46,7 +46,7 @@ for(const [op,x,y,w,h,r,g,b,size,text,strong] of cmds){
  const rgb='rgb('+r+','+g+','+b+')';ctx.strokeStyle=rgb;ctx.fillStyle=rgb;
  if(op===1){ctx.fillRect(x,y,w,h)}
  else if(op===2){ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,w-1,h-1)}
- else if(op===3&&text){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.font=(strong?'700 ':'400 ')+size+'px "DejaVu Sans",system-ui,sans-serif';ctx.textBaseline='top';ctx.fillText(text,x,y);ctx.restore()}
+ else if((op===3||op===4)&&text){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.font=(strong?'700 ':'400 ')+size+'px "DejaVu Sans",system-ui,sans-serif';ctx.textBaseline='top';ctx.fillText(text,x,y);ctx.restore()}
 }
 }
 function key(k){
@@ -72,11 +72,12 @@ print('interactive preview:',len(page),'chars and',len(scenes),'native C-rendere
 (ROOT/'previews').mkdir(parents=True,exist_ok=True)
 for key,name in [('home_app3','demo_netflix_selected.png'),('home_app9','demo_kion_unavailable.png'),('detail9','demo_unavailable_detail.png')]:
  cmds=scenes[key];im=Image.new('RGB',(1280,720),(12,18,28));d=ImageDraw.Draw(im);cache={}
- for op,x,y,w,h,r,g,b,size,text,strong in cmds:
+ for cmd in cmds:
+  op,x,y,w,h,r,g,b,size,text,strong=cmd[:11]
   color=(r,g,b)
   if op==1:d.rectangle((x,y,x+w-1,y+h-1),fill=color)
   elif op==2:d.rectangle((x,y,x+w-1,y+h-1),outline=color)
-  elif op==3 and text:
+  elif op in (3,4) and text:
    n=max(9,int(size));font= BOLD if strong else FONT
    while True:
     if (font,n) not in cache:cache[(font,n)]=ImageFont.truetype(font,n)

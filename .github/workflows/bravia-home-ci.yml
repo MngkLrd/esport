@@ -22,7 +22,7 @@ jobs:
       - name: Install ARM tools, emulator and preview dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends clang lld qemu-user binutils build-essential python3-pil fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends clang lld qemu-user binutils build-essential python3-pil python3-cairosvg fonts-dejavu-core
       - name: Native C99 and mocked DirectFB adapter regression
         run: make -C bravia-lab/native_core test adapter-test
       - name: Stage15 Linux and ARM ELF build and regression
@@ -59,6 +59,23 @@ jobs:
           sh bravia-lab/stage14/build_arm.sh
           python3 bravia-lab/stage14/build_preview.py
           python3 bravia-lab/stage14/test_artifacts.py
+      - name: Stage17 build 30 offline alpha-blurred logo textures
+        run: python3 bravia-lab/stage17/build_assets.py
+      - name: Stage17 verify fitted logos, source identity, command count and safe bounds
+        run: python3 -m unittest -v bravia-lab/stage17/test_logo_assets.py
+      - name: Stage17 build native C-command screenshots and keyboard demo
+        run: python3 bravia-lab/stage17/build_preview.py
+      - name: Archive Stage17 offline visual previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: bravia-home-stage17-logo-blur-preview
+          path: |
+            bravia-lab/stage17/assets/*.png
+            bravia-lab/stage17/assets/manifest.json
+            bravia-lab/stage17/previews/*.png
+            bravia-lab/stage17/BRAVIA_HOME_v17_LOGO_BLUR_DEMO.html
+          retention-days: 14
+          if-no-files-found: error
       - name: Publish Linux and ARM research-only builds
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "target_model": "KD-55XG7096",
+  "firmware_baseline": "v8.931",
+  "status": "wishlist_only_not_installed",
+  "home_policy": {
+    "app_tiles": 10,
+    "app_order_user_supplied": true,
+    "layout": "five columns, two complete rows",
+    "boot_screen": "stock_tv_or_last_input",
+    "home_key": "opens HOME only; television stays primary on startup",
+    "remote_navigation": "TV hero → 5×2 app grid → 4-button system dock; DPAD/OK/BACK, no mouse in prototype",
+    "system_keys": "preserve_vendor_handling",
+    "app_failure": "return_to_tv_or_home",
+    "remove_unused_vendor_apps": "hide_only_until_rootfs_analysis_and_backup",
+    "browser_policy": "Use stock Sony Vewd browser, pending native shortcut API integration"
+  },
+  "apps": [
+    {
+      "id": "kinopoisk",
+      "name": "Кинопоиск",
+      "display_order": 1,
+      "candidate_mode": "investigate_platform_port_or_authorized_web",
+      "verified_native_sony_linux": false,
+      "playback_verified": false,
+      "source": "https://yandex.ru/support/kinopoisk/ru/viewing/conditions",
+      "notes": "No Sony Linux in current supported TV platforms. DRM and remote navigation need proof."
+    },
+    {
+      "id": "ivi",
+      "name": "Иви",
+      "display_order": 2,
+      "candidate_mode": "preserve_or_recover_sony_linux_app",
+      "verified_native_sony_linux": true,
+      "playback_verified": false,
+      "source": "https://ask.ivi.ru/knowledge-bases/10/articles/51699-prilozhenie-ivi-dlya-televizorov-sony",
+      "notes": "Vendor documents a SONY Linux variant; whether installed/launchable on KD-55XG7096 untested."
+    },
+    {
+      "id": "start",
+      "name": "START",
+      "display_order": 3,
+      "candidate_mode": "investigate_opera_tv_vendor_app",
+      "verified_native_sony_linux": null,
+      "playback_verified": false,
+      "source": "https://start.ru/legal/program_description",
+      "notes": "Vendor mentions Sony OperaTV/AndroidTV; verify specific TV build and service availability."
+    },
+    {
+      "id": "netflix",
+      "name": "Netflix",
+      "display_order": 4,
+      "candidate_mode": "preserve_existing_if_present",
+      "verified_native_sony_linux": null,
+      "playback_verified": false,
+      "source": "https://www.sony.ie/electronics/support/televisions-projectors-lcd-tvs/kd-55xg7096",
+      "notes": "Model documentation contains Netflix references; inspect device presence and active video playback; do not alter DRM."
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "display_order": 5,
+      "candidate_mode": "preserve_existing_if_present",
+      "verified_native_sony_linux": null,
+      "playback_verified": false,
+      "source": "https://www.sony.ie/electronics/support/televisions-projectors-lcd-tvs/kd-55xg7096",
+      "notes": "Model documentation contains YouTube references; verify service compatibility on actual TV."
+    },
+    {
+      "id": "rutube",
+      "name": "RUTUBE",
+      "display_order": 6,
+      "candidate_mode": "investigate_vendor_supported_tv_or_web",
+      "verified_native_sony_linux": false,
+      "playback_verified": false,
+      "source": "https://rutube.ru/info/smarttv/",
+      "notes": "Official packages list APK, WGT, IPK and tvOS; Sony Linux build not identified."
+    },
+    {
+      "id": "mediax",
+      "name": "Media Station X",
+      "display_order": 7,
+      "candidate_mode": "MSX in Vewd App Store or supported browser, untested on actual TV",
+      "verified_native_sony_linux": null,
+      "playback_verified": false,
+      "source": "https://www.msx.benzac.de/info/index.html",
+      "notes": "User confirmed MSX; platform supports Vewd 4.0+, Sony's exact Vewd version not yet verified."
+    },
+    {
+      "id": "alpac",
+      "name": "Al(co)pac",
+      "display_order": 8,
+      "candidate_mode": "server-backed client via MSX/Lampa, not native APK",
+      "verified_native_sony_linux": false,
+      "playback_verified": false,
+      "source": "https://wiki.alcopa.cc/docs/plugins/msx/",
+      "notes": "User confirmed alcopa.cc, personal Go-based media server; provides MSX start JSON endpoint. dev.alcopa.cc/clients unavailable during investigation; server is not a Sony TV application."
+    },
+    {
+      "id": "browser",
+      "name": "Браузер",
+      "display_order": 9,
+      "candidate_mode": "preserve_and_link_native_vewd_browser",
+      "verified_native_sony_linux": true,
+      "playback_verified": null,
+      "source": "https://www.sony.ee/electronics/support/televisions-projectors-lcd-tvs/kd-49xg7073/articles/00143144",
+      "notes": "Use existing Vewd (Opera) Internet Browser for low overhead. A launcher shortcut requires proven native system launch IPC/URL mapping. Web pointer/D-pad constraints remain unverified. Do not claim an alternative compiled browser exists."
+    },
+    {
+      "id": "kion",
+      "name": "КИОН",
+      "display_order": 10,
+      "candidate_mode": "investigate_sony_linux_native_or_authorized_web_playback",
+      "verified_native_sony_linux": null,
+      "playback_verified": false,
+      "source": "https://kion.ru/",
+      "notes": "User-requested HOME app. This is only a UI tile; Linux app installation, remote support, DRM and video playback remain unverified."
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "model": "KD-55XG7096",
+  "model_year": 2019,
+  "os": "Linux (Sony, non-Android)",
+  "baseline_firmware": {
+    "reported": "v8.931-1000…",
+    "normalized": "8.931",
+    "full_suffix_known": false,
+    "verified_from_user": true,
+    "official_region_reference": "https://www.sony.ru/electronics/support/televisions-projectors-lcd-tvs/kd-55xg7096",
+    "official_zip_name": "sony_tvupdate_2017_8931_eff_auth.zip",
+    "official_zip_size_bytes": 289426738,
+    "release_date": "2023-02-15"
+  },
+  "candidate_new_firmware": {
+    "version": "8.933",
+    "regional_distribution": "EU Sony country pages (not assumed cross-region flash safe)",
+    "zip_name": "sony_tvupdate_2017_8933_eff_auth.zip",
+    "zip_size_bytes": 289402286,
+    "release_date": "2024-07-17",
+    "official_model_downloads": "https://www.sony.ee/electronics/support/televisions-projectors-lcd-tvs/kd-55xg7096/downloads",
+    "downloaded_and_inspected": false,
+    "install_authorized": false
+  },
+  "hardware_candidate_from_repair_record": {
+    "verification": "Unverified for user's specific unit",
+    "cpu": "MediaTek MT5597BMEJ",
+    "main_board": "1-983-119-22",
+    "emmc": "KLM4G1FETE-B041",
+    "panel": "YS9S055CND01",
+    "source": "https://remont-aud.net/dump/lcd_pdp_tv/sony/sony_kd_55xg7096_shassi_main_board_1_983_119_22/302-1-0-150727",
+    "source_disclaimer": "Uploader: read personally, not independently retested; 767.17 MB download behind registration/test."
+  },
+  "official_specifications_url": "https://www.sony.ru/electronics/support/televisions-projectors-lcd-tvs/kd-55xg7096/specifications",
+  "tv_first_requirements": "TV_FIRST_REQUIREMENTS.md",
+  "operating_constraints": [
+    "Never flash unknown/cross-region firmware",
+    "Preserve tuner/EPG/channels/remote and Sony TV boot path",
+    "Do not publish device-unique flash images or secrets",
+    "Verify safe restore path before writes",
+    "Avoid Android APK assumptions"
+  ],
+  "current_status": "RESEARCH ONLY — no real firmware extracted, patched, rebuilt or flashed"
+}

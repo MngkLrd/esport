@@ -1,0 +1,32 @@
+const assert=require('node:assert/strict');
+const {test}=require('node:test');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const script=fs.readFileSync(path.join(__dirname,'../ui/sony_catalog_bridge.js'),'utf8');
+function entry(name,id=7,extra={}){return {service_name:name,service_id:id,service_type:'Video',service_index:3,icon_url:'file:///stock.png',...extra};}
+function fixture(services,modify){const calls=[];const home={bivlservicelist:JSON.stringify({data:services}),LaunchApp(data){calls.push(JSON.parse(data))}};if(modify)modify(home);const ctx={HomeuiInterface:home,module:{exports:{}}};vm.createContext(ctx);vm.runInContext(script,ctx);return {bridge:ctx.BraviaCatalogBridge,calls,home};}
+const as=(obj)=>JSON.parse(JSON.stringify(obj));
+test('empty Sony list does not invent installs',()=>assert.equal(fixture([]).bridge.available('netflix'),false));
+test('Netflix exact registered service available',()=>assert.equal(fixture([entry('Netflix',23234)]).bridge.available('netflix'),true));
+test('unregistered KION cannot launch',()=>assert.equal(fixture([entry('Netflix')]).bridge.launchIfRegistered('kion'),false));
+test('unregistered Kinopoisk cannot launch',()=>assert.equal(fixture([entry('Netflix')]).bridge.launchIfRegistered('kinopoisk'),false));
+test('strict alias: MSX other app rejected',()=>assert.equal(fixture([entry('MSX Pro')]).bridge.available('mediax'),false));
+test('strict alias: MSX exact succeeds',()=>assert.equal(fixture([entry('Media Station X')]).bridge.available('mediax'),true));
+test('case-insensitive alias',()=>assert.equal(fixture([entry('  yoUTube  ')]).bridge.available('youtube'),true));
+test('browser alias Opera Browser',()=>assert.equal(fixture([entry('Opera Browser')]).bridge.available('browser'),true));
+test('ambiguous duplicate names must not launch',()=>assert.equal(fixture([entry('Netflix',5),entry('Netflix',9)]).bridge.launchIfRegistered('netflix'),false));
+test('ambiguous browser aliases must not launch',()=>assert.equal(fixture([entry('Opera Browser',5),entry('Internet Browser',9)]).bridge.launchIfRegistered('browser'),false));
+test('never use generated fake service ID',()=>{const x=fixture([entry('Netflix',23234)]);assert.equal(x.bridge.launchIfRegistered('netflix'),true);assert.equal(x.calls[0].service_id,23234)});
+test('Sony native payload fields exactly',()=>{const x=fixture([entry('Netflix',23234,{uri:'https://untrusted.invalid/run'})]);x.bridge.launchIfRegistered('netflix');assert.deepEqual(Object.keys(x.calls[0]).sort(),['icon_url','service_name','service_id','service_type','service_index','uri'].sort());assert.equal(x.calls[0].uri,'');});
+test('unknown selected app id rejected',()=>assert.equal(fixture([entry('Netflix')]).bridge.launchIfRegistered('future-app'),false));
+test('prototype alias rejected',()=>assert.equal(fixture([entry('Netflix')]).bridge.launchIfRegistered('__proto__'),false));
+test('missing Sony runtime rejected',()=>{const ctx={module:{exports:{}}};vm.createContext(ctx);vm.runInContext(script,ctx);assert.equal(ctx.BraviaCatalogBridge.launchIfRegistered('netflix'),false)});
+test('malformed JSON rejected',()=>{const x=fixture([]);x.home.bivlservicelist='bad json';assert.equal(x.bridge.available('netflix'),false)});
+test('oversized JSON rejected',()=>{const x=fixture([]);x.home.bivlservicelist='a'.repeat(131073);assert.equal(x.bridge.available('netflix'),false)});
+test('invalid service ID rejected',()=>assert.equal(fixture([entry('Netflix','23234')]).bridge.available('netflix'),false));
+test('negative service ID rejected',()=>assert.equal(fixture([entry('Netflix',-1)]).bridge.available('netflix'),false));
+test('missing service index rejected',()=>assert.equal(fixture([{service_name:'Netflix',service_id:5,service_type:'Video',icon_url:'X'}]).bridge.available('netflix'),false));
+test('malformed item rejected without throw',()=>assert.equal(fixture([null,5,'Netflix']).bridge.available('netflix'),false));
+test('too many entries rejected',()=>assert.equal(fixture(new Array(257).fill(entry('Netflix'))).bridge.available('netflix'),false));
+test('native throw fails closed',()=>{const x=fixture([entry('Netflix')],api=>{api.LaunchApp=()=>{throw Error('device')}});assert.equal(x.bridge.launchIfRegistered('netflix'),false)});
+test('launch does not touch settings API',()=>{const x=fixture([entry('Netflix')],api=>{api.LaunchMenu=()=>{throw Error('unexpected menu')}});assert.equal(x.bridge.launchIfRegistered('netflix'),true)});
+test('launch does not need network requests',()=>{const x=fixture([entry('Netflix')]);assert.equal(x.bridge.launchIfRegistered('netflix'),true)});

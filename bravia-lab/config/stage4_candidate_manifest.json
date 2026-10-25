@@ -1,0 +1,43 @@
+{
+  "status": "OFFLINE_COBALT_HOME_CANDIDATE_ONLY_NOT_FLASHABLE",
+  "target": "Sony KD-55XG7096 v8.931-1000",
+  "intended_runtime": "Sony Cobalt HTML5UI, if verified to own HOME on physical hardware",
+  "stock_entry_reference": "file:///html5ui/index.html",
+  "application_count": 10,
+  "assets": [
+    {
+      "name": "index.html",
+      "bytes": 4200,
+      "sha256": "ed71899de8e463d7c6a7ae76b98d850aee7bdfd062642c5cceefdafb27a4cc82"
+    },
+    {
+      "name": "style.css",
+      "bytes": 9727,
+      "sha256": "d4383dbfd97a5677c757a3287437455dd385dc0503399a9f11bb08d9d92e0e6a"
+    },
+    {
+      "name": "app-data.js",
+      "bytes": 1422,
+      "sha256": "710be096a86aea1c98225a14aee1c34cbe69baf965ed8433a5c0843027ca9db6"
+    },
+    {
+      "name": "sony_native_bridge.js",
+      "bytes": 1404,
+      "sha256": "7e29a6f5e92e0e7266dee79b3be68e274debffb7fc65edab67400dc171e7dc19"
+    },
+    {
+      "name": "launcher.js",
+      "bytes": 8491,
+      "sha256": "2ac8af83998deba6c19d4e267381faa4deae687470973a59a"
+    }
+  ],
+  "production_flash_enabled": false,
+  "limitations": [
+    "The TV view is a mock, not actual tuner or TV signal",
+    "No proof of HDMI/INPUT native selector, stock keyboard or actual remote handoff on this TV",
+    "No streaming app playback confirmed",
+    "No Sony OTA signing/flash/recovery method",
+    "No confirmation that /3rd_rw/service_list/dockui is user-writable or an installable app catalog"
+  ],
+  "rights": "Only user-authored UI assets; Sony proprietary binaries not included"
+}

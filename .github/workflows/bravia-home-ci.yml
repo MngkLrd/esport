@@ -1,0 +1,83 @@
+name: BRAVIA HOME Stage 15
+
+on:
+  push:
+    branches:
+      - feature/bravia-home-stage15
+    paths:
+      - 'bravia-lab/**'
+      - '.github/workflows/bravia-home-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  arm-and-native:
+    name: Build and execute ARMv7 Linux ELF
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux/ARM build tools and ARM user-mode emulator
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends clang lld qemu-user binutils build-essential python3-pil fonts-dejavu-core
+      - name: Run v14 C99 HOME, system-key, product and DirectFB-mock tests
+        run: make -C bravia-lab/native_core test adapter-test
+      - name: Build real Linux host and static ARMv7 ELF32 executables
+        run: sh bravia-lab/stage15/build.sh
+      - name: Execute actual ARM ELF in QEMU and assert HOME/TV input states
+        run: |
+          printf 'hsdo+bq' | qemu-arm bravia-lab/stage15/build/bravia-home-armv7-linux-elf | tee /tmp/bravia-arm.log
+          grep -q 'view=home area=apps focus=1' /tmp/bravia-arm.log
+          grep -q 'NO_SONY_HOST_ACTION' /tmp/bravia-arm.log
+          grep -q 'UNHANDLED_SONY_SYSTEM_KEY' /tmp/bravia-arm.log
+          grep -q '^EXIT$' /tmp/bravia-arm.log
+      - name: Run all Stage15 executable and safety tests
+        working-directory: bravia-lab
+        run: python3 -m unittest -v stage15/test_demo.py
+      - name: Run Stage10, Stage11, Stage12 standalone native IPC-observer tests
+        run: |
+          make -C bravia-lab/stage10 test
+          make -C bravia-lab/stage11 test arm
+          make -C bravia-lab/stage12 test fragment-test arm
+      - name: Regenerate Stage14 native-command preview and ARM relocatable component
+        run: |
+          sh bravia-lab/stage14/build_arm.sh
+          python3 bravia-lab/stage14/build_preview.py
+          python3 bravia-lab/stage14/test_artifacts.py
+      - name: Confirm not a Sony firmware updater
+        run: |
+          file bravia-lab/stage15/build/bravia-home-armv7-linux-elf
+          readelf -h bravia-lab/stage15/build/bravia-home-armv7-linux-elf | grep -E 'Type:|Machine:|Flags:'
+          echo "No Sony firmware, DRM, tuner hardware, device calls, or flashing."
+
+  javascript:
+    name: Sony mock adapter and D-pad regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify navigation and Sony JS API mocks
+        working-directory: bravia-lab
+        run: node --test tests/test_*.cjs
+
+  offline-python:
+    name: Offline firmware test tools (no OEM files)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run repository-only Python firmware tests
+        working-directory: bravia-lab
+        run: |
+          python -m unittest -v tests/test_firmware_lab.py tests/test_firmware_extended.py tests/test_audit_bloat.py tests/test_real_firmware_pipeline.py
+      - name: Declare physical Sony checks intentionally omitted
+        run: echo 'Physical Sony TV, licensed native loader, proprietary ELF and full recovery remain unverified.'

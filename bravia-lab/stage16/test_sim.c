@@ -30,7 +30,12 @@ int main(void){
  assert(sim_key(&s,K_OK)==HOST_OK);
  assert(s.owner==SIM_APP&&s.foreground_app==3&&s.home.last_dispatched_app==3);
  assert(draw(&s)==0);
- assert(sim_key(&s,K_DOWN)==HOST_OK&&s.owner==SIM_APP);
+ {
+  int forwarded=s.forwarded_count;
+  assert(sim_key(&s,K_DOWN)==HOST_OK&&s.owner==SIM_APP);
+  assert(sim_key(&s,K_OK)==HOST_OK&&s.owner==SIM_APP);
+  assert(s.forwarded_count==forwarded+2);
+ }
  assert(sim_key(&s,K_VOL_UP)==HOST_OK&&s.remote_last==K_VOL_UP);
  assert(sim_key(&s,K_SOURCE)==HOST_OK&&s.remote_last==K_SOURCE);
  assert(sim_key(&s,K_BACK)==HOST_OK&&s.owner==SIM_HOME&&s.home.view==VIEW_HOME);
@@ -46,6 +51,13 @@ int main(void){
  assert(sim_key(&s,K_LEFT)==HOST_OK);
  assert(sim_key(&s,K_OK)==HOST_OK);
  assert(s.owner==SIM_NATIVE_MENU&&s.menu==SIM_INPUTS&&draw(&s)==0);
+ {
+  int forwarded=s.forwarded_count;
+  assert(sim_key(&s,K_DOWN)==HOST_OK&&s.owner==SIM_NATIVE_MENU);
+  assert(sim_key(&s,K_OK)==HOST_OK&&s.owner==SIM_NATIVE_MENU);
+  assert(s.forwarded_count==forwarded+2);
+  assert(draw(&s)==0);
+ }
  assert(sim_key(&s,K_BACK)==HOST_OK&&s.owner==SIM_HOME);
  assert(draw(&s)>=94);
  sim_enable_menu(&s,SIM_INPUTS,0);

@@ -2,7 +2,7 @@ CC ?= cc
 CLANG ?= clang
 CFLAGS = -std=c99 -O2 -Wall -Wextra -Werror -pedantic
 CORE = ../native_core/home_core.c ../native_core/host_dispatch.c ../native_core/render.c
-.PHONY: all test sanitize arm bench clean
+.PHONY: all test sanitize fuzz fuzz-sanitize arm bench clean
 all: console test_sim
 console: $(CORE) sim.c console.c sim.h
 	$(CC) $(CFLAGS) -I../native_core $(CORE) sim.c console.c -o console
@@ -15,6 +15,12 @@ test: all
 sanitize:
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer -I../native_core $(CORE) sim.c test_sim.c -o /tmp/bravia-stage16-sanitized
 	/tmp/bravia-stage16-sanitized
+fuzz:
+	$(CC) $(CFLAGS) -I../native_core $(CORE) sim.c test_fuzz.c -o /tmp/bravia-stage16-fuzz
+	/tmp/bravia-stage16-fuzz
+fuzz-sanitize:
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Werror -pedantic -fsanitize=address,undefined -fno-omit-frame-pointer -I../native_core $(CORE) sim.c test_fuzz.c -o /tmp/bravia-stage16-fuzz-san
+	/tmp/bravia-stage16-fuzz-san
 arm:
 	$(CLANG) -target armv7-linux-gnueabi -march=armv7-a -mfpu=vfpv4 -mfloat-abi=softfp -std=c99 -ffreestanding -fno-builtin -fno-stack-protector -O2 -Wall -Wextra -Werror -I../native_core -c sim.c -o /tmp/bravia-stage16-sim-armv7.o
 	readelf -h /tmp/bravia-stage16-sim-armv7.o | grep -E 'Class:|Type:|Machine:|Flags:'

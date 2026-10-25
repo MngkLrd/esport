@@ -63,7 +63,9 @@ HostResult sim_key(BraviaSim *s,Key key){
    s->dirty=1;
    return HOST_OK;
   }
-  if(key>=K_VOL_UP&&key<=K_SUBTITLE){
+  /* An app or native menu must receive its own D-pad and OK input.
+     Never move HOME focus behind that foreground surface. */
+  if((key>=K_LEFT&&key<=K_OK)||(key>=K_VOL_UP&&key<=K_SUBTITLE)){
    if(mock_forward_system(s,key))return HOST_OK;
    return HOST_UNHANDLED_SYSTEM_KEY;
   }

@@ -1,0 +1,57 @@
+/* Deliberately conservative CSS: avoid modern grid, shaders, custom fonts, transitions. */
+html,body {margin:0;padding:0;width:100%;height:100%;background:#10121a;color:#f2f2f6;
+ font-family:Arial,'DejaVu Sans',sans-serif;overflow:hidden;font-size:20px;}
+* {box-sizing:border-box;}
+.shell {position:relative;width:100%;height:100%;padding:32px 52px 64px;min-width:320px;}
+.top {height:78px;border-bottom:1px solid #2c3040;overflow:hidden;}
+.brand {float:left;font-size:34px;font-weight:bold;line-height:60px;letter-spacing:.03em;}
+.brand b {background:#f02c43;color:#fff;display:inline-block;text-align:center;
+ width:44px;height:44px;line-height:44px;border-radius:9px;margin-right:8px;}
+.brand span {font-size:15px;color:#a1a8b6;font-weight:normal;margin-left:10px;}
+.right {float:right;color:#8e99a8;font-size:15px;line-height:66px;}
+.main,.entry,.results {padding-top:56px;}
+h1 {font-size:39px;margin:10px 0 10px;font-weight:bold;}
+.subtitle {color:#98a2b4;margin:0 0 42px;font-size:19px;}
+.menu {width:100%;display:table;table-layout:fixed;border-spacing:16px 0;margin-left:-16px;}
+.tile {display:table-cell;vertical-align:top;background:#1e2230;border:3px solid #303647;
+ border-radius:12px;padding:32px 28px;height:280px;}
+.tile.active {border-color:#f04459;background:#2a2631;box-shadow:0 0 0 2px #161820;}
+.tile-icon {font-size:46px;color:#fb4b63;line-height:1.3;margin-bottom:15px;}
+.tile h2 {font-size:26px;margin:12px 0 10px;}
+.tile p {font-size:17px;line-height:1.4;color:#acb4c4;}
+.hidden {display:none!important;}
+.entry-title {font-size:35px;font-weight:bold;margin-bottom:25px;}
+.typed {padding:17px 22px;min-height:66px;background:#212431;border:2px solid #414656;
+ border-radius:9px;margin-bottom:28px;font-size:27px;overflow:hidden;white-space:nowrap;}
+.keyboard {margin:0 auto;width:950px;max-width:100%;}
+.keyrow {display:table;width:100%;table-layout:fixed;border-spacing:5px 8px;}
+.key {display:table-cell;vertical-align:middle;height:62px;background:#292e3d;border:2px solid #3a4253;
+ border-radius:7px;text-align:center;font-size:24px;font-weight:bold;}
+.key.special {font-size:19px;color:#e8edf6;}
+.key.active {background:#f13952;border-color:#fff;color:#fff;}
+.hint {color:#9ba6b4;font-size:17px;margin:24px 0 0;}
+.results-list {max-height:68vh;overflow:auto;}
+.result {padding:20px 22px;background:#252b39;border:2px solid #363e4e;
+ margin-bottom:12px;border-radius:8px;font-size:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result.active {background:#332837;border-color:#fa4763;}
+.player {position:absolute;inset:0;top:0;left:0;width:100%;height:100%;background:#000;z-index:4;}
+.video-area {position:absolute;left:0;top:0;width:100%;height:100%;background:#000;}
+.video-area iframe {border:0;width:100%;height:100%;display:block;}
+.player-ui {position:absolute;left:0;bottom:0;width:100%;padding:26px 50px 44px;
+ background:linear-gradient(to top,rgba(0,0,0,.93),rgba(0,0,0,.70),rgba(0,0,0,.06));pointer-events:none;}
+.player-name {font-weight:bold;font-size:29px;margin-bottom:6px;}
+.player-status,.player-timeline,.player-hint {font-size:17px;color:#d2d5df;margin-top:8px;}
+.player-hint {color:#fff;margin-top:19px;}
+.footer {position:absolute;bottom:18px;left:52px;right:52px;border-top:1px solid #323543;
+ padding-top:14px;color:#9ba6b6;font-size:15px;overflow:hidden;}
+.footer span:first-child {float:left;max-width:73%;}
+.footer span:last-child {float:right;}
+@media(max-width:850px) {
+ .shell {padding:15px 20px 50px;} .top {height:60px;} .brand {font-size:23px;line-height:48px;}
+ .right {display:none;} .brand b {width:32px;height:32px;line-height:32px;}
+ .main,.entry,.results {padding-top:20px;} h1 {font-size:27px;} .subtitle {font-size:14px;margin-bottom:16px;}
+ .tile {padding:14px 10px;height:180px;} .tile-icon {font-size:26px;} .tile h2 {font-size:16px;}
+ .tile p {font-size:12px;} .key {height:40px;font-size:16px;} .key.special {font-size:13px;}
+ .footer {left:20px;right:20px;font-size:11px;} .typed {font-size:18px;}
+}
+.video-area video {width:100%;height:100%;display:block;background:#000;}

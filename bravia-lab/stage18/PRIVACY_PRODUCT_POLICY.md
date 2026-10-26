@@ -16,7 +16,7 @@ Source: `REAL_FIRMWARE_AUDIT.md`, `STAGE6_NATIVE_INSTALL_GATE.md`, `PERFORMANCE_
 
 ### Our authored BRAVIA HOME (work completed in Stage18.2)
 
-- `stage18/privacy_audit.py` statically scans 11 authored JS/C runtime source files for common network and analytics calls; missing files are a test failure. It reports both findings **and** explicit limits of coverage. It does not silently classify Sony system daemons as spyware.
+- `stage18/privacy_audit.py` statically scans 13 authored HTML/CSS/JS/C runtime source files for common network and analytics calls; missing files are a test failure. It reports both findings **and** explicit limits of coverage. It does not silently classify Sony system daemons as spyware.
 - `ui/index.html` declares `connect-src 'none'`, `frame-src 'none'`, no referrer and no external runtime assets. This is **defense in depth only for the browser prototype where CSP is honored**. Sony firmware may launch its Cobalt HTML5UI with `--disable_csp`, so never call this an enforced OS-wide network firewall.
 - The native C99 renderer already contains no telemetry pipeline, network polling or forced vendor app launches. User-initiated vendor apps may, by necessity, contact their own DRM/account/content/CDN endpoints.
 - `stage18/test_privacy_audit.py` ensures the expected indicators remain absent and checks the policy cannot claim the actual TV is clean.

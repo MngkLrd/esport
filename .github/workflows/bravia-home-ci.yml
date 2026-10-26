@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 16
+name: BRAVIA HOME Stage 17
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends clang lld qemu-user binutils build-essential python3-pil python3-cairosvg fonts-dejavu-core
-      - name: Native C99 and mocked DirectFB adapter regression
+      - name: Native C99, DirectFB draw and 30-logo host loader rollback regression
         run: make -C bravia-lab/native_core test adapter-test
       - name: Stage15 Linux and ARM ELF build and regression
         run: |
@@ -76,7 +76,7 @@ jobs:
             bravia-lab/stage17/BRAVIA_HOME_v17_LOGO_BLUR_DEMO.html
           retention-days: 14
           if-no-files-found: error
-      - name: Stage17 preblurred logo assets and actual C UI_LOGO contract
+      - name: Stage17 single-generator manifest and actual C UI_LOGO contract
         run: |
           python3 -m unittest -v bravia-lab/stage17/test_assets.py
       - name: Publish Linux and ARM research-only builds

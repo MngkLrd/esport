@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate 30 preblurred RGBA tile assets. NO network access at build or runtime.
+"""Canonical generator for 30 preblurred RGBA assets. NO network at build/runtime.
 Only Kinopoisk, Netflix and YouTube have sourced vector paths (Simple Icons).
 Others use explicitly project-made typographic wordmark placeholders.
 """
@@ -16,7 +16,7 @@ SERVICES=[
  ('youtube','YouTube',(243,247,255)),('rutube','RUTUBE',(235,241,255)),
  ('msx','MSX',(140,222,210)),('alcopac','AL(CO)PAC',(210,238,194)),
  ('browser','WWW',(180,220,243)),('kion','КИОН',(231,214,255))]
-STATES={'unknown':(.33,2.9),'ready':(.46,2.2),'unavailable':(.14,4.3)}
+STATES={'unknown':(.14,3.4),'ready':(.22,2.6),'unavailable':(.08,5.8)}
 FONT_PATHS=['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
  '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf']
 def font(sz):

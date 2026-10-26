@@ -142,12 +142,11 @@ jobs:
           python3 -m pip install playwright
           python3 -m playwright install --with-deps chromium
           python3 - <<'PY'
-          import os
+          import subprocess
           from playwright.sync_api import sync_playwright
           with sync_playwright() as playwright:
               chromium = playwright.chromium.executable_path
-          os.symlink(chromium, "/tmp/bravia-chromium")
-          os.system("sudo ln -sf " + chromium + " /usr/bin/chromium")
+          subprocess.run(["sudo", "ln", "-sf", chromium, "/usr/bin/chromium"], check=True)
           PY
       - name: Restore original UI, Sony native bridge and catalog browser tests
         working-directory: bravia-lab

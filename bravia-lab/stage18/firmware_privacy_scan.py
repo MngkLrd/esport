@@ -2,9 +2,10 @@
 """Bounded, read-only tracker *indicator* scan on user-extracted Sony file trees.
 
 This never parses an OTA image, accesses the TV, alters firmware, or claims
-runtime network transmission. It deliberately emits no raw strings/URLs/IDs.
+runtime network transmission. It emits no raw file contents, URLs, device IDs or filenames; paths are hashed.
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -56,8 +57,12 @@ def observe(roots):
                     continue
                 relstr = rel.as_posix()
                 # Metadata only: never publish potentially personal content.
-                entry = {"tree": str(label), "relative_path": relstr,
-                         "kind": "candidate_name_only", "runtime_active": "UNKNOWN"}
+                entry = {
+                    "tree": str(label),
+                    "path_sha256_16": hashlib.sha256(relstr.encode("utf-8")).hexdigest()[:16],
+                    "kind": "candidate_name_only",
+                    "runtime_active": "UNKNOWN",
+                }
                 low = relstr.lower()
                 if "samba" in low:
                     findings["samba_component_present"] = True

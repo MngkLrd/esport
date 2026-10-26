@@ -1,0 +1,22 @@
+{
+  "device":"KD-55XG7096",
+  "firmware":"8.931-1000-4.000-0000",
+  "original_ota_sha256":"9fedce4521bb3b9d2fc0d8e8a19d31a795752026d1a17249b1ccf712c25b606c",
+  "stock_browser_base_web_app_registered":true,
+  "stock_web_app_enablemouse":0,
+  "stock_opera_browser_enablemouse":1,
+  "stock_web_app_disableSpatialNav":1,
+  "source_app_list":"runtime HomeuiInterface.bivlservicelist",
+  "linked_stock_service_list":"/3rd_rw/service_list",
+  "modified_staged_rootfs_count":1,
+  "oem_source_copies_patched":2,
+  "oem_files_patched":4,
+  "required_ten_tiles":10,
+  "sony_oem_binary_modified":false,
+  "boot_chain_modified":false,
+  "region_catalog_runtime_captured":false,
+  "browser_dpad_in_stock_web_app_physically_tested":false,
+  "installed_on_tv":false,
+  "custom_firmware_bootable":false,
+  "signed_ota":false
+}

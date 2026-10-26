@@ -134,7 +134,7 @@ jobs:
         run: |
           python3 bravia-lab/stage18/privacy_audit.py --output bravia-lab/stage18/privacy_report.json
           cd bravia-lab
-          python3 -m unittest -v stage18/test_privacy_audit.py stage18/test_package_offline.py
+          python3 -m unittest -v stage18/test_privacy_audit.py stage18/test_firmware_privacy_scan.py stage18/test_package_offline.py
       - name: Run source-only firmware tests
         working-directory: bravia-lab
         run: |

@@ -49,6 +49,11 @@ jobs:
         run: make -C bravia-lab/stage16 fuzz fuzz-sanitize
       - name: Benchmark native simulation only, not Sony TV
         run: make -C bravia-lab/stage16 bench
+      - name: Restore Stage8 ABI structure and Stage9 lifecycle guards from original repository
+        run: |
+          gcc -std=c99 -O2 -Wall -Wextra -Werror -pedantic -c bravia-lab/stage8/sony_appclient_abi.c -o /tmp/bravia-stage8-abi.o
+          gcc -std=c99 -O2 -Wall -Wextra -Werror -pedantic -Ibravia-lab/stage9 bravia-lab/stage9/lifecycle.c bravia-lab/stage9/test_lifecycle.c -o /tmp/bravia-stage9-test
+          /tmp/bravia-stage9-test
       - name: Stage10-12 lifecycle and offline IPC observer unit tests
         run: |
           make -C bravia-lab/stage10 test
@@ -113,9 +118,37 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Stage18 verify original 99 BRAVIA files and complete CI coverage
+        working-directory: bravia-lab
+        run: python3 -m unittest -v stage18/test_repo_integrity.py
       - name: Run source-only firmware tests
         working-directory: bravia-lab
         run: |
           python -m unittest -v tests/test_firmware_lab.py tests/test_firmware_extended.py tests/test_audit_bloat.py tests/test_real_firmware_pipeline.py
       - name: No real device installation or modification
         run: echo 'Owner proprietary ELF not in GitHub; Sony hardware and signed update not tested.'
+
+  browser:
+    name: Restored Chromium / Playwright Sony mock integrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real Chromium and Playwright for off-device QA
+        run: |
+          python3 -m pip install playwright
+          python3 -m playwright install --with-deps chromium
+          python3 - <<'PY'
+          import os
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as playwright:
+              chromium = playwright.chromium.executable_path
+          os.symlink(chromium, "/tmp/bravia-chromium")
+          os.system("sudo ln -sf " + chromium + " /usr/bin/chromium")
+          PY
+      - name: Restore original UI, Sony native bridge and catalog browser tests
+        working-directory: bravia-lab
+        run: python3 -m unittest -v tests/test_ui_v2_browser.py tests/test_native_sony_browser.py tests/test_catalog_browser.py

@@ -6,7 +6,12 @@
 > service tiles** and a native C99 Stage17 offline renderer with preblurred logos.
 > This is **not an installable Sony HOME**. No authorized executable loader,
 > physical TV compatibility or full eMMC recovery has been demonstrated.
-> See [Stage18 repository/integration audit](stage18/FEASIBILITY_AUDIT.md).
+> See [Stage18 repository/integration audit](stage18/FEASIBILITY_AUDIT.md)
+> and [Stage18.2 Privacy & Offline Product Policy](stage18/PRIVACY_PRODUCT_POLICY.md).
+> The optional Samba/ACR opt-out must be checked in stock TV settings;
+> factory `enabled=false` is not proof of the user's live configuration.
+> Offline-only source/privacy scanner, passive OEM evidence scanner and a
+> non-installable reproduction archive are in `stage18/`.
 > Sections below retain historical notes from earlier stages; statements
 > referring to 8/9 apps or uninspected OTA are superseded by later reports.
 

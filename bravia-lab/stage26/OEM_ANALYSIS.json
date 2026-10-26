@@ -1,0 +1,36 @@
+{
+  "stage": 26,
+  "target": "Sony BRAVIA KD-55XG7096",
+  "reported_firmware": "8.931-1000-4.000-0000",
+  "factory_homeui_version": "2.0.32.27052021",
+  "factory_source": "private owner-provided Sony v8.931, 3rd2 NFSB/SquashFS",
+  "factory_file_sha256": {
+    "homeuiapi.js": "878594b68ae8d9bb980db6ae8f0a08e7d3c273e807717103658f219784aee118",
+    "homeuiglobals.js": "be554cbf756e6cc4e0d8cc0adccebc17cf7efd71b79962622914a2c209a0ff19",
+    "allappsmodule.js": "f7d1e1b598b59a5b6a42bf78059da72ddf168099dbbda088d3d6eb6edb097210",
+    "index.html": "91245c702dcf0864b42f369a6d0695fd2baefeaf9110602111ed0b238c21bd78",
+    "channelsmodule.js": "a2bf993d21538159ce4c2a52980d1a1424110060393f8ff7c5e4ea1bcdb38e28",
+    "recordmodule.js": "a6431c6cbe6fbc16762465c65ac0b12762ee069d82a453a15cea1068aa83681b",
+    "mediamodule.js": "47962f58dd2bfb466a5179e3c7b7041949419164a5bcfa583ffd2fea7d1b04f5",
+    "settingsmodule.js": "45e189ba252d3fcfba40fafecf2635b36f65b0d99b928f0d894a08f50cd5a273",
+    "menudatas.js": "b3517d7b2e1ab67aba5f6ebaf5232e343aa71bf73edf202856a141685c5b1400"
+  },
+  "factory_api_code_evidence": {
+    "native_registered_services": "HomeuiInterface.bivlservicelist read by homeuiapi.js",
+    "native_launch": "HomeuiInterface.LaunchApp(JSON.stringify({icon_url,service_name,service_id,service_type,service_index,uri:\"\"}))",
+    "uri_launch": "HomeuiInterface.LaunchApp(JSON.stringify({uri:\"https://www.google.com/search?...\"}))",
+    "channels_unmodified": "channelsmodule.js from owner OEM",
+    "media_unmodified": "mediamodule.js from owner OEM",
+    "settings_unmodified": "settingsmodule.js from owner OEM",
+    "remote_debug_config": "--remote_debugging_port=9224 in original root/basic/am_start.ini"
+  },
+  "adapted_app_count": 10,
+  "web_fallback": "official HTTPS sites, launch intent only; no playback/DRM guarantee",
+  "stock_native_ids": "only exact unique values from runtime BIVL; no ID guessing",
+  "runtime_test_evidence": "OEM original JS executed in Node VM with mocked Sony host; live TV not contacted",
+  "sony_firmware_written": false,
+  "signed_usb_update_available": false,
+  "persistent_home_replacement_verified": false,
+  "cobalt_debugger_reachable_from_user_lan": null,
+  "stock_abi_validity_live_tv": null
+}

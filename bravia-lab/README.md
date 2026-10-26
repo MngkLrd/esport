@@ -1,5 +1,15 @@
 # BRAVIA Firmware Lab (read-only alpha)
 
+> **Current project state (Stage 18.1, 2026-10-26):** The original Sony
+> `game/bravia-firmware-lab` tree was preserved as 99/99 file paths in
+> `esport/feature/bravia-home-stage15`. The current product has **10 planned
+> service tiles** and a native C99 Stage17 offline renderer with preblurred logos.
+> This is **not an installable Sony HOME**. No authorized executable loader,
+> physical TV compatibility or full eMMC recovery has been demonstrated.
+> See [Stage18 repository/integration audit](stage18/FEASIBILITY_AUDIT.md).
+> Sections below retain historical notes from earlier stages; statements
+> referring to 8/9 apps or uninspected OTA are superseded by later reports.
+
 Investigation workspace for Sony BRAVIA non-Android Linux TVs. Goal: TV-first HOME menu with eight user-selected services and real D-pad/OK/BACK support while preserving the native tuner, picture, HDMI and audio stack.
 
 **No custom TV firmware or flashing instructions are available yet.** The **model KD-55XG7096, year 2019, Sony Linux, and reported firmware v8.931** are known. Board revision of this individual set, firmware image internals, signature policy and recovery route are unverified. Never flash a firmware intended for a different board.

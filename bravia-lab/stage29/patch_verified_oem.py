@@ -82,9 +82,12 @@ def build(root, output, authored):
     for location, src in present:
         originals.append((location,*transform(original_file(src,'index.html'),
                                                original_file(src,'allappsmodule.js'))))
-    catalog=authored/'stage29/bravia_catalog.js'
-    client=authored/'client/rutube'
-    icons=authored/'icons'
+    assetroot=authored if (authored/'client/rutube').is_dir() else authored/'stage29'
+    catalog=assetroot/'bravia_catalog.js'
+    if not catalog.is_file():
+        catalog=assetroot/'stage29/bravia_catalog.js'
+    client=assetroot/'client/rutube'
+    icons=assetroot/'icons'
     needed=('index.html','style.css','remote.js','rutube_player.js','catalog_api.js','hls_fallback.js','app.js')
     if not catalog.is_file() or not icons.is_dir() or not all((client/x).is_file() for x in needed):
         raise ValueError('Stage29 authored catalog/assets/client not found')

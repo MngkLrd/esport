@@ -42,6 +42,8 @@ class PrivacyAuditTests(unittest.TestCase):
             ("navigator.sendBeacon('/usage', '{}')", "send_beacon"),
             ("mixpanel.track('watch')", "analytics_sdk"),
             ("socket(AF_INET, SOCK_STREAM, 0);", "c_socket"),
+            ('<script src="https://tracker.invalid/pixel.js"></script>', "remote_html_asset"),
+            ('background:url(https://tracker.invalid/p.gif)', "remote_css_resource"),
         ]
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

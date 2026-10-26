@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 18.2 Privacy Offline
+name: BRAVIA HOME Stage 19 Native DockUI Contract
 
 on:
   push:
@@ -130,6 +130,9 @@ jobs:
       - name: Stage18 verify original 99 BRAVIA files and complete CI coverage
         working-directory: bravia-lab
         run: python3 -m unittest -v stage18/test_repo_integrity.py
+      - name: Stage19 stock native DockUI replacement content and Sony passthrough contract
+        working-directory: bravia-lab
+        run: python3 -m unittest -v stage19/test_stock_dockui_target.py
       - name: Stage18.2 audit first-party network and telemetry calls
         run: |
           python3 bravia-lab/stage18/privacy_audit.py --output bravia-lab/stage18/privacy_report.json

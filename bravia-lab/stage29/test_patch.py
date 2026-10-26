@@ -31,6 +31,9 @@ class Stage29Tests(unittest.TestCase):
    result=build(self.source,out,HERE)
    self.assertEqual(len(result['ten_requested_apps']),10)
    self.assertEqual(len(result['modified_vendor_file_hashes']),4)
+   self.assertEqual(result['root_menu_reroute']['modified_home_routes'],3)
+   self.assertTrue((out/'root/basic/keymap_tv.ini').is_file())
+   self.assertEqual((out/'root/basic/keymap_tv.ini').read_text().count('ROOT_MENU=html5ui(stop)[start]'),3)
    self.assertFalse(result['installable_sony_usb_update'])
    self.assertFalse(result['sony_signed_and_verity_valid'])
    self.assertFalse(result['oem_region_catalog_source_fully_identified'])
@@ -44,6 +47,14 @@ class Stage29Tests(unittest.TestCase):
     self.assertEqual(app.count('BraviaCatalog.launch('),3)
     self.assertEqual((out/x/'bravia_assets').glob('*.png').__iter__().__next__().suffix,'.png')
     self.assertTrue((out/x/'bravia_clients/rutube/index.html').is_file())
+ def test_rejected_unknown_vendor_keymap(self):
+  if not self.have:self.skipTest('Original owner image missing')
+  with tempfile.TemporaryDirectory() as d:
+   src=Path(d)/'root/basic';src.mkdir(parents=True)
+   shutil.copyfile(self.source/'root/basic/am_start.ini',src/'am_start.ini')
+   (src/'keymap_tv.ini').write_text('ROOT_MENU=dockui(stop)[start]\n')
+   from patch_verified_oem import reroute_home
+   with self.assertRaises(ValueError):reroute_home(Path(d),Path(d)/'out')
  def test_unknown_oem_hash_rejected(self):
   with tempfile.TemporaryDirectory() as d:
    dest=Path(d);(dest/'index.html').write_bytes(b'<html>changed</html>')

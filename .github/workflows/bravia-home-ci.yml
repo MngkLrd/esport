@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 19 Native DockUI Contract
+name: BRAVIA HOME Stage 20 Native Catalog Bridge
 
 on:
   push:
@@ -25,6 +25,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang lld qemu-user binutils build-essential python3-pil python3-cairosvg fonts-dejavu-core
       - name: Native C99, DirectFB draw and 30-logo host loader rollback regression
         run: make -C bravia-lab/native_core test adapter-test
+      - name: Stage20 compile verified native app catalog as ARM32 ELF objects
+        run: |
+          clang -target armv7-linux-gnueabi -mfpu=vfpv4 -mfloat-abi=softfp -std=c99 -O2 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Wconversion -pedantic -Ibravia-lab/native_core -c bravia-lab/native_core/native_catalog.c -o /tmp/bravia-catalog-arm.o
+          clang -target armv7-linux-gnueabi -mfpu=vfpv4 -mfloat-abi=softfp -std=c99 -O2 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Wconversion -pedantic -Ibravia-lab/native_core -c bravia-lab/native_core/catalog_host.c -o /tmp/bravia-catalog-host-arm.o
+          readelf -h /tmp/bravia-catalog-arm.o | grep -q 'Machine:.*ARM'
+          readelf -h /tmp/bravia-catalog-host-arm.o | grep -q 'Machine:.*ARM'
       - name: Stage15 Linux and ARM ELF build and regression
         run: |
           sh bravia-lab/stage15/build.sh

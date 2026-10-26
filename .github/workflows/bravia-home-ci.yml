@@ -164,4 +164,4 @@ jobs:
           PY
       - name: Restore original UI, Sony native bridge and catalog browser tests
         working-directory: bravia-lab
-        run: python3 -m unittest -v tests/test_ui_v2_browser.py tests/test_native_sony_browser.py tests/test_catalog_browser.py
+        run: python3 -m unittest -v tests/test_ui_v2_browser.py tests/test_native_sony_browser.py tests/test_catalog_browser.py stage18/test_browser_privacy.py

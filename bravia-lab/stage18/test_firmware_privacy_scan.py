@@ -52,6 +52,8 @@ class FirmwarePrivacyScanTests(unittest.TestCase):
             r = observe({"root": root})
             self.assertEqual(r["candidate_count"], 1)
             self.assertEqual(r["candidates"][0]["runtime_active"], "UNKNOWN")
+            self.assertIn("path_sha256_16", r["candidates"][0])
+            self.assertNotIn("relative_path", r["candidates"][0])
             self.assertFalse(r["network_traffic_confirmed"])
 
     def test_non_candidate_binary_ignored(self):

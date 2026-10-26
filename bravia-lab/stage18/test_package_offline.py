@@ -17,6 +17,18 @@ class OfflinePackTests(unittest.TestCase):
         self.assertIn("bravia-lab/stage18/PRIVACY_PRODUCT_POLICY.md", paths)
         self.assertIn(".github/workflows/bravia-home-ci.yml", paths)
 
+    def test_untracked_private_file_is_not_packaged(self):
+        # Deliberately place a local-only JSON in the Stage18 work directory.
+        workdir = Path(__file__).resolve().parent
+        private = workdir / "_temporary_private_test_data.json"
+        self.assertFalse(private.exists())
+        try:
+            private.write_text('{"token":"must-not-ship"}', encoding="utf-8")
+            self.assertNotIn("bravia-lab/stage18/" + private.name,
+                             approved_paths(include_generated=True))
+        finally:
+            private.unlink(missing_ok=True)
+
     def test_disallow_vendor_executables_and_ota(self):
         paths = approved_paths()
         prohibited = (".zip", ".pkg", ".bin", ".so", ".elf", ".o", ".key", ".pem",

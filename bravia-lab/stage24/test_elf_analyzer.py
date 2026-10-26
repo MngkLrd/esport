@@ -6,7 +6,7 @@ HERE=Path(__file__).resolve().parent
 sys.path.insert(0,str(HERE))
 from elf_analyzer import ELFError,inspect_elf_bytes,inspect_elf_path
 from inspect_sony import inspect,load_config
-ARM_LIB=HERE.parent/"build"/"libbravia_home_armv7.so"
+ARM_LIB=HERE.parent/"stage23"/"build"/"libbravia_home_armv7.so"
 class SonyELFAuditTests(unittest.TestCase):
  def test_real_arm32_shared_object(self):
   info=inspect_elf_path(ARM_LIB)

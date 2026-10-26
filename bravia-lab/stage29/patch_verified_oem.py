@@ -82,6 +82,7 @@ def build(root, output, authored):
     for location, src in present:
         originals.append((location,*transform(original_file(src,'index.html'),
                                                original_file(src,'allappsmodule.js'))))
+    # In standalone ZIP: authored is the ZIP root. In GitHub: stage29/ itself.
     assetroot=authored if (authored/'client/rutube').is_dir() else authored/'stage29'
     catalog=assetroot/'bravia_catalog.js'
     if not catalog.is_file():

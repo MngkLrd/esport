@@ -27,7 +27,41 @@ ADDITIONS = (
     "native_core/directfb_logos.h",
     "tests/test_directfb_logo_loader.c",
 )
-STAGE_SUBDIRS = ("stage15", "stage16", "stage17", "stage18")
+# Closed source whitelist: never copy arbitrary untracked .json/.txt/log files.
+STAGE_FILES = (
+    "stage15/README.md", "stage15/arm_linux_io.c",
+    "stage15/build.sh", "stage15/demo_core.c",
+    "stage15/host_posix.c", "stage15/test_demo.py",
+    "stage16/Makefile", "stage16/README.md",
+    "stage16/arm_main.c", "stage16/build_arm.sh",
+    "stage16/console.c", "stage16/sim.c", "stage16/sim.h",
+    "stage16/test_cli.py", "stage16/test_fuzz.c", "stage16/test_sim.c",
+    "stage17/README.md", "stage17/build_assets.py",
+    "stage17/build_preview.py", "stage17/generate_assets.py",
+    "stage17/test_assets.py", "stage17/test_logo_assets.py",
+    "stage17/assets/source/0_kinopoisk.svg",
+    "stage17/assets/source/3_netflix.svg",
+    "stage17/assets/source/4_youtube.svg",
+    "stage18/FEASIBILITY_AUDIT.md",
+    "stage18/PRIVACY_PRODUCT_POLICY.md",
+    "stage18/source_inventory.json", "stage18/test_repo_integrity.py",
+    "stage18/privacy_audit.py", "stage18/test_privacy_audit.py",
+    "stage18/firmware_privacy_scan.py",
+    "stage18/test_firmware_privacy_scan.py",
+    "stage18/package_offline.py", "stage18/test_package_offline.py",
+)
+SLUGS = ("kinopoisk", "ivi", "start", "netflix", "youtube",
+         "rutube", "msx", "alcopac", "browser", "kion")
+STATES = ("unknown", "ready", "unavailable")
+GENERATED = (
+    "stage17/assets/manifest.json",
+    "stage17/BRAVIA_HOME_v17_LOGO_BLUR_DEMO.html",
+    "stage17/previews/home_720p.png",
+    "stage17/previews/netflix_ready_720p.png",
+    "stage17/previews/kion_unavailable_720p.png",
+    "stage17/previews/demo_unavailable_detail.png",
+)
+
 MAX_FILE = 8 * 1024 * 1024
 MAX_TOTAL = 32 * 1024 * 1024
 
@@ -41,19 +75,16 @@ def approved_paths(include_generated=True):
         raise ValueError("Duplicate baseline paths")
     names.update("bravia-lab/" + p for p in ADDITIONS)
     names.add(".github/workflows/bravia-home-ci.yml")
-    for dirname in STAGE_SUBDIRS:
-        directory = LAB / dirname
-        for file in directory.rglob("*"):
-            if not file.is_file() or any(part in OMIT_NAMES for part in file.parts):
-                continue
-            relative = file.relative_to(REPO).as_posix()
-            if file.suffix.lower() in SAFE_EXT:
-                names.add(relative)
-            if (include_generated and dirname == "stage17" and
-                    file.suffix.lower() == ".png" and
-                    file.relative_to(LAB).parts[:2] in
-                    (("stage17", "assets"), ("stage17", "previews"))):
-                names.add(relative)
+    names.update("bravia-lab/" + p for p in STAGE_FILES)
+    if include_generated:
+        for p in GENERATED:
+            if (LAB / p).is_file():
+                names.add("bravia-lab/" + p)
+        for i, slug in enumerate(SLUGS):
+            for state in STATES:
+                p = "stage17/assets/{:02d}_{}_{}.png".format(i, slug, state)
+                if (LAB / p).is_file():
+                    names.add("bravia-lab/" + p)
     return sorted(names)
 
 

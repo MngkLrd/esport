@@ -13,7 +13,7 @@ from pathlib import Path
 LAB = Path(__file__).resolve().parents[1]
 REPO = LAB.parent
 SAFE_EXT = frozenset((
-    ".py", ".md", ".c", ".h", ".js", ".html", ".css", ".json",
+    ".py", ".md", ".c", ".h", ".s", ".js", ".html", ".css", ".json",
     ".cjs", ".yml", ".svg", ".sh", ".txt",
 ))
 OMIT_NAMES = frozenset(("__pycache__", ".git", "node_modules", ".venv"))
@@ -55,6 +55,11 @@ STAGE_FILES = (
     "stage20/README.md", "stage20/test_catalog_host.c",
     "stage21/README.md", "stage21/firmware_preflight.py",
     "stage21/test_firmware_preflight.py",
+    "stage24/README_RU.md", "stage24/elf_analyzer.py",
+    "stage24/inspect_sony.py", "stage24/test_elf_analyzer.py",
+    "stage24/test_native_boot.py", "stage24/build_probe.sh",
+    "stage24/native_boot_probe.c", "stage24/native_boot_start.S",
+    "stage24/INSTALLER_STATUS.json",
     "stage23/README.md", "stage23/exports.map",
     "stage23/build_arm_shared.sh", "stage23/test_native_plugin.sh",
     "stage23/test_native_plugin.c", "stage23/installer_gate.py",

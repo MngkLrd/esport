@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 20 Native Catalog Bridge
+name: BRAVIA HOME Stage 21 Sony Firmware Family Gate
 
 on:
   push:
@@ -136,6 +136,11 @@ jobs:
       - name: Stage18 verify original 99 BRAVIA files and complete CI coverage
         working-directory: bravia-lab
         run: python3 -m unittest -v stage18/test_repo_integrity.py
+      - name: Stage21 verify exact TV firmware version family and original OEM provenance gates
+        working-directory: bravia-lab
+        run: |
+          python3 -m unittest -v stage21/test_firmware_preflight.py
+          python3 stage21/firmware_preflight.py --tv-version 8.931-1000-4.000-0000
       - name: Stage19 stock native DockUI replacement content and Sony passthrough contract
         working-directory: bravia-lab
         run: python3 -m unittest -v stage19/test_stock_dockui_target.py

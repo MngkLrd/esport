@@ -1,0 +1,22 @@
+{
+  "target_model": "KD-55XG7096",
+  "tv_reported_version": "8.931-1000-4.000-0000",
+  "stage": 24,
+  "artifacts": {
+    "elf32_arm_shared_home": "build/libbravia_home_armv7.so",
+    "elf32_arm_executable": "build/bravia_home_native_probe_armv7.elf",
+    "linux_dlopen_test": "build/test_dynamic_load",
+    "read_only_oem_analyzer": "stage24/inspect_sony.py"
+  },
+  "hard_gates": {
+    "sony_original_appmanager_elf_present": false,
+    "sony_native_lifecycle_abi_verified": false,
+    "sony_directfb_surface_ownership_verified": false,
+    "executable_launcher_on_consumer_tv_verified": false,
+    "sony_signed_usb_update_patchable": false,
+    "full_emmc_backup_and_restore_verified": false,
+    "new_streaming_app_clients_ported": false
+  },
+  "installable_onto_physical_sony": false,
+  "warning": "Do not put this offline developer package into Sony Software Update"
+}

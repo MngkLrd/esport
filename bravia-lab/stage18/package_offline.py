@@ -70,6 +70,7 @@ def safe_manifest(include_generated=True):
         if name.startswith("/") or ".." in Path(name).parts:
             raise ValueError("Unsafe archive path: " + name)
         if (Path(name).suffix.lower() not in SAFE_EXT and
+                Path(name).name != "Makefile" and
                 not (include_generated and name.startswith("bravia-lab/stage17/") and
                      Path(name).suffix.lower() == ".png")):
             raise ValueError("Not an approved source/preview type: " + name)

@@ -84,6 +84,15 @@ jobs:
       - name: Stage17 single-generator manifest and actual C UI_LOGO contract
         run: |
           python3 -m unittest -v bravia-lab/stage17/test_assets.py
+      - name: Assemble reproducible non-installable Stage18 offline source bundle
+        run: python3 bravia-lab/stage18/package_offline.py --output bravia-lab/stage18/BRAVIA_HOME_STAGE18_OFFLINE.zip
+      - name: Archive Stage18 privacy-first source bundle (NOT Sony firmware)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bravia-home-stage18-offline-sources-not-installable
+          path: bravia-lab/stage18/BRAVIA_HOME_STAGE18_OFFLINE.zip
+          retention-days: 90
+          if-no-files-found: error
       - name: Publish Linux and ARM research-only builds
         uses: actions/upload-artifact@v4
         with:
@@ -125,6 +134,7 @@ jobs:
         run: |
           python3 bravia-lab/stage18/privacy_audit.py --output bravia-lab/stage18/privacy_report.json
           cd bravia-lab && python3 -m unittest -v stage18/test_privacy_audit.py
+          cd bravia-lab && python3 -m unittest -v stage18/test_package_offline.py
       - name: Run source-only firmware tests
         working-directory: bravia-lab
         run: |

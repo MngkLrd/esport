@@ -55,6 +55,11 @@ STAGE_FILES = (
     "stage20/README.md", "stage20/test_catalog_host.c",
     "stage21/README.md", "stage21/firmware_preflight.py",
     "stage21/test_firmware_preflight.py",
+    "stage23/README.md", "stage23/exports.map",
+    "stage23/build_arm_shared.sh", "stage23/test_native_plugin.sh",
+    "stage23/test_native_plugin.c", "stage23/installer_gate.py",
+    "stage23/service_policy.py", "stage23/test_tools.py",
+    "native_core/bravia_plugin.h", "native_core/bravia_plugin.c",
     "native_core/native_catalog.c", "native_core/native_catalog.h",
     "native_core/catalog_host.c", "native_core/catalog_host.h",
 )

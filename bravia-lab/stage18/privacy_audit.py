@@ -12,6 +12,8 @@ from pathlib import Path
 
 LAB = Path(__file__).resolve().parents[1]
 RUNTIME = (
+    "ui/index.html",
+    "ui/style.css",
     "ui/launcher.js",
     "ui/app-data.js",
     "ui/sony_native_bridge.js",
@@ -29,6 +31,8 @@ RUNTIME = (
 # of Sony DRM/OS services. We do not inspect third-party apps with this scanner.
 NETWORK = {
     "fetch": r"\bfetch\s*\(",
+    "remote_html_asset": r"""(?:src|srcset|href)\s*=\s*['"]\s*https?://""",
+    "remote_css_resource": r"""(?:url|@import)\s*\(\s*['"]?https?://""",
     "xhr": r"\bXMLHttpRequest\b",
     "websocket": r"\bWebSocket\s*\(",
     "send_beacon": r"\bsendBeacon\s*\(",

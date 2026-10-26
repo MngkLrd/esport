@@ -76,6 +76,9 @@ jobs:
             bravia-lab/stage17/BRAVIA_HOME_v17_LOGO_BLUR_DEMO.html
           retention-days: 14
           if-no-files-found: error
+      - name: Stage17 preblurred logo assets and actual C UI_LOGO contract
+        run: |
+          python3 -m unittest -v bravia-lab/stage17/test_assets.py
       - name: Publish Linux and ARM research-only builds
         uses: actions/upload-artifact@v4
         with:

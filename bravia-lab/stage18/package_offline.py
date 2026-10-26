@@ -49,6 +49,7 @@ STAGE_FILES = (
     "stage18/firmware_privacy_scan.py",
     "stage18/test_firmware_privacy_scan.py",
     "stage18/package_offline.py", "stage18/test_package_offline.py",
+    "stage18/test_browser_privacy.py",
 )
 SLUGS = ("kinopoisk", "ivi", "start", "netflix", "youtube",
          "rutube", "msx", "alcopac", "browser", "kion")

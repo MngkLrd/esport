@@ -1,31 +1,54 @@
-# BRAVIA HOME Stage 17 — TV tile blurred logo backplates
+# BRAVIA HOME Stage 17 — blurred service logos and optional DirectFB image loader
 
-Implemented in `feature/bravia-home-stage15` **without changing Sony HOME launch behavior**.
+Branch: `feature/bravia-home-stage15`. Target: Sony BRAVIA KD-55XG7096 (native non-Android Linux). **Offline research build, not installable Sony firmware.**
 
-## Visual contract
+## Render contract
 
-Tile bounding box: **216×130** at 1280×720. Logo backplate inset: **144×75**, positioned x+36 / y+13, centered and aspect-preserving; foreground app name and availability indicator remain separate and readable. 5×2 grid stays 10 apps.
+At 1280 × 720, ten tiles form a 5 × 2 grid. Each is 216 × 130 px; the preblurred artwork is 144 × 75 px and is placed at x + 36 / y + 13. Names, availability markers, focus outlines, TV card and system key delegation are unchanged. The pure C99 UI continues to emit 94 commands on the HOME screen.
 
-| Service state | PNG variant | Peak source opacity | Gaussian blur reference |
-|---|---|---|---|
-| `APP_UNKNOWN` (default) | `unknown` | 16% | 3.4 px |
-| `APP_READY` (host-reported only) | `ready` | 26% | 2.6 px |
-| `APP_UNAVAILABLE` | `unavailable`, desaturated | 10% | 5.8 px |
+**One canonical asset generator**: `stage17/build_assets.py`. The older `generate_assets.py` is only a compatibility wrapper; both produce the same 30 PNG files and one `stage17/assets/manifest.json` (a list of 30 records).
 
-Blurring and opacity are **prebaked at asset generation**, not computed per rendered TV frame. At 1080p and 4K the native UI-logo destination rectangle follows the C99 renderer scaling. Existing DirectFB adapter's `logos[10][3]` uses its `DSBLIT_BLEND_ALPHACHANNEL` / `StretchBlit` path if a permitted host has loaded the surfaces. **Actual Sony texture loading and physical TV are still not verified.** If the supplied host texture is absent the backend retains its text fallback.
+| Availability state | Prebaked alpha | Gaussian blur on 144 × 75 source |
+|---|---:|---:|
+| UNKNOWN (default, not a claim of installation) | 0.14 | 3.4 px |
+| READY (only from verified host) | 0.22 | 2.6 px |
+| UNAVAILABLE | 0.08, grayscale | 5.8 px |
 
-A 30-PNG pack generated with `python3 bravia-lab/stage17/generate_assets.py` and the manifest is provided. **These are locally drawn and blurred wordmark placeholders, not certified official brand artwork**. The ten service labels are Kinopoisk, Ivi, START, Netflix, YouTube, RUTUBE, Media Station X, Al(co)pac, Sony Browser and KION. For production, replace individually with permissioned transparent vendor-supplied source logo SVG/PNG, preserving the original aspect ratio and alpha padding.
+No dynamic blur, logo download or PNG decoding occurs in the C99 renderer. Three services use sourced Simple Icons vector elements: Kinopoisk, Netflix, YouTube. The remaining seven are **local typographic placeholders, not verified official logos**. Replace those with duly licensed, aspect-preserving logo assets before any product distribution. The preview's READY/UNAVAILABLE test statuses are fictional.
 
-## Reproduce
+## Optional DirectFB host integration (Stage17 patch)
 
-```bash
-python3 bravia-lab/stage17/generate_assets.py
-python3 -m unittest -v bravia-lab/stage17/test_assets.py
-make -C bravia-lab/native_core test adapter-test
+`native_core/directfb_logos.[ch]` now provides a real **standard DirectFB 1.x image-provider loading path** for the 30 files, without requiring network calls. It is opt-in and **requires an authorized host-provided `IDirectFB*`, already usable graphics context, and a read-only local assets directory**.
+
+```c
+#include "directfb_logos.h"
+BraviaDfb backend = {0};        /* host must supply backend.surface + fonts */
+BraviaLogoPack pack = {0};     /* caller owns this pack */
+if (bravia_logo_pack_load(&pack, dfb, "/authorized/app/stage17/assets") == 0)
+    bravia_logo_pack_attach(&backend, &pack);
+
+/* bravia_dfb_draw(&backend, ...): images from cached ARGB surfaces */
+/* Shut down only after all draw calls have stopped: */
+bravia_logo_pack_detach(&backend);
+bravia_logo_pack_release(&pack);
 ```
 
-The *conversation artifact* `BRAVIA_HOME_STAGE17_LOGO_BACKPLATES.zip` also contains generated native-command 720p/1080p/4K previews and `BRAVIA_HOME_STAGE17_INTERACTIVE.html` with all base64-embedded PNGs and keyboard navigation, no network use. The browser preview is only a **visual presentation of C99 commands**; it is not a Sony app or a native Sony DirectFB renderer. Demo Netflix READY and KION UNAVAILABLE are deliberately synthetic, not a reading from physical Sony.
+Loader behavior: use `CreateImageProvider → GetSurfaceDescription → CreateSurface(ARGB) → RenderTo`. It rejects wrong-sized images, loads 30/30 or releases everything and retains the text fallback, never double-owns the host's canvas and never calls `DirectFBCreate` or sets cooperative/primary fullscreen mode. Attach is non-owning: **detach before release and never release while a draw is in progress**. The missing-logo text fallback remains operational if no pack is loaded.
 
-## Isolation / safety
+**Scope limit:** DirectFB entrypoints are tested against a mock header/provider. They have not been compiled against the television's actual SDK, provided an authenticated Sony compositor, or run on real KD-55XG7096 hardware. PNG provider codec availability, host graphics layer ownership and application deployment remain unknown. Do not flash these sources as firmware.
 
-No network calls in the C core, no Sony IPC writer, no changes to DRM, tuner, channels, remote key reservation or firmware update path. **No installable Sony package**. Native ready state remains verified only by a future authorized app manager; visual color must not imply verified playback.
+## Reproduce locally
+
+From repository root:
+
+```bash
+python3 bravia-lab/stage17/build_assets.py
+python3 -m unittest -v bravia-lab/stage17/test_logo_assets.py
+python3 -m unittest -v bravia-lab/stage17/test_assets.py
+make -C bravia-lab/native_core test adapter-test
+python3 bravia-lab/stage17/build_preview.py
+```
+
+Dependencies for asset generation: Python 3.11+, Pillow, CairoSVG and DejaVu fonts. The mock DirectFB adapter does **not** prove Sony ABI compatibility; `make -C bravia-lab/native_core directfb-check` additionally requires real DirectFB 1.x headers on a supported development host.
+
+The CI workflow archives offline PNG assets, a keyboard-driven HTML demo and screenshots from native C99 draw commands. The demo does not exercise the actual Sony remote, launcher, firmware, DRM or tuner.

@@ -31,6 +31,8 @@ jobs:
           clang -target armv7-linux-gnueabi -mfpu=vfpv4 -mfloat-abi=softfp -std=c99 -O2 -ffreestanding -fno-builtin -Wall -Wextra -Werror -Wconversion -pedantic -Ibravia-lab/native_core -c bravia-lab/native_core/catalog_host.c -o /tmp/bravia-catalog-host-arm.o
           readelf -h /tmp/bravia-catalog-arm.o | grep -q 'Machine:.*ARM'
           readelf -h /tmp/bravia-catalog-host-arm.o | grep -q 'Machine:.*ARM'
+      - name: Stage23 linked native library regression
+        run: sh bravia-lab/stage23/test_native_plugin.sh
       - name: Stage15 Linux and ARM ELF build and regression
         run: |
           sh bravia-lab/stage15/build.sh

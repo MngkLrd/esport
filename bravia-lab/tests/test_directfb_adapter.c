@@ -16,8 +16,9 @@ static DFBResult stretch(IDirectFBSurface*s,IDirectFBSurface*logo,const DFBRecta
  (void)s;(void)src;assert(logo&&dst&&dst->w>0&&dst->h>0);
  assert(blitflags==DSBLIT_BLEND_ALPHACHANNEL);bitmaps++;return DFB_OK;
 }
+static DFBResult release_logo(IDirectFBSurface*s){(void)s;return DFB_OK;}
 int main(void){
- IDirectFBSurface surface={size,color,fill,stroke,font,clip,draw,flip,flags,stretch};
+ IDirectFBSurface surface={size,color,fill,stroke,font,clip,draw,flip,flags,stretch,release_logo};
  IDirectFBFont f[12];BraviaDfb backend;UiMetrics m;HomeState state;int i;
  memset(&backend,0,sizeof(backend));backend.surface=&surface;
  for(i=0;i<6;i++){backend.regular[i]=&f[i];backend.bold[i]=&f[i+6];}

@@ -1,5 +1,10 @@
 #include "native_catalog.h"
-#include <string.h>
+/* Avoid libc linkage: available even in a minimal ARM32 native host. */
+static int equal(const char *a,const char *b){
+ if(!a||!b)return 0;
+ while(*a&&*b){if(*a!=*b)return 0;++a;++b;}
+ return *a==*b;
+}
 /* Sony service strings below are only candidate labels. They cannot prove
  * the existence of an installed application or playback support. */
 static const BraviaCatalogEntry entries[BRAVIA_CATALOG_APPS] = {
@@ -25,7 +30,7 @@ int bravia_catalog_validate(void){
   if(entries[i].sony_alias_is_candidate &&
      (!entries[i].stock_alias||!entries[i].stock_alias[0]))return -1;
   for(j=0;j<i;j++)
-   if(strcmp(entries[i].slug,entries[j].slug)==0)return -1;
+   if(equal(entries[i].slug,entries[j].slug))return -1;
  }
  return 0;
 }
@@ -41,7 +46,7 @@ BraviaRoute bravia_catalog_resolve(size_t index,
  if(!app->sony_alias_is_candidate)return result;
  for(i=0;i<live_count;i++){
   if(!live[i].name)continue;
-  if(strcmp(live[i].name,app->stock_alias)!=0)continue;
+  if(!equal(live[i].name,app->stock_alias))continue;
   if(!live[i].registered || !live[i].host_verified ||live[i].service_id<0)
    continue;
   matches++;

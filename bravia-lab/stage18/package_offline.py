@@ -52,6 +52,9 @@ STAGE_FILES = (
     "stage18/test_browser_privacy.py",
     "stage19/stock_dockui_target.json", "stage19/test_stock_dockui_target.py",
     "stage19/README.md",
+    "stage20/README.md", "stage20/test_catalog_host.c",
+    "native_core/native_catalog.c", "native_core/native_catalog.h",
+    "native_core/catalog_host.c", "native_core/catalog_host.h",
 )
 SLUGS = ("kinopoisk", "ivi", "start", "netflix", "youtube",
          "rutube", "msx", "alcopac", "browser", "kion")

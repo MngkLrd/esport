@@ -35,6 +35,38 @@ Sony Samba FAQ: https://www.sony.co.uk/electronics/support/articles/00182856
 Sony privacy policy (Smart TV services/DRM tradeoff): https://www.sony.com/articleimage/servlet/servlet.FileDownload?file=0155F000007WDghQAG
 Samba TV privacy rights: https://samba.tv/privacy-center/your-privacy-handbook
 
+## Reproducible offline privacy and transfer commands
+
+From repository root (no Sony TV or flash drive required):
+
+```bash
+python3 bravia-lab/stage18/privacy_audit.py --output /tmp/bravia-privacy.json
+cd bravia-lab
+python3 -m unittest -v stage18/test_privacy_audit.py stage18/test_firmware_privacy_scan.py stage18/test_package_offline.py
+cd ..
+python3 bravia-lab/stage18/package_offline.py --output /tmp/BRAVIA_HOME_STAGE18_OFFLINE.zip
+```
+
+If a legally held read-only **already extracted** Sony v8.931 file tree is available,
+scan it separately without injecting any data into the TV:
+
+```bash
+python3 bravia-lab/stage18/firmware_privacy_scan.py \
+  --rootfs /path/to/extracted/root \
+  --thirdparty /path/to/extracted/3rdp \
+  --output /tmp/bravia-firmware-privacy-evidence.json
+```
+
+The OEM indicator scan reads bounded candidate paths and flags, and never exports
+raw URLs, device identifiers or code bodies. `UNKNOWN` is deliberately retained
+for runtime consent, traffic or active services. Its output is a static inventory,
+not a blocklist and not evidence that a vendor is sending data.
+
+The offline ZIP is an author-created reproducibility package with SHA-256 manifest,
+source files, tests and optionally previews. It is explicitly **NOT** an installable
+Sony update. GitHub Actions retains the generated artifact for 90 days when a
+successful workflow runs; the tracked source code remains available afterward.
+
 ## Privacy acceptance gates for any future HOME release
 
 | Gate | Required evidence | Until verified |

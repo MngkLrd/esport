@@ -1,0 +1,60 @@
+{
+  "stage": 25,
+  "target": "Sony KD-55XG7096",
+  "tv_version": "8.931-1000-4.000-0000",
+  "source": "owner-original Sony PKG extracted offline",
+  "original_zip_sha256": "9fedce4521bb3b9d2fc0d8e8a19d31a795752026d1a17249b1ccf712c25b606c",
+  "original_pkg_size": 294598802,
+  "partition_count": 11,
+  "decrypted_nfsb_partitions": [
+    "root",
+    "3rdp",
+    "3rd2"
+  ],
+  "original_elf_matches": {
+    "root/basic/app_man": {
+      "sha256": "29fca75522ccd66abba528b8622ccda944e6b15455dd812c1f2036d710c14702",
+      "size": 548240
+    },
+    "root/basic/libapp_client.so": {
+      "sha256": "bbe9eb3d74c8e793b5d93e0a96edbb4d1e89fe8b3e259791c95b5836c3eb8636",
+      "size": 34540
+    },
+    "3rdp/sony/sony_dockui/launcher.bin": {
+      "sha256": "1c29e9f4175e825500b57874b37c5257fd8ce162b53ca061cc43a47e8c579480",
+      "size": 125080
+    }
+  },
+  "root_inode_count": 2511,
+  "thirdparty_inode_count": 6522,
+  "home_key": "ROOT_MENU=dockui(stop)[start]",
+  "actual_dockui_path": "/3rd/sony/sony_dockui/launcher.bin",
+  "dockui_xml_legacy_entry_count": 8,
+  "stock_service_list_path": "/3rd_rw/service_list/dockui",
+  "stock_service_list_arm_evidence": "0x1e828 movw r0, #0x4740; 0x1e834 bl access() with r1=4",
+  "stock_service_list_write_route_proven": false,
+  "autostart_config_candidates": [
+    "browser_base",
+    "globoplay"
+  ],
+  "samba_factory_default_disabled": true,
+  "samba_current_tv_state_known": false,
+  "experiment": {
+    "action": "Replace /basic/DockUI.xml with /3rd_rw/home.xml in offline owner-extracted launcher only",
+    "changed_bytes": 16,
+    "elf_same_size": true,
+    "text_section_identical": true,
+    "patched_candidate_sha256": "591fe6797a674065f30ebdad5812c305797993fdcb5d892f60827a310fdc67fb",
+    "native_live_menu_uses_new_path_proven": false,
+    "modified_vendor_signature_valid": false,
+    "dm_verity_hash_valid": false
+  },
+  "local_python_tests_passed": 11,
+  "tv_modified": false,
+  "custom_usb_installer_available": false,
+  "missing": [
+    "actual Sony exec/loader or writable code path",
+    "firmware signing and verified recovery",
+    "native app clients for desired unavailable services"
+  ]
+}

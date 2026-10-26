@@ -37,6 +37,10 @@ class SourcePreservationTests(unittest.TestCase):
             "stage17/build_preview.py", "stage17/test_logo_assets.py",
             "stage17/test_assets.py", "native_core/directfb_logos.c",
             "native_core/directfb_logos.h", "tests/test_directfb_logo_loader.c",
+            "stage18/privacy_audit.py", "stage18/test_privacy_audit.py",
+            "stage18/firmware_privacy_scan.py", "stage18/test_firmware_privacy_scan.py",
+            "stage18/package_offline.py", "stage18/test_package_offline.py",
+            "stage18/test_browser_privacy.py", "stage18/PRIVACY_PRODUCT_POLICY.md",
         )
         self.assertEqual([p for p in required if not (LAB / p).is_file()], [])
 
@@ -45,7 +49,9 @@ class SourcePreservationTests(unittest.TestCase):
         for text in ("test_ui_v2_browser.py", "test_native_sony_browser.py",
                      "test_catalog_browser.py", "stage8/sony_appclient_abi.c",
                      "stage9/test_lifecycle.c", "test_repo_integrity.py",
-                     "test_logo_assets.py", "test_assets.py", "adapter-test"):
+                     "test_logo_assets.py", "test_assets.py", "adapter-test",
+                     "test_privacy_audit.py", "test_firmware_privacy_scan.py",
+                     "test_package_offline.py", "test_browser_privacy.py"):
             with self.subTest(name=text):
                 self.assertIn(text, workflow)
 

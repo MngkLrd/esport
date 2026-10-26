@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 21 Sony Firmware Family Gate
+name: BRAVIA HOME Stage 24 ARM32 Native Boot + OEM Evidence
 
 on:
   push:
@@ -33,6 +33,20 @@ jobs:
           readelf -h /tmp/bravia-catalog-host-arm.o | grep -q 'Machine:.*ARM'
       - name: Stage23 linked native library regression
         run: sh bravia-lab/stage23/test_native_plugin.sh
+      - name: Stage24 build genuine freestanding ARM32 HOME executable
+        run: sh bravia-lab/stage24/build_probe.sh
+      - name: Stage24 audit pinned Sony ELF imports and rejected malformed files
+        working-directory: bravia-lab
+        run: python3 -m unittest -v stage24/test_elf_analyzer.py stage24/test_native_boot.py
+      - name: Save Stage24 ARM32 ET_EXEC diagnostic and existing ARM library
+        uses: actions/upload-artifact@v4
+        with:
+          name: bravia-stage24-arm32-native-binaries-not-sony-update
+          path: |
+            bravia-lab/stage24/build/bravia_home_native_probe_armv7.elf
+            bravia-lab/stage23/build/libbravia_home_armv7.so
+          retention-days: 90
+          if-no-files-found: error
       - name: Stage15 Linux and ARM ELF build and regression
         run: |
           sh bravia-lab/stage15/build.sh

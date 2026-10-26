@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RUTUBE — BRAVIA TV Client</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="shell" class="shell">
+  <div class="top">
+    <div class="brand"><b>R</b> RUTUBE <span>BRAVIA</span></div>
+    <div class="right">Управление пультом Sony · Локальный клиент</div>
+  </div>
+  <div id="main" class="main">
+    <h1>Смотрите RUTUBE на телевизоре</h1>
+    <p class="subtitle">Оригинальный плеер RUTUBE внутри локального приложения. Без внешнего сервера.</p>
+    <div id="menu" class="menu">
+      <div class="tile active" id="tile0"><div class="tile-icon">▶</div><h2>Проверочное видео</h2><p>Видеоролик из официальной документации RUTUBE</p></div>
+      <div class="tile" id="tile1"><div class="tile-icon">⌕</div><h2>Поиск</h2><p>Поиск видео через публичный API, если движок поддерживает запрос</p></div>
+      <div class="tile" id="tile2"><div class="tile-icon">#</div><h2>Видео по ID</h2><p>Откройте конкретное видео, введя 32-символьный ID</p></div>
+    </div>
+  </div>
+  <div id="entry" class="entry hidden">
+    <div id="entryTitle" class="entry-title">Поиск</div>
+    <div id="typed" class="typed">Введите запрос</div>
+    <div id="keyboard" class="keyboard"></div>
+    <div class="hint">↑↓←→ Выбор символа · OK Ввести · BACK Назад</div>
+  </div>
+  <div id="results" class="results hidden">
+    <h1>Результаты поиска</h1>
+    <div id="resultsList" class="results-list"></div>
+    <p class="hint">↑↓ Выбор видео · OK Смотреть · BACK Изменить поиск</p>
+  </div>
+  <div id="player" class="player hidden">
+    <div id="videoArea" class="video-area"></div>
+    <div class="player-ui">
+      <div class="player-name" id="videoTitle">RUTUBE</div>
+      <div class="player-status" id="playerStatus">Ожидание ответа плеера…</div>
+      <div class="player-timeline" id="playTime"></div>
+      <div class="player-hint">OK Пауза · ←/→ Перемотка · ↓ Попробовать HLS · BACK Закрыть</div>
+    </div>
+  </div>
+  <div class="footer"><span id="status">Для запуска видео нужен интернет. Для HOME и этого интерфейса — нет.</span><span>← ↑ ↓ → · OK · BACK</span></div>
+</div>
+<script src="remote.js"></script>
+<script src="rutube_player.js"></script>
+<script src="catalog_api.js"></script>
+<script src="hls_fallback.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

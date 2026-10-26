@@ -31,8 +31,10 @@ directfb-check:
 	$(CC) $(CFLAGS) -DBRAVIA_WITH_DIRECTFB $$(pkg-config --cflags directfb) -fsyntax-only directfb_backend.c
 
 clean:
-	rm -f test_home_core test_render render_dump test_adapter test_host_dispatch test_product
+	rm -f test_home_core test_render render_dump test_adapter test_logos test_host_dispatch test_product
 # A test-only header validates calling shape; it is NOT Sony's DirectFB ABI.
 adapter-test:
 	$(CC) $(CFLAGS) -DBRAVIA_WITH_DIRECTFB -I../tests/directfb_stub -I. home_core.c render.c directfb_backend.c ../tests/test_directfb_adapter.c -o test_adapter
 	./test_adapter
+	$(CC) $(CFLAGS) -DBRAVIA_WITH_DIRECTFB -I../tests/directfb_stub -I. directfb_logos.c ../tests/test_directfb_logo_loader.c -o test_logos
+	./test_logos

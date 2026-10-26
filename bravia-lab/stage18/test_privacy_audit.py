@@ -61,7 +61,6 @@ class PrivacyAuditTests(unittest.TestCase):
 
     def test_csp_blocks_home_page_network_not_sony_native_intents(self):
         content = (LAB / "ui/index.html").read_text(encoding="utf-8")
-        self.assertIn('connect-src &#', content) if False else None
         self.assertIn("connect-src 'none'", content)
         self.assertIn("frame-src 'none'", content)
         self.assertIn("referrer", content.lower())

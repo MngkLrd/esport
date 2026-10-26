@@ -1,0 +1,4 @@
+BRAVIA_1.0 {
+  global: bravia_plugin_*;
+  local: *;
+};

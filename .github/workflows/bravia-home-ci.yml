@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 17
+name: BRAVIA HOME Stage 18.2 Privacy Offline
 
 on:
   push:
@@ -79,7 +79,7 @@ jobs:
             bravia-lab/stage17/assets/manifest.json
             bravia-lab/stage17/previews/*.png
             bravia-lab/stage17/BRAVIA_HOME_v17_LOGO_BLUR_DEMO.html
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
       - name: Stage17 single-generator manifest and actual C UI_LOGO contract
         run: |
@@ -102,7 +102,7 @@ jobs:
             bravia-lab/stage15/build/bravia-home-armv7-linux-elf
             bravia-lab/stage16/console
             bravia-lab/stage16/build/bravia-stage16-simulator-armv7-linux-elf
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
 
   javascript:

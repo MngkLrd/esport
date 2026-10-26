@@ -138,6 +138,9 @@ jobs:
       - name: Stage18 verify original 99 BRAVIA files and complete CI coverage
         working-directory: bravia-lab
         run: python3 -m unittest -v stage18/test_repo_integrity.py
+      - name: Stage23 Sony OTA and background service audit tests
+        working-directory: bravia-lab
+        run: python3 -m unittest -v stage23/test_tools.py
       - name: Stage21 verify exact TV firmware version family and original OEM provenance gates
         working-directory: bravia-lab
         run: |

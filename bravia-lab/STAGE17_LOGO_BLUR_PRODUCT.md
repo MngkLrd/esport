@@ -11,9 +11,9 @@ All **10 service tiles** now use a **preblurred, proportionately fitted image un
 | Tile | 216×130, 5 columns × 2 rows, horizontal spacing 22px |
 | Preblur logo area | **144×75px (66.7% of tile width)**, top-center above footer |
 | Position | tile x+36, y+13 |
-| READY | preblur radius 2.2px, alpha 0.46 |
-| UNKNOWN | radius 2.9px, alpha 0.33 |
-| UNAVAILABLE | radius 4.3px, alpha 0.14, grayscale |
+| READY | preblur radius 2.6px, alpha 0.22 |
+| UNKNOWN | radius 3.4px, alpha 0.14 |
+| UNAVAILABLE | radius 5.8px, alpha 0.08, grayscale |
 | Foreground | unchanged app title, status indicator, focus outlines |
 | Native draw-call count | **94 HOME commands** unchanged from v14 |
 | Asset count | **30 RGBA PNG files**, 144×75 |
@@ -25,14 +25,14 @@ The fallback remains the previous large text/service mark if the authorized host
 
 - **Sourced real vector symbols (Simple Icons):** Kinopoisk, Netflix, YouTube. Their SVG sources are stored under `stage17/assets/source/`, obtained from the public `simple-icons/simple-icons` icon collection.
 - **Project-made typographic stand-ins, *not official logos*:** Иви, START, RUTUBE, Media Station X, Al(co)pac, Sony browser, КИОН. Names are exact while marks are visually approximated. This distinction is intentional; don't label these seven as verified trademark assets.
-- The offline generator `stage17/build_assets.py` reads the source SVGs (CairoSVG), draws wordmarks using installed typefaces (Pillow), Gaussian-blurs and embeds alpha **once at build time**. Generated PNGs are not fetched online during TV use.
+- The offline generator `stage17/build_assets.py` reads the source SVGs (CairoSVG), draws wordmarks using installed typefaces (Pillow), Gaussian-blurs and embeds alpha **once at build time**. Generated PNGs are not fetched online during TV use. The former second generator is now a compatibility wrapper around `build_assets.py`, eliminating manifest overwrites and incompatible alpha profiles.
 
 ### Native integration
 
 - New `UI_LOGO` command in `native_core/render.h` with `image_id=0..9` and `image_variant` (0 UNKNOWN, 1 READY, 2 UNAVAILABLE). Replaces previous giant text command, maintaining the **94-command** frame budget.
 - `native_core/render_dump.c` serializes these extra metadata fields for offline preview and testing.
-- `native_core/directfb_backend.[ch]`: optional `IDirectFBSurface *logos[10][3]` provided and owned by a future verified Sony native host. `StretchBlit` with `DSBLIT_BLEND_ALPHACHANNEL` for pre-blurred RGBA; explicitly restores flags to `DSBLIT_NOFX`. If unavailable, draws the previous textual fallback.
-- The test-only DirectFB header and mock adapter now validate bitmap operation and fallback. **Actual Sony asset decoding/surface provisioning has not been implemented or physically tested.** No Sony IPC or update images touched.
+- `native_core/directfb_backend.[ch]`: optional `IDirectFBSurface *logos[10][3]` can be borrowed from a host-owned `BraviaLogoPack`. `native_core/directfb_logos.[ch]` loads all 30 local PNG textures using a caller-provided DirectFB 1.x context, checks geometry/ARGB and rolls back on failures. `StretchBlit` with `DSBLIT_BLEND_ALPHACHANNEL` for pre-blurred RGBA; explicitly restores flags to `DSBLIT_NOFX`. If unavailable, draws the previous textual fallback.
+- The test-only DirectFB header and mock adapter validate bitmap operation, fallback and resource cleanup after failed texture loading. **The optional standard DirectFB PNG provider loader now exists and has mock integration tests; real Sony PNG codec support, graphics host integration and physical television behavior are still unverified.** No Sony IPC or update images touched.
 
 ### Verified tests and previews
 
@@ -47,7 +47,7 @@ The fallback remains the previous large text/service mark if the authorized host
 cd bravia-lab
 make -C native_core test adapter-test
 python3 stage17/build_assets.py
-python3 -m unittest -v stage17/test_logo_assets.py
+python3 -m unittest -v stage17/test_logo_assets.py stage17/test_assets.py
 python3 stage17/build_preview.py
 ```
 

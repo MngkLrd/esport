@@ -1,4 +1,4 @@
-name: BRAVIA HOME Stage 24 ARM32 Native Boot + OEM Evidence
+name: BRAVIA HOME Stage 26 Stock OEM App Compatibility
 
 on:
   push:
@@ -33,6 +33,14 @@ jobs:
           readelf -h /tmp/bravia-catalog-host-arm.o | grep -q 'Machine:.*ARM'
       - name: Stage23 linked native library regression
         run: sh bravia-lab/stage23/test_native_plugin.sh
+      - name: Stage26 patch original Cobalt HOME catalog compatibility tests
+        run: |
+          python3 bravia-lab/stage26/source/make_icons.py
+          node --check bravia-lab/stage26/source/bravia_catalog.js
+          node --check bravia-lab/stage26/source/ram_hook.js
+          node bravia-lab/stage26/tests/test_catalog.js
+          node bravia-lab/stage26/tests/test_real_oem_bridge.js
+          python3 -m unittest discover -s bravia-lab/stage26/tests -p 'test_patch.py' -v
       - name: Stage24 build genuine freestanding ARM32 HOME executable
         run: sh bravia-lab/stage24/build_probe.sh
       - name: Stage24 audit pinned Sony ELF imports and rejected malformed files

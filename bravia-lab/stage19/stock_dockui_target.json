@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "name": "BRAVIA STOCK DOCKUI REPLACEMENT CONTRACT",
+  "target": "KD-55XG7096",
+  "baseline_firmware": "Sony v8.931-1000 (owner OTA read-only research)",
+  "launch_surface": "Sony native dockui",
+  "goal": "Replace only HOME content, preserve host display/tuner/audio/TV and all system keys",
+  "launch_constraint": "No installed or confirmed USB loader; policy is offline only; NOT a firmware update",
+  "legacy_apps_policy": {
+    "action": "REPLACE_ENTIRE_LEGACY_APPLICATIONS_ROW",
+    "preserve_legacy_shortcuts": false,
+    "match_mode": "legacy row independent of vendor service ID",
+    "legacy_examples": [
+      "Netflix",
+      "YouTube",
+      "ivi",
+      "Okko",
+      "Prime Video",
+      "START",
+      "Megafon",
+      "Berlin Philharmonic",
+      "legacy browser",
+      "radio",
+      "clock",
+      "legacy media shortcuts"
+    ],
+    "overlap_rule": "If a name appears in both legacy and desired catalogs, the new tile remains a separately defined user entry; using an existing working native Sony app runtime is allowed only after host verification. Never assume a sideloaded APK is compatible.",
+    "remove_vendor_binaries": false
+  },
+  "desired_home_order": [
+    {
+      "section": "applications",
+      "label": "Мои приложения",
+      "mode": "NEW_USER_CATALOG",
+      "ref": "apps"
+    },
+    {
+      "section": "channels",
+      "label": "Каналы",
+      "mode": "SONY_HOST_NATIVE",
+      "items": [
+        {
+          "key": "program_list",
+          "label": "Список программ",
+          "intent": "SONY_CHANNEL_LIST",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "guide",
+          "label": "Guide",
+          "intent": "SONY_EPG",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "recent_channels",
+          "label": "Недавно просмотренные",
+          "intent": "SONY_CHANNEL_HISTORY",
+          "verified_on_hardware": false,
+          "fallback": "Hide when no truthful host history"
+        },
+        {
+          "key": "frequent_channels",
+          "label": "Часто смотрят",
+          "intent": "SONY_CHANNEL_FREQUENCY",
+          "verified_on_hardware": false,
+          "fallback": "Hide when unsupported; never fabricate counts"
+        }
+      ]
+    },
+    {
+      "section": "media",
+      "label": "Носитель",
+      "mode": "SONY_USB_MEDIA_NATIVE",
+      "items": [
+        {
+          "key": "usb_preview",
+          "label": "Просмотр файлов",
+          "intent": "SONY_USB_BROWSER",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "photos",
+          "label": "Фото",
+          "intent": "SONY_MEDIA_PHOTO",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "videos",
+          "label": "Видео",
+          "intent": "SONY_MEDIA_VIDEO",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "music",
+          "label": "Музыка",
+          "intent": "SONY_MEDIA_AUDIO",
+          "verified_on_hardware": false
+        }
+      ],
+      "ui_requirement": "Integrate into HOME presentation with native Sony media decoder, preserving USB access without rebuilding proprietary codecs"
+    },
+    {
+      "section": "settings",
+      "label": "Настройки",
+      "mode": "SONY_NATIVE_HANDOFF",
+      "items": [
+        {
+          "key": "system",
+          "label": "Системные настройки",
+          "intent": "SONY_SYSTEM_SETTINGS",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "network",
+          "label": "Настройка сети",
+          "intent": "SONY_NETWORK_SETTINGS",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "support",
+          "label": "Клиентская поддержка",
+          "intent": "SONY_SUPPORT",
+          "verified_on_hardware": false
+        },
+        {
+          "key": "help",
+          "label": "Справочное руководство",
+          "intent": "SONY_HELP",
+          "verified_on_hardware": false
+        }
+      ]
+    }
+  ],
+  "hidden_from_home": [
+    "legacy_app_tiles",
+    "recordings_section",
+    "recorded_title_list",
+    "recording_timer_list",
+    "recording_error_list",
+    "manual_recording_timer",
+    "radio_shortcut",
+    "clock_shortcut",
+    "unused_recommendation_shortcuts"
+  ],
+  "system_features_not_removed": [
+    "native_live_tv",
+    "tuner",
+    "epg",
+    "hdmi_input",
+    "channel_switching",
+    "volume_osd",
+    "picture_settings",
+    "audio_settings",
+    "back_key",
+    "options_key",
+    "system_settings",
+    "network_stack",
+    "drm",
+    "ota_and_recovery",
+    "usb_media_decoders",
+    "app_manager"
+  ],
+  "desired_apps": [
+    {
+      "id": "kinopoisk",
+      "label": "Кинопоиск",
+      "launch": "REQUIRES_COMPATIBLE_SONY_CLIENT"
+    },
+    {
+      "id": "ivi",
+      "label": "Иви",
+      "launch": "VERIFY_EXISTING_SONY_NATIVE_IF_SUPPORTED"
+    },
+    {
+      "id": "start",
+      "label": "START",
+      "launch": "VERIFY_EXISTING_SONY_NATIVE_IF_SUPPORTED"
+    },
+    {
+      "id": "netflix",
+      "label": "Netflix",
+      "launch": "VERIFY_EXISTING_SONY_NATIVE_IF_SUPPORTED"
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "launch": "VERIFY_EXISTING_SONY_NATIVE_IF_SUPPORTED"
+    },
+    {
+      "id": "rutube",
+      "label": "RUTUBE",
+      "launch": "REQUIRES_COMPATIBLE_SONY_CLIENT"
+    },
+    {
+      "id": "mediax",
+      "label": "Media Station X",
+      "launch": "REQUIRES_COMPATIBLE_SONY_CLIENT"
+    },
+    {
+      "id": "alpac",
+      "label": "Al(co)pac",
+      "launch": "REQUIRES_COMPATIBLE_SONY_CLIENT"
+    },
+    {
+      "id": "browser",
+      "label": "Браузер",
+      "launch": "VERIFY_STOCK_SONY_BROWSER_INTENT"
+    },
+    {
+      "id": "kion",
+      "label": "КИОН",
+      "launch": "REQUIRES_COMPATIBLE_SONY_CLIENT"
+    }
+  ],
+  "privacy": {
+    "launcher_analytics": "NO_FIRST_PARTY_ANALYTICS",
+    "samba_acr": "STOCK_OPT_OUT_IF_ENABLED",
+    "other_optional_daemons": "REVIEW_DEPENDENCIES_AND_RUNTIME_TRAFFIC_BEFORE_DISABLE",
+    "keep": [
+      "security",
+      "firmware_ota",
+      "drm",
+      "device_network",
+      "tv",
+      "app_authentication"
+    ],
+    "performance_proof": "Read-only baseline RSS CPU traffic per-process then compare, never assume disabling improves CPU"
+  },
+  "hardware_gates": [
+    "VALIDATED_APP_INSTALL_OR_LAUNCH_PATH",
+    "SONY_NATIVE_DOCKUI_CONTROL_WITHOUT_BREAKING_SYSTEM_FOCUS",
+    "MATCHED_DIRECTFB_ABI_AND_LIBAPP_CLIENT_CALLBACKS",
+    "VERIFIED_BACKUP_AND_RECOVERY_BEFORE_ANY_PROTECTED_PARTITION_WRITE"
+  ],
+  "verified_real_tv": [
+    "FAT32 USB media enumeration",
+    "JPG display in stock player"
+  ],
+  "not_verified_real_tv": [
+    "custom executable loading",
+    "HOME replacement",
+    "application installations",
+    "third-party telemetry absence",
+    "interception of Sony system keys"
+  ]
+}
